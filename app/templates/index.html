@@ -1,0 +1,88 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>The Den</title>
+  <style>
+    body { font-family: sans-serif; max-width: 900px; margin: 2rem auto; }
+    table { border-collapse: collapse; width: 100%; margin-bottom: 1.5rem; }
+    th, td { border: 1px solid #ccc; padding: 4px 8px; text-align: left; font-size: 14px; }
+    form.inline { display: inline; }
+  </style>
+</head>
+<body>
+  <h1>The Den</h1>
+
+  <h2>Indexers</h2>
+  <table>
+    <tr><th>Name</th><th>URL</th><th>Protocol</th><th>Enabled</th><th></th></tr>
+    {% for i in indexers %}
+    <tr>
+      <td>{{ i.name }}</td>
+      <td>{{ i.url }}</td>
+      <td>{{ i.protocol }}</td>
+      <td>{{ "yes" if i.enabled else "no" }}</td>
+      <td>
+        <a href="#" onclick="testIndexer({{ i.id }}); return false;">test</a>
+        &nbsp;
+        <form class="inline" method="post" action="/ui/indexers/{{ i.id }}/delete">
+          <button type="submit">delete</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  <p id="test-result"></p>
+
+  <h3>Add indexer</h3>
+  <form method="post" action="/ui/indexers">
+    <input name="name" placeholder="Name" required>
+    <input name="url" placeholder="https://indexer.example/api" required>
+    <input name="api_key" placeholder="API key (optional)">
+    <select name="protocol">
+      <option value="torznab">torznab</option>
+      <option value="newznab">newznab</option>
+    </select>
+    <button type="submit">Add</button>
+  </form>
+
+  <h2>Search</h2>
+  <form method="get" action="/">
+    <input name="q" placeholder="Search query" value="{{ query or '' }}">
+    <button type="submit">Search</button>
+  </form>
+
+  {% if results is not none %}
+  <table>
+    <tr><th>Title</th><th>Indexer</th><th>Seeders</th><th>Peers</th><th>Size</th><th></th></tr>
+    {% for r in results %}
+    <tr>
+      <td>{{ r.title }}</td>
+      <td>{{ r.indexer_name }}</td>
+      <td>{{ r.seeders if r.seeders is not none else "-" }}</td>
+      <td>{{ r.peers if r.peers is not none else "-" }}</td>
+      <td>{{ r.size if r.size is not none else "-" }}</td>
+      <td><a href="{{ r.download_url }}">download</a></td>
+    </tr>
+    {% endfor %}
+    {% if not results %}
+    <tr><td colspan="6">No results.</td></tr>
+    {% endif %}
+  </table>
+  {% endif %}
+
+  <script>
+    async function testIndexer(id) {
+      const el = document.getElementById("test-result");
+      el.textContent = "testing...";
+      try {
+        const resp = await fetch(`/indexers/${id}/test`);
+        const data = await resp.json();
+        el.textContent = resp.ok ? `OK: ${JSON.stringify(data)}` : `FAILED: ${JSON.stringify(data)}`;
+      } catch (e) {
+        el.textContent = `FAILED: ${e}`;
+      }
+    }
+  </script>
+</body>
+</html>

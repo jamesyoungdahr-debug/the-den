@@ -14,3 +14,15 @@ class IndexerOut(IndexerCreate):
 
     class Config:
         from_attributes = True
+
+
+class ReleaseOut(BaseModel):
+    title: str
+    download_url: str
+    indexer_name: str
+    size: int | None = None
+    seeders: int | None = None
+    peers: int | None = None
+
+    class Config:
+        from_attributes = True

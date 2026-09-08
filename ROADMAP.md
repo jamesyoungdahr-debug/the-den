@@ -9,7 +9,7 @@ Deploy target: native systemd service on Arch Linux (no Docker).
 ## Milestones
 
 - [x] M0 — Skeleton: FastAPI boots, SQLite connects, `/health` works, systemd unit stub
-- [ ] M1 — Indexer search (Prowlarr core): add Torznab/Newznab indexer, test connection, manual search, ranked results
+- [x] M1 — Indexer search (Prowlarr core): add Torznab/Newznab indexer, test connection, manual search, ranked results
 - [ ] M2 — Movie library (Radarr core): TMDB lookup, add to library, missing/have status
 - [ ] M3 — Release scoring: quality profiles + release-title parser, pick best result for a movie
 - [ ] M4 — Download + import (movies): send to qBittorrent, monitor, auto-import/rename
