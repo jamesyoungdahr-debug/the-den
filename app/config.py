@@ -5,6 +5,9 @@ DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./den.db")
 TMDB_API_KEY = os.environ.get("TMDB_API_KEY", "")
 TMDB_BASE_URL = os.environ.get("TMDB_BASE_URL", "https://api.themoviedb.org/3")
 
+# TVmaze needs no key/account at all, for real use — this override exists only for tests.
+TVMAZE_BASE_URL = os.environ.get("TVMAZE_BASE_URL", "https://api.tvmaze.com")
+
 QBIT_URL = os.environ.get("QBIT_URL", "http://127.0.0.1:8080")
 QBIT_USERNAME = os.environ.get("QBIT_USERNAME", "admin")
 QBIT_PASSWORD = os.environ.get("QBIT_PASSWORD", "adminadmin")

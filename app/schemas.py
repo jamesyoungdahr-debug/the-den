@@ -66,7 +66,7 @@ class DownloadRecordOut(BaseModel):
 
 
 class SeriesCreate(BaseModel):
-    tmdb_id: int
+    tvmaze_id: int
     title: str
     year: int | None = None
     overview: str | None = None

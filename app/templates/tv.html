@@ -46,7 +46,7 @@
       <td>{{ c.year or "-" }}</td>
       <td>
         <form method="post" action="/ui/series">
-          <input type="hidden" name="tmdb_id" value="{{ c.tmdb_id }}">
+          <input type="hidden" name="tvmaze_id" value="{{ c.tvmaze_id }}">
           <input type="hidden" name="title" value="{{ c.title }}">
           <input type="hidden" name="year" value="{{ c.year or '' }}">
           <input type="hidden" name="overview" value="{{ c.overview or '' }}">

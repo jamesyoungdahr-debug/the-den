@@ -3,7 +3,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
-from app import tmdb, torznab
+from app import tmdb, torznab, tvmaze
 from app.candidates import scored_candidates
 from app.deps import get_db
 from app.download_check import check_and_import
@@ -144,7 +144,7 @@ async def tv_library(request: Request, q: str | None = None, db: Session = Depen
     for s in all_series:
         episodes = db.query(Episode).filter(Episode.series_id == s.id).all()
         rows.append({"series": s, "total": len(episodes), "have": sum(1 for e in episodes if e.has_file)})
-    candidates = await tmdb.search_tv(q) if q else None
+    candidates = await tvmaze.search_tv(q) if q else None
     return templates.TemplateResponse(
         "tv.html", {"request": request, "series": rows, "query": q, "candidates": candidates}
     )
@@ -152,16 +152,16 @@ async def tv_library(request: Request, q: str | None = None, db: Session = Depen
 
 @router.post("/ui/series")
 async def ui_add_series(
-    tmdb_id: int = Form(...),
+    tvmaze_id: int = Form(...),
     title: str = Form(...),
     year: str = Form(""),
     overview: str = Form(""),
     poster_path: str = Form(""),
     db: Session = Depends(get_db),
 ):
-    if not db.query(Series).filter(Series.tmdb_id == tmdb_id).first():
+    if not db.query(Series).filter(Series.tvmaze_id == tvmaze_id).first():
         series = Series(
-            tmdb_id=tmdb_id,
+            tvmaze_id=tvmaze_id,
             title=title,
             year=int(year) if year.isdigit() else None,
             overview=overview or None,
@@ -170,7 +170,7 @@ async def ui_add_series(
         db.add(series)
         db.commit()
         db.refresh(series)
-        for ep in await tmdb.get_tv_episodes(tmdb_id):
+        for ep in await tvmaze.get_tv_episodes(tvmaze_id):
             db.add(Episode(series_id=series.id, **ep))
         db.commit()
     return RedirectResponse("/tv", status_code=303)

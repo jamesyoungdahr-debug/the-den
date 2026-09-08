@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app import tmdb
+from app import tvmaze
 from app.candidates import scored_candidates
 from app.deps import get_db
 from app.grabber import grab_episode as do_grab_episode
@@ -11,9 +11,9 @@ from app.schemas import DownloadRecordOut, EpisodeOut, GrabRequest, ScoredReleas
 router = APIRouter(tags=["series"])
 
 
-@router.get("/series/search-tmdb")
-async def search_tmdb(q: str):
-    return await tmdb.search_tv(q)
+@router.get("/series/search-tvmaze")
+async def search_tvmaze(q: str):
+    return await tvmaze.search_tv(q)
 
 
 @router.get("/series", response_model=list[SeriesOut])
@@ -23,14 +23,14 @@ def list_series(db: Session = Depends(get_db)):
 
 @router.post("/series", response_model=SeriesOut, status_code=201)
 async def add_series(payload: SeriesCreate, db: Session = Depends(get_db)):
-    if db.query(Series).filter(Series.tmdb_id == payload.tmdb_id).first():
+    if db.query(Series).filter(Series.tvmaze_id == payload.tvmaze_id).first():
         raise HTTPException(400, "Series already in library")
     series = Series(**payload.model_dump())
     db.add(series)
     db.commit()
     db.refresh(series)
 
-    for ep in await tmdb.get_tv_episodes(payload.tmdb_id):
+    for ep in await tvmaze.get_tv_episodes(payload.tvmaze_id):
         db.add(Episode(series_id=series.id, **ep))
     db.commit()
     return series

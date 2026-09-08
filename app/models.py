@@ -46,7 +46,7 @@ class Series(Base):
     __tablename__ = "series"
 
     id = Column(Integer, primary_key=True)
-    tmdb_id = Column(Integer, nullable=False, unique=True)
+    tvmaze_id = Column(Integer, nullable=False, unique=True)
     title = Column(String, nullable=False)
     year = Column(Integer, nullable=True)
     overview = Column(String, nullable=True)

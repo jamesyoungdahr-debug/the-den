@@ -20,10 +20,13 @@ Deploy target: native systemd service on Arch Linux (no Docker).
 - [x] M9 — Distro packaging: systemd unit, config conventions, PKGBUILD
 
 ## Notes
-- TMDB: free for non-commercial use, attribution required.
-- Decided against TheTVDB for M5: TMDB's `/tv` endpoints give full series/season/episode
-  data for free too, so one metadata provider covers both movies and TV — no second API
-  key, no TVDB per-user-PIN/licensing question to deal with.
+- Movies: TMDB. Free for non-commercial use, attribution required, needs a free API key
+  (2-minute signup at themoviedb.org).
+- TV: switched from TMDB to **TVmaze** (`app/tvmaze.py`) — free, no API key, no account
+  at all. `Series.tvmaze_id` is a TVmaze show id, unrelated to TMDB's id space; `Movie`
+  still uses `tmdb_id`. Originally used TMDB's `/tv` endpoints for M5 (see commit
+  history) to avoid TheTVDB's licensing question entirely, but TVmaze removes even the
+  TMDB signup for the TV half of the app, so switched over.
 - Real config goes in `.env` (see `.env.example`): TMDB_API_KEY, QBIT_URL/USERNAME/PASSWORD,
   MOVIES_ROOT, TV_ROOT. Until you set a real TMDB key/qBittorrent, `tests/mock_tmdb.py`,
   `tests/mock_qbit.py`, and `tests/mock_torznab.py` let the whole app be tested

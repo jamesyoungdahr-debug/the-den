@@ -41,6 +41,7 @@ on real hardware, not as verified.
 
 - The app logic, protocol clients (Torznab/Newznab, TMDB, qBittorrent WebUI), scoring,
   scheduler, and packaging are all real and tested (against mocks — see above).
-- You still need: real indexer accounts/API keys, a real TMDB API key (free, 2-minute
-  signup), qBittorrent actually installed and running, and — if you want it — a Discord
+- You still need: real indexer accounts/API keys, a real TMDB API key for movies (free,
+  2-minute signup — TV metadata uses TVmaze instead, which needs no key or account at
+  all), qBittorrent actually installed and running, and — if you want it — a Discord
   webhook URL for notifications.
