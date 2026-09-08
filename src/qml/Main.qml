@@ -99,6 +99,11 @@ Kirigami.ApplicationWindow {
                     enabled: apiClient.connected
                     onClicked: root.pageStack.push(Qt.resolvedUrl("DownloadsPage.qml"))
                 }
+                Controls.Button {
+                    text: "Calendar"
+                    enabled: apiClient.connected
+                    onClicked: root.pageStack.push(Qt.resolvedUrl("CalendarPage.qml"))
+                }
             }
 
             Item { Layout.fillHeight: true }

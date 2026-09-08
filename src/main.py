@@ -5,6 +5,7 @@ from PySide6.QtGui import QGuiApplication
 from PySide6.QtQml import QQmlApplicationEngine
 
 from api_client import ApiClient
+from models.calendar_model import CalendarEpisodesModel, CalendarMoviesModel
 from models.candidates_model import CandidatesModel
 from models.downloads_model import DownloadsModel
 from models.episodes_model import EpisodesModel
@@ -30,6 +31,8 @@ def main() -> None:
     series_search_model = SeriesSearchResultsModel(lambda: api_client.baseUrl)
     episodes_model = EpisodesModel(lambda: api_client.baseUrl)
     episode_candidates_model = CandidatesModel(lambda: api_client.baseUrl, resource="episodes")
+    missing_movies_model = CalendarMoviesModel(lambda: api_client.baseUrl)
+    missing_episodes_model = CalendarEpisodesModel(lambda: api_client.baseUrl)
     theme = Theme()
     engine.rootContext().setContextProperty("apiClient", api_client)
     engine.rootContext().setContextProperty("indexerModel", indexer_model)
@@ -41,6 +44,8 @@ def main() -> None:
     engine.rootContext().setContextProperty("seriesSearchModel", series_search_model)
     engine.rootContext().setContextProperty("episodesModel", episodes_model)
     engine.rootContext().setContextProperty("episodeCandidatesModel", episode_candidates_model)
+    engine.rootContext().setContextProperty("missingMoviesModel", missing_movies_model)
+    engine.rootContext().setContextProperty("missingEpisodesModel", missing_episodes_model)
     engine.rootContext().setContextProperty("Theme", theme)
 
     qml_file = Path(__file__).parent / "qml" / "Main.qml"

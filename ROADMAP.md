@@ -19,7 +19,7 @@ Built the same way as the backend: one milestone at a time, tested before moving
       (or a chosen) one
 - [x] M4 — Downloads view: status list, manual "check now"
 - [x] M5 — TV library: series/episodes (mirrors backend M5/M6)
-- [ ] M6 — Calendar view
+- [x] M6 — Calendar view
 - [ ] M7 — Settings: same fields as the backend's `/ui/settings`, via a JSON API — the
       backend side of this (`GET/POST /api/settings`) is already done, see the-den's
       ROADMAP.md
@@ -234,3 +234,31 @@ in quick succession (no request generation counter to discard a stale reply). Do
 affect the current app, since every real navigation only ever calls `load()` once per
 page visit — but worth hardening before this matters, e.g. if a future page adds a
 manual refresh button someone could double-tap.
+
+## M6: calendar view
+
+There's no JSON `/calendar` endpoint on the backend — only the HTML page. Rather than
+grow the backend's API surface for one screen, `src/models/calendar_model.py` composes
+it client-side from endpoints that already exist and are already tested:
+`CalendarMoviesModel` (GET `/movies`, filtered to `has_file=false`) and
+`CalendarEpisodesModel` — the more interesting one, a genuine fan-out/fan-in: GET
+`/series` for the list, then one GET `/series/{id}/episodes` per series fired
+concurrently, a pending-counter to know when they've all landed, then one combined,
+`air_date`-sorted result. `CalendarPage.qml` uses two `Repeater`s in a plain
+`ColumnLayout` rather than `ListView`s — no `ListView.header` involved at all here, so
+none of the M3 id-scoping bug's precondition even applies to this page by construction.
+
+Verified against real data: a missing movie and 4 missing episodes across 2 seasons
+came back correctly aggregated and sorted; forcing a real network error (unreachable
+URL, same technique as M5) confirmed the error-handling path works too.
+
+**Testing-process gap found while running the full regression suite this time, worth
+fixing eventually**: every `check_*_model.py`/`check_*_page_qml.py` script assumes a
+*specific* pre-seeded fixture state (an indexer with id 1, a download already grabbed,
+etc.) rather than seeding its own. Running the full suite against a freshly-seeded dev
+instance that only had M6's fixtures (a movie, a series) produced several failures that
+looked alarming but were just missing fixtures, not regressions — confirmed by
+re-seeding the missing pieces and re-running. Fine for now since these are run
+individually by hand as each milestone lands, not as automated CI, but if this project
+ever gets a CI pipeline these will need to become self-seeding (or share one setup
+script) rather than depending on accumulated hand-run `curl` state.

@@ -1,37 +1,32 @@
 # Status
 
 ## Last completed
-M5: TV library. `SeriesListModel`/`SeriesSearchResultsModel`/`EpisodesModel` +
-`SeriesPage.qml`/`EpisodesPage.qml` (season-grouped via `ListView.section`).
-Generalized `CandidatesModel`/`CandidatesPage.qml` to serve both movies and episodes
-(one `resource` param, one `candidatesSource` override) rather than duplicating the
-whole page — verified both variants load real, independent data correctly. Two more
-test-design bugs caught while building this (a backend endpoint that doesn't 404 on a
-bad id, and a property-seeding race in the test harness itself) — full story in
-ROADMAP.md's "M5" section. Before that: M4 (downloads), M3 (candidates/grab + the
-id-scoping bug fix), M2, the design system, M0/M1, and repo branding.
+M6: calendar view. `CalendarMoviesModel`/`CalendarEpisodesModel` compose the view
+client-side from `/movies` and `/series/{id}/episodes` (no `/calendar` JSON endpoint
+exists on the backend) — the episodes model does a real fan-out/fan-in over N series'
+worth of requests. `CalendarPage.qml` uses plain `Repeater`s in a `ColumnLayout`, no
+`ListView.header` involved, so the M3 scoping bug's precondition doesn't even apply
+here. Verified against real aggregated, sorted data plus a forced real network error.
+Also surfaced (and worked around) a testing-process gap: the regression scripts assume
+shared pre-seeded fixture state rather than being self-contained — noted in
+ROADMAP.md's M6 section for whenever this gets a real CI pipeline. Before that: M5 (TV
+library + generalized candidates), M4, M3 (+ the id-scoping bug fix), M2, the design
+system, M0/M1, and repo branding.
 
 ## Currently working on
-Nothing in progress — M5 is finished, tested for real, committed, and pushed.
+Nothing in progress — M6 is finished, tested for real, committed, and pushed.
 
 ## Next steps
-- **M6** (next milestone): calendar view — missing movies + upcoming/missing episodes,
-  mirrors the backend's `/calendar`.
-- **M7** after that: settings screen. The backend's JSON API side
-  (`GET/POST /api/settings`) is already done (see the-den's ROADMAP.md) — this is
-  purely client-side QML/model work now.
-- **M8** after that: Flatpak packaging (`org.kde.Platform`, `flatpak-builder`,
-  verified with a real build+run) — this is the one the user actually needs, to pull
-  the client into the main HoltOS distro.
-- Consider whether the earlier `check_*_page_qml.py` scripts should switch to
-  `engine.setInitialProperties()` before `load()` instead of `root.setProperty()`
-  after — see M5's note in ROADMAP.md for why this matters.
+- **M7** (next milestone): settings screen. Backend JSON API side is already done
+  (`GET/POST /api/settings`, see the-den's ROADMAP.md) — purely client QML/model work.
+- **M8** after that: Flatpak packaging (`org.kde.Platform`, `flatpak-builder`, verified
+  with a real build+run) — the one that actually matters for pulling this into the
+  main HoltOS distro, per the user's stated goal.
 - Known backend gaps (not fixed here, belong in the-den): `tmdb.search_movie()` 500s
   on a bad key; `GET /series/{id}/episodes` doesn't 404 on a nonexistent series id.
 - Known client-side gap: no `QAbstractListModel` subclass guards against out-of-order
-  replies from rapid repeated `load()`/`refresh()` calls. Not an issue today (every
-  real navigation calls `load()` once), but worth hardening eventually.
+  replies from rapid repeated `load()`/`refresh()` calls.
+- Known testing-process gap: regression scripts assume shared pre-seeded fixtures
+  rather than self-seeding (see M6 in ROADMAP.md).
 - Still no real visual look at the app on an actual screen (no VM/display this
-  session). Headless tests cover network/data correctness thoroughly — the remaining
-  gap is purely visual/layout polish, which M8's Flatpak build (run on the real distro)
-  should finally let someone check.
+  session). M8's Flatpak build, run on the real distro, should finally allow that.
