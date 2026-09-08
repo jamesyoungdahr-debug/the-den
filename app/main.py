@@ -2,8 +2,10 @@ from fastapi import FastAPI
 from sqlalchemy import text
 
 from app.db import engine
+from app.routers import indexers
 
 app = FastAPI(title="The Den")
+app.include_router(indexers.router)
 
 
 @app.get("/health")
