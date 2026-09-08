@@ -40,6 +40,12 @@ Kirigami.ApplicationWindow {
                 text: apiClient.statusText
             }
 
+            Controls.Button {
+                text: "Indexers"
+                enabled: apiClient.connected
+                onClicked: root.pageStack.push(Qt.resolvedUrl("IndexersPage.qml"))
+            }
+
             Item { Layout.fillHeight: true }
         }
     }

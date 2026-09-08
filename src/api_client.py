@@ -7,6 +7,7 @@ class ApiClient(QObject):
     Network calls go through QNetworkAccessManager (Qt's own async HTTP client)
     so they never block the UI thread — no extra Python HTTP library needed."""
 
+    baseUrlChanged = Signal()
     connectedChanged = Signal()
     statusTextChanged = Signal()
 
@@ -21,9 +22,11 @@ class ApiClient(QObject):
         return self._base_url
 
     def _set_base_url(self, value: str) -> None:
-        self._base_url = value
+        if value != self._base_url:
+            self._base_url = value
+            self.baseUrlChanged.emit()
 
-    baseUrl = Property(str, _get_base_url, _set_base_url)
+    baseUrl = Property(str, _get_base_url, _set_base_url, notify=baseUrlChanged)
 
     def _get_connected(self) -> bool:
         return self._connected
