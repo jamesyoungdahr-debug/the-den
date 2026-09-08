@@ -16,7 +16,7 @@ Deploy target: native systemd service on Arch Linux (no Docker).
 - [x] M5 — TV library (Sonarr core): series/season/episode via TMDB (not TVDB, see notes)
 - [x] M6 — TV search/grab/import: reuse M3/M4, SxxEyy in the search query
 - [x] M7 — Scheduler/RSS automation: background auto-grab on a timer
-- [ ] M8 — Notifications + calendar
+- [x] M8 — Notifications + calendar
 - [ ] M9 — Distro packaging: systemd unit, config conventions, PKGBUILD
 
 ## Notes

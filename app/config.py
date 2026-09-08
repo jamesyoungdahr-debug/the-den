@@ -11,3 +11,6 @@ MOVIES_ROOT = os.environ.get("MOVIES_ROOT", "./library/movies")
 TV_ROOT = os.environ.get("TV_ROOT", "./library/tv")
 
 AUTOMATION_INTERVAL_SECONDS = int(os.environ.get("AUTOMATION_INTERVAL_SECONDS", "900"))
+
+# A Discord "Webhook URL" from a channel's Integrations settings. Left blank, notifications are a no-op.
+DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "")

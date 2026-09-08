@@ -257,3 +257,27 @@ async def ui_check_download(download_id: int, db: Session = Depends(get_db)):
     except Exception as exc:
         raise HTTPException(502, f"Failed to reach download client: {exc}")
     return RedirectResponse("/ui/downloads", status_code=303)
+
+
+# --- Calendar -----------------------------------------------------------------
+
+@router.get("/calendar", response_class=HTMLResponse)
+def calendar(request: Request, db: Session = Depends(get_db)):
+    missing_movies = db.query(Movie).filter(Movie.has_file == False).all()  # noqa: E712
+
+    missing_episodes = []
+    for episode in db.query(Episode).filter(Episode.has_file == False).order_by(Episode.air_date).all():
+        series = db.get(Series, episode.series_id)
+        missing_episodes.append(
+            {
+                "air_date": episode.air_date,
+                "series_title": series.title,
+                "season_number": episode.season_number,
+                "episode_number": episode.episode_number,
+                "title": episode.title,
+            }
+        )
+    return templates.TemplateResponse(
+        "calendar.html",
+        {"request": request, "missing_movies": missing_movies, "missing_episodes": missing_episodes},
+    )

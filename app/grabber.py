@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 
 from app import qbittorrent
 from app.models import DownloadRecord, Episode, Movie
+from app.notifier import notify
 
 
 async def grab_movie(db: Session, movie: Movie, download_url: str, release_title: str) -> DownloadRecord:
@@ -14,6 +15,7 @@ async def grab_movie(db: Session, movie: Movie, download_url: str, release_title
     db.add(record)
     db.commit()
     db.refresh(record)
+    await notify(f"Grabbed **{movie.title} ({movie.year})** — {release_title}")
     return record
 
 
@@ -27,4 +29,5 @@ async def grab_episode(db: Session, episode: Episode, download_url: str, release
     db.add(record)
     db.commit()
     db.refresh(record)
+    await notify(f"Grabbed **S{episode.season_number:02d}E{episode.episode_number:02d}** — {release_title}")
     return record

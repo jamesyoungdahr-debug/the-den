@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 
 from app import importer, qbittorrent
 from app.models import DownloadRecord, Episode, Movie, Series
+from app.notifier import notify
 
 
 async def check_and_import(db: Session, record: DownloadRecord) -> None:
@@ -27,6 +28,8 @@ async def check_and_import(db: Session, record: DownloadRecord) -> None:
             if imported:
                 episode.has_file = True
         record.status = "imported" if imported else "completed"
+        if imported:
+            await notify(f"Imported: {record.release_title}")
     else:
         record.status = "downloading"
 
