@@ -32,7 +32,8 @@ async def index(request: Request, q: str | None = None, db: Session = Depends(ge
         gathered.sort(key=lambda r: r.seeders or 0, reverse=True)
         results = gathered
     return templates.TemplateResponse(
-        "index.html", {"request": request, "indexers": indexers, "query": q, "results": results}
+        "index.html",
+        {"request": request, "indexers": indexers, "query": q, "results": results, "active_nav": "search"},
     )
 
 
@@ -65,7 +66,8 @@ async def library(request: Request, q: str | None = None, db: Session = Depends(
     movies = db.query(Movie).all()
     candidates = await tmdb.search_movie(q, settings_module.effective(db).tmdb_api_key) if q else None
     return templates.TemplateResponse(
-        "library.html", {"request": request, "movies": movies, "query": q, "candidates": candidates}
+        "library.html",
+        {"request": request, "movies": movies, "query": q, "candidates": candidates, "active_nav": "movies"},
     )
 
 
@@ -116,6 +118,7 @@ async def ui_movie_candidates(movie_id: int, request: Request, db: Session = Dep
             "heading": f"{movie.title} ({movie.year})",
             "grab_action": f"/ui/movies/{movie.id}/grab",
             "candidates": candidates,
+            "active_nav": "movies",
         },
     )
 
@@ -148,7 +151,8 @@ async def tv_library(request: Request, q: str | None = None, db: Session = Depen
         rows.append({"series": s, "total": len(episodes), "have": sum(1 for e in episodes if e.has_file)})
     candidates = await tvmaze.search_tv(q) if q else None
     return templates.TemplateResponse(
-        "tv.html", {"request": request, "series": rows, "query": q, "candidates": candidates}
+        "tv.html",
+        {"request": request, "series": rows, "query": q, "candidates": candidates, "active_nav": "tv"},
     )
 
 
@@ -200,7 +204,8 @@ def ui_series_detail(series_id: int, request: Request, db: Session = Depends(get
         .all()
     )
     return templates.TemplateResponse(
-        "series_detail.html", {"request": request, "series": series, "episodes": episodes}
+        "series_detail.html",
+        {"request": request, "series": series, "episodes": episodes, "active_nav": "tv"}
     )
 
 
@@ -220,6 +225,7 @@ async def ui_episode_candidates(episode_id: int, request: Request, db: Session =
             "heading": f"{series.title} S{episode.season_number:02d}E{episode.episode_number:02d}",
             "grab_action": f"/ui/episodes/{episode.id}/grab",
             "candidates": candidates,
+            "active_nav": "tv",
         },
     )
 
@@ -246,7 +252,9 @@ async def ui_grab_episode(
 @router.get("/ui/downloads", response_class=HTMLResponse)
 def ui_downloads(request: Request, db: Session = Depends(get_db)):
     downloads = db.query(DownloadRecord).all()
-    return templates.TemplateResponse("downloads.html", {"request": request, "downloads": downloads})
+    return templates.TemplateResponse(
+        "downloads.html", {"request": request, "downloads": downloads, "active_nav": "downloads"}
+    )
 
 
 @router.post("/ui/downloads/{download_id}/check")
@@ -281,7 +289,12 @@ def calendar(request: Request, db: Session = Depends(get_db)):
         )
     return templates.TemplateResponse(
         "calendar.html",
-        {"request": request, "missing_movies": missing_movies, "missing_episodes": missing_episodes},
+        {
+            "request": request,
+            "missing_movies": missing_movies,
+            "missing_episodes": missing_episodes,
+            "active_nav": "calendar",
+        },
     )
 
 
@@ -299,6 +312,7 @@ def ui_settings(request: Request, db: Session = Depends(get_db)):
             "has_tmdb_api_key": bool(row.tmdb_api_key),
             "has_qbit_password": bool(row.qbit_password),
             "has_discord_webhook": bool(row.discord_webhook_url),
+            "active_nav": "settings",
         },
     )
 

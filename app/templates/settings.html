@@ -1,47 +1,52 @@
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>The Den — Settings</title>
-  <style>
-    body { font-family: sans-serif; max-width: 700px; margin: 2rem auto; }
-    label { display: block; margin-top: 1rem; font-weight: bold; }
-    input { width: 100%; padding: 4px; box-sizing: border-box; }
-    .hint { font-weight: normal; font-size: 12px; color: #888; }
-    button { margin-top: 1.5rem; }
-  </style>
-</head>
-<body>
-  <nav><a href="/">Indexers &amp; Search</a> <a href="/library">Movie Library</a> <a href="/tv">TV Library</a> <a href="/ui/downloads">Downloads</a> <a href="/calendar">Calendar</a> <a href="/ui/settings">Settings</a></nav>
-  <h1>Settings</h1>
-  <p>Anything left blank here falls back to the matching environment variable (see <code>.env.example</code>), or the app's built-in default. Secret fields never show their current value — leave them blank to keep what's already set.</p>
+{% extends "base.html" %}
+{% block title_suffix %} — Settings{% endblock %}
+{% block content %}
+  <h1 class="holt-page-title">Settings</h1>
+  <p class="holt-body" style="max-width: 520px; margin-bottom: var(--holt-space-4);">Anything left blank here falls back to the matching environment variable (see <code>.env.example</code>), or the app's built-in default. Secret fields never show their current value — leave them blank to keep what's already set.</p>
 
-  <form method="post" action="/ui/settings">
-    <label>TMDB API key <span class="hint">(secret — {{ "currently set" if has_tmdb_api_key else "not set" }})</span></label>
-    <input type="password" name="tmdb_api_key" placeholder="leave blank to keep current value" autocomplete="off">
+  <div class="holt-panel" style="max-width: 480px;">
+    <form method="post" action="/ui/settings">
+      <div class="holt-field">
+        <label>TMDB API key {{ "· currently set" if has_tmdb_api_key else "· not set" }}</label>
+        <input type="password" name="tmdb_api_key" placeholder="leave blank to keep current value" autocomplete="off">
+      </div>
 
-    <label>qBittorrent URL</label>
-    <input type="text" name="qbit_url" value="{{ s.qbit_url }}">
+      <div class="holt-field">
+        <label>qBittorrent URL</label>
+        <input type="text" name="qbit_url" value="{{ s.qbit_url }}">
+      </div>
 
-    <label>qBittorrent username</label>
-    <input type="text" name="qbit_username" value="{{ s.qbit_username }}">
+      <div class="holt-field">
+        <label>qBittorrent username</label>
+        <input type="text" name="qbit_username" value="{{ s.qbit_username }}">
+      </div>
 
-    <label>qBittorrent password <span class="hint">(secret — {{ "currently set" if has_qbit_password else "not set" }})</span></label>
-    <input type="password" name="qbit_password" placeholder="leave blank to keep current value" autocomplete="off">
+      <div class="holt-field">
+        <label>qBittorrent password {{ "· currently set" if has_qbit_password else "· not set" }}</label>
+        <input type="password" name="qbit_password" placeholder="leave blank to keep current value" autocomplete="off">
+      </div>
 
-    <label>Movies library folder</label>
-    <input type="text" name="movies_root" value="{{ s.movies_root }}">
+      <div class="holt-field">
+        <label>Movies library folder</label>
+        <input type="text" name="movies_root" value="{{ s.movies_root }}">
+      </div>
 
-    <label>TV library folder</label>
-    <input type="text" name="tv_root" value="{{ s.tv_root }}">
+      <div class="holt-field">
+        <label>TV library folder</label>
+        <input type="text" name="tv_root" value="{{ s.tv_root }}">
+      </div>
 
-    <label>Automation interval (seconds)</label>
-    <input type="number" name="automation_interval_seconds" value="{{ s.automation_interval_seconds }}" min="60">
+      <div class="holt-field">
+        <label>Automation interval (seconds)</label>
+        <input type="number" name="automation_interval_seconds" value="{{ s.automation_interval_seconds }}" min="60">
+      </div>
 
-    <label>Discord webhook URL <span class="hint">(secret, optional — {{ "currently set" if has_discord_webhook else "not set" }})</span></label>
-    <input type="password" name="discord_webhook_url" placeholder="leave blank to keep current value" autocomplete="off">
+      <div class="holt-field">
+        <label>Discord webhook URL {{ "· currently set" if has_discord_webhook else "· not set (optional)" }}</label>
+        <input type="password" name="discord_webhook_url" placeholder="leave blank to keep current value" autocomplete="off">
+      </div>
 
-    <button type="submit">Save</button>
-  </form>
-</body>
-</html>
+      <button type="submit" class="holt-btn holt-btn-primary">Save</button>
+    </form>
+  </div>
+{% endblock %}

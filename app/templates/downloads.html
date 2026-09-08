@@ -1,35 +1,26 @@
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>The Den — Downloads</title>
-  <style>
-    body { font-family: sans-serif; max-width: 900px; margin: 2rem auto; }
-    table { border-collapse: collapse; width: 100%; }
-    th, td { border: 1px solid #ccc; padding: 4px 8px; text-align: left; font-size: 14px; }
-  </style>
-</head>
-<body>
-  <nav><a href="/">Indexers &amp; Search</a> <a href="/library">Movie Library</a> <a href="/tv">TV Library</a> <a href="/ui/downloads">Downloads</a> <a href="/calendar">Calendar</a> <a href="/ui/settings">Settings</a></nav>
-  <h1>Downloads</h1>
-  <table>
-    <tr><th>Release</th><th>Status</th><th></th></tr>
-    {% for d in downloads %}
-    <tr>
-      <td>{{ d.release_title }}</td>
-      <td>{{ d.status }}</td>
-      <td>
+{% extends "base.html" %}
+{% block title_suffix %} — Downloads{% endblock %}
+{% block content %}
+  <h1 class="holt-page-title">Downloads</h1>
+
+  <div class="holt-panel">
+    <div class="holt-row-list">
+      {% set tone_map = {"queued": "working", "downloading": "working", "completed": "idle", "imported": "healthy", "failed": "warning"} %}
+      {% for d in downloads %}
+      <div class="holt-row">
+        <div class="holt-row-main">
+          <div class="holt-row-title">{{ d.release_title }}</div>
+        </div>
+        <span class="holt-pill holt-pill-{{ tone_map.get(d.status, 'idle') }}"><span class="dot"></span>{{ d.status }}</span>
         {% if d.status != "imported" %}
         <form method="post" action="/ui/downloads/{{ d.id }}/check">
-          <button type="submit">Check status</button>
+          <button type="submit" class="holt-btn holt-btn-quiet holt-btn-sm">check status</button>
         </form>
         {% endif %}
-      </td>
-    </tr>
-    {% endfor %}
-    {% if not downloads %}
-    <tr><td colspan="3">No downloads yet.</td></tr>
-    {% endif %}
-  </table>
-</body>
-</html>
+      </div>
+      {% else %}
+      <div class="holt-row-empty">No downloads yet.</div>
+      {% endfor %}
+    </div>
+  </div>
+{% endblock %}

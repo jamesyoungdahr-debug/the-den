@@ -1,0 +1,29 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>The Den{% block title_suffix %}{% endblock %}</title>
+  <link rel="stylesheet" href="/static/holt-tokens.css">
+  <link rel="stylesheet" href="/static/den.css">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  <header class="den-header">
+    <a class="den-lockup" href="/">
+      <span class="den-ringmark"></span>
+      <span class="den-wordmark">The Den</span>
+    </a>
+    <nav class="den-nav">
+      <a href="/" class="{{ 'active' if active_nav == 'search' else '' }}">Indexers &amp; Search</a>
+      <a href="/library" class="{{ 'active' if active_nav == 'movies' else '' }}">Movies</a>
+      <a href="/tv" class="{{ 'active' if active_nav == 'tv' else '' }}">TV</a>
+      <a href="/ui/downloads" class="{{ 'active' if active_nav == 'downloads' else '' }}">Downloads</a>
+      <a href="/calendar" class="{{ 'active' if active_nav == 'calendar' else '' }}">Calendar</a>
+      <a href="/ui/settings" class="{{ 'active' if active_nav == 'settings' else '' }}">Settings</a>
+    </nav>
+  </header>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

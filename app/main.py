@@ -1,4 +1,5 @@
 from fastapi import Depends, FastAPI
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -9,6 +10,7 @@ from app.models import QualityProfile
 from app.routers import downloads, indexers, movies, search, series, ui
 
 app = FastAPI(title="The Den")
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
 app.include_router(indexers.router)
 app.include_router(search.router)
 app.include_router(movies.router)

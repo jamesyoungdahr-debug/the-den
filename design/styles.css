@@ -1,0 +1,56 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root{
+  /* Core surfaces — HoltOS is a dark system first */
+  --holt-deep:#0D0B12;
+  --holt-surface:#171423;
+  --holt-raised:#1D1927;
+  --holt-hairline:rgba(255,255,255,.09);
+  --holt-hairline-strong:rgba(255,255,255,.15);
+
+  /* Ink */
+  --holt-ink:#FFFFFF;
+  --holt-ink-70:rgba(255,255,255,.70);
+  --holt-ink-55:rgba(255,255,255,.55);
+  --holt-ink-42:rgba(255,255,255,.42);
+  --holt-ink-28:rgba(255,255,255,.28);
+
+  /* Identity */
+  --holt-current:#B14DFF;      /* purple carries identity and does the shouting */
+  --holt-current-deep:#8F2FE0; /* shading only — ears, brow band */
+  --holt-lilac:#F4EBFF;        /* cheek pads, whiskers, light ground */
+
+  /* Semantic — teal ONLY ever means online / healthy */
+  --holt-healthy:#28E0C8;
+  --holt-warning:#FFB84D;
+
+  /* Type */
+  --holt-font-core:'Nunito',system-ui,-apple-system,sans-serif;
+  --holt-font-mono:'JetBrains Mono',ui-monospace,SFMono-Regular,monospace;
+
+  /* Geometry */
+  --holt-radius-sm:8px;
+  --holt-radius-md:10px;
+  --holt-radius-lg:14px;   /* the squircle radius of every service icon */
+  --holt-radius-pill:999px;
+  --holt-shadow:0 2px 14px rgba(0,0,0,.28);
+
+  /* Rhythm */
+  --holt-space-1:6px;
+  --holt-space-2:10px;
+  --holt-space-3:16px;
+  --holt-space-4:22px;
+  --holt-space-5:32px;
+  --holt-space-6:48px;
+}
+
+body{margin:0;background:var(--holt-deep);color:var(--holt-ink);font-family:var(--holt-font-core);-webkit-font-smoothing:antialiased}
+a{color:var(--holt-current);text-decoration:none}
+a:hover{color:#C77DFF}
+
+/* Type roles */
+.holt-display{font-family:var(--holt-font-core);font-weight:900;letter-spacing:-2.6px;line-height:.95}
+.holt-title{font-family:var(--holt-font-core);font-weight:800;letter-spacing:-1.2px;line-height:1.05}
+.holt-body{font-family:var(--holt-font-core);font-weight:400;font-size:15px;line-height:1.6;color:var(--holt-ink-55);text-wrap:pretty}
+.holt-eyebrow{font-family:var(--holt-font-mono);font-size:10.5px;letter-spacing:2.2px;color:var(--holt-healthy);text-transform:uppercase}
+.holt-meta{font-family:var(--holt-font-mono);font-size:10.5px;line-height:1.7;color:var(--holt-ink-42)}

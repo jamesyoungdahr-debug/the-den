@@ -33,10 +33,17 @@ systemctl enable --now the-den
 
 The service binds to `127.0.0.1:8686` only — **there's no login/auth layer**, so put a
 reverse proxy in front of it (or accept LAN-only access via SSH tunnel/VPN) before
-exposing it beyond localhost. This packaging has been written carefully against Arch
-conventions but has **not been run through an actual `makepkg -si` + `pacman -U`** yet
-(built from a Windows dev machine) — treat it as a solid first draft to test and fix up
-on real hardware, not as verified.
+exposing it beyond localhost. This packaging has been run for real through
+`makepkg -si` + `pacman -U` + `systemctl enable --now` on genuine Arch Linux (WSL2, not
+literally CachyOS — see ROADMAP.md for details) and came up cleanly.
+
+## Design
+
+The UI follows the HoltOS design system (`design/` in this repo — colors, type,
+component specs) by hand-translating its React/JSX components into plain CSS classes in
+`app/static/den.css`, since this app deliberately has no JS framework (keeps it working
+offline and easy to bundle into the distro). See `design/readme.md` for the source
+system and `design/docs/brand-cheat-sheet.md` for the palette/type quick reference.
 
 ## What's real vs. what needs your input
 

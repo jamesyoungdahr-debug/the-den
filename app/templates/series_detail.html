@@ -1,28 +1,25 @@
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>The Den — {{ series.title }}</title>
-  <style>
-    body { font-family: sans-serif; max-width: 900px; margin: 2rem auto; }
-    table { border-collapse: collapse; width: 100%; }
-    th, td { border: 1px solid #ccc; padding: 4px 8px; text-align: left; font-size: 14px; }
-  </style>
-</head>
-<body>
-  <nav><a href="/">Indexers &amp; Search</a> <a href="/library">Movie Library</a> <a href="/tv">TV Library</a> <a href="/ui/downloads">Downloads</a> <a href="/calendar">Calendar</a> <a href="/ui/settings">Settings</a></nav>
-  <h1>{{ series.title }} ({{ series.year }})</h1>
-  <table>
-    <tr><th>Season</th><th>Episode</th><th>Title</th><th>Status</th><th></th></tr>
-    {% for e in episodes %}
-    <tr>
-      <td>{{ e.season_number }}</td>
-      <td>{{ e.episode_number }}</td>
-      <td>{{ e.title or "-" }}</td>
-      <td>{{ "have" if e.has_file else "missing" }}</td>
-      <td>{% if not e.has_file %}<a href="/ui/episodes/{{ e.id }}/candidates">find releases</a>{% endif %}</td>
-    </tr>
-    {% endfor %}
-  </table>
-</body>
-</html>
+{% extends "base.html" %}
+{% block title_suffix %} — {{ series.title }}{% endblock %}
+{% block content %}
+  <h1 class="holt-page-title">{{ series.title }} <span style="font-family: var(--holt-font-mono); font-size: 15px; color: var(--holt-ink-42); font-weight: 400; letter-spacing: 0;">({{ series.year }})</span></h1>
+
+  <div class="holt-panel">
+    <div class="holt-row-list">
+      {% for e in episodes %}
+      {% if loop.first or e.season_number != loop.previtem.season_number %}
+      <div class="holt-eyebrow">Season {{ "%02d"|format(e.season_number) }}</div>
+      {% endif %}
+      <div class="holt-row">
+        <div class="holt-row-main">
+          <div class="holt-row-title">E{{ "%02d"|format(e.episode_number) }} — {{ e.title or "Untitled" }}</div>
+          {% if e.air_date %}<div class="holt-row-meta">{{ e.air_date }}</div>{% endif %}
+        </div>
+        <span class="holt-pill {{ 'holt-pill-healthy' if e.has_file else 'holt-pill-idle' }}"><span class="dot"></span>{{ "have" if e.has_file else "missing" }}</span>
+        {% if not e.has_file %}<a href="/ui/episodes/{{ e.id }}/candidates" class="holt-btn holt-btn-quiet holt-btn-sm">find releases</a>{% endif %}
+      </div>
+      {% else %}
+      <div class="holt-row-empty">No episodes found.</div>
+      {% endfor %}
+    </div>
+  </div>
+{% endblock %}

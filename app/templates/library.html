@@ -1,63 +1,73 @@
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>The Den — Library</title>
-  <style>
-    body { font-family: sans-serif; max-width: 900px; margin: 2rem auto; }
-    table { border-collapse: collapse; width: 100%; margin-bottom: 1.5rem; }
-    th, td { border: 1px solid #ccc; padding: 4px 8px; text-align: left; font-size: 14px; }
-    nav a { margin-right: 1rem; }
-    form.inline { display: inline; }
-  </style>
-</head>
-<body>
-  <nav><a href="/">Indexers &amp; Search</a> <a href="/library">Movie Library</a> <a href="/tv">TV Library</a> <a href="/ui/downloads">Downloads</a> <a href="/calendar">Calendar</a> <a href="/ui/settings">Settings</a></nav>
-  <h1>Movie Library</h1>
+{% extends "base.html" %}
+{% block content %}
+  <h1 class="holt-page-title">Movie Library</h1>
 
-  <table>
-    <tr><th>Title</th><th>Year</th><th>Status</th><th></th></tr>
-    {% for m in movies %}
-    <tr>
-      <td>{{ m.title }}</td>
-      <td>{{ m.year or "-" }}</td>
-      <td>{{ "have" if m.has_file else "missing" }}</td>
-      <td>
-        {% if not m.has_file %}<a href="/ui/movies/{{ m.id }}/candidates">find releases</a>&nbsp;{% endif %}
-        <form class="inline" method="post" action="/ui/movies/{{ m.id }}/delete">
-          <button type="submit">remove</button>
-        </form>
-      </td>
-    </tr>
-    {% endfor %}
-  </table>
+  <div class="holt-panel">
+    <div class="holt-panel-head">
+      <div class="holt-eyebrow">Library</div>
+      <div class="holt-meta">{{ movies|length }} movies</div>
+    </div>
+    <div class="holt-tile-grid">
+      {% for m in movies %}
+      <div class="holt-tile">
+        <div class="holt-tile-poster {{ 'healthy' if m.has_file else '' }}">
+          <div class="holt-tile-poster-label">poster art</div>
+        </div>
+        <div class="holt-tile-title">{{ m.title }}</div>
+        <div class="holt-tile-meta">{{ m.year or "-" }}</div>
+        <div style="margin-top:8px;"><span class="holt-pill {{ 'holt-pill-healthy' if m.has_file else 'holt-pill-idle' }}"><span class="dot"></span>{{ "have" if m.has_file else "missing" }}</span></div>
+        <div style="margin-top:8px; display:flex; gap:6px; flex-wrap:wrap;">
+          {% if not m.has_file %}<a href="/ui/movies/{{ m.id }}/candidates" class="holt-btn holt-btn-quiet holt-btn-sm">find releases</a>{% endif %}
+          <form method="post" action="/ui/movies/{{ m.id }}/delete">
+            <button type="submit" class="holt-btn holt-btn-quiet holt-btn-sm">remove</button>
+          </form>
+        </div>
+      </div>
+      {% else %}
+      <div class="holt-row-empty">No movies yet — search below to add one.</div>
+      {% endfor %}
+    </div>
+  </div>
 
-  <h3>Add a movie</h3>
-  <form method="get" action="/library">
-    <input name="q" placeholder="Search TMDB" value="{{ query or '' }}">
-    <button type="submit">Search</button>
-  </form>
+  <h2 class="holt-section-title">Add a movie</h2>
+  <div class="holt-panel">
+    <form method="get" action="/library">
+      <div class="holt-form-row">
+        <div class="holt-field">
+          <label>Search TMDB</label>
+          <input name="q" placeholder="Movie title" value="{{ query or '' }}">
+        </div>
+        <button type="submit" class="holt-btn holt-btn-primary">Search</button>
+      </div>
+    </form>
+  </div>
 
   {% if candidates is not none %}
-  <table>
-    <tr><th>Title</th><th>Year</th><th></th></tr>
-    {% for c in candidates %}
-    <tr>
-      <td>{{ c.title }}</td>
-      <td>{{ c.year or "-" }}</td>
-      <td>
+  <div class="holt-panel">
+    <div class="holt-panel-head">
+      <div class="holt-eyebrow">Results</div>
+      <div class="holt-meta">{{ candidates|length }} found</div>
+    </div>
+    <div class="holt-row-list">
+      {% for c in candidates %}
+      <div class="holt-row">
+        <div class="holt-row-main">
+          <div class="holt-row-title">{{ c.title }}</div>
+          <div class="holt-row-meta">{{ c.year or "-" }}</div>
+        </div>
         <form method="post" action="/ui/movies">
           <input type="hidden" name="tmdb_id" value="{{ c.tmdb_id }}">
           <input type="hidden" name="title" value="{{ c.title }}">
           <input type="hidden" name="year" value="{{ c.year or '' }}">
           <input type="hidden" name="overview" value="{{ c.overview or '' }}">
           <input type="hidden" name="poster_path" value="{{ c.poster_path or '' }}">
-          <button type="submit">Add</button>
+          <button type="submit" class="holt-btn holt-btn-primary holt-btn-sm">Add</button>
         </form>
-      </td>
-    </tr>
-    {% endfor %}
-  </table>
+      </div>
+      {% else %}
+      <div class="holt-row-empty">No results.</div>
+      {% endfor %}
+    </div>
+  </div>
   {% endif %}
-</body>
-</html>
+{% endblock %}
