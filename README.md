@@ -1,8 +1,13 @@
-# The Den Client
+<p align="center">
+  <img src="assets/logo.svg" width="72" alt="The Den">
+</p>
+<h1 align="center">The Den Client</h1>
+<p align="center"><code>PART OF HOLTOS</code></p>
 
 A native KDE desktop app (Qt6 + QML + Kirigami) for [The Den](
 https://github.com/jamesyoungdahr-debug/the-den) — talks to its JSON API instead of
-using a browser. See [ROADMAP.md](ROADMAP.md) for how it's being built.
+using a browser. See [ROADMAP.md](ROADMAP.md) for how it's being built and
+[STATUS.md](STATUS.md) for what's done/next right now.
 
 ## Running it for development
 
