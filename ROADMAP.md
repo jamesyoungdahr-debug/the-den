@@ -64,6 +64,17 @@ never echo their stored value back into the page; leaving them blank on save kee
 existing value. Changing the automation interval reschedules the running APScheduler
 job immediately via `scheduler.reschedule()`, no restart needed.
 
+## Post-redesign addition: JSON settings API
+
+Added `app/routers/api_settings.py` — `GET`/`POST /api/settings`, the same
+get-effective/save logic as the `/ui/settings` HTML form (`app/settings.py`), just as
+JSON instead of a form post. Needed by the-den-client's future M7 (its Settings screen
+can't POST an HTML form). Secrets follow the same rule as the web UI: `GET` never
+returns the stored value, only a `has_*` boolean; `POST` only overwrites a secret field
+when a non-empty value is actually supplied. Verified live: added a real key/URL via
+`POST`, confirmed `has_tmdb_api_key` flipped true and the key itself never appeared in
+any response, confirmed the change persisted on a follow-up `GET`.
+
 ## All milestones done — what's next is real-world shakedown, not new code
 
 The build is feature-complete per this roadmap. What's left is exercising it against

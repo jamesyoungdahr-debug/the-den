@@ -7,7 +7,7 @@ from app import automation, scheduler
 from app.db import SessionLocal, engine
 from app.deps import get_db
 from app.models import QualityProfile
-from app.routers import downloads, indexers, movies, search, series, ui
+from app.routers import api_settings, downloads, indexers, movies, search, series, ui
 
 app = FastAPI(title="The Den")
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
@@ -16,6 +16,7 @@ app.include_router(search.router)
 app.include_router(movies.router)
 app.include_router(series.router)
 app.include_router(downloads.router)
+app.include_router(api_settings.router)
 app.include_router(ui.router)
 
 
