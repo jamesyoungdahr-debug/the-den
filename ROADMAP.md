@@ -17,7 +17,7 @@ Built the same way as the backend: one milestone at a time, tested before moving
 - [x] M2 — Movie library: TMDB search, add, missing/have status
 - [x] M3 — Release browsing + grab: view scored candidates for a movie, grab the best
       (or a chosen) one
-- [ ] M4 — Downloads view: status list, manual "check now"
+- [x] M4 — Downloads view: status list, manual "check now"
 - [ ] M5 — TV library: series/episodes (mirrors backend M5/M6)
 - [ ] M6 — Calendar view
 - [ ] M7 — Settings: same fields as the backend's `/ui/settings`, via a JSON API — the
@@ -160,3 +160,25 @@ confirm a clean load with zero rows. Updated `check_indexers_page_qml.py` and
 `check_movies_page_qml.py` accordingly (they now trigger `testIndexer`/a duplicate-add
 error against real seeded data) alongside the new `check_candidates_model.py` and
 `check_candidates_page_qml.py`.
+
+## M4: downloads view
+
+`src/models/downloads_model.py` (`DownloadsModel`) — GET `/downloads`, POST
+`/downloads/{id}/check`. `DownloadsPage.qml` — status list with a `StatusPill` per row
+(same tone mapping as the web UI: queued/downloading→working, completed→idle,
+imported→healthy, failed→warning) and a "Check now" button, hidden once a download is
+`imported`.
+
+Applied the M3 lesson from the start this time: `Connections` nested inside the
+header's `ColumnLayout` alongside `statusBanner` (not a page-level sibling of the
+`ListView`), `ListView.view.width` on the delegate. Both tests seed real data and
+actually trigger both the success path (`check()` on a real in-flight download) and the
+error path (`check()` on a nonexistent id) before being treated as passing — not just a
+clean empty load. Zero new bugs found, which is itself a decent signal the M3 fixes and
+the updated testing approach are holding.
+
+Hit real dev-environment friction setting this up, worth remembering: chaining multiple
+backgrounded `nohup ... &` process starts across *separate* `wsl -d archlinux -- bash -c
+'...'` invocations doesn't reliably keep them alive — put all of them in *one* `bash -c`
+invocation (as done successfully throughout this project) or they can silently die when
+that particular `wsl.exe` call returns.

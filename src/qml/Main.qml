@@ -89,6 +89,11 @@ Kirigami.ApplicationWindow {
                     enabled: apiClient.connected
                     onClicked: root.pageStack.push(Qt.resolvedUrl("MoviesPage.qml"))
                 }
+                Controls.Button {
+                    text: "Downloads"
+                    enabled: apiClient.connected
+                    onClicked: root.pageStack.push(Qt.resolvedUrl("DownloadsPage.qml"))
+                }
             }
 
             Item { Layout.fillHeight: true }
