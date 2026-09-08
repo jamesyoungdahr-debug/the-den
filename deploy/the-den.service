@@ -1,0 +1,13 @@
+[Unit]
+Description=The Den
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/the-den
+ExecStart=/opt/the-den/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8686
+Restart=on-failure
+User=the-den
+
+[Install]
+WantedBy=multi-user.target
