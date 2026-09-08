@@ -22,9 +22,9 @@ Built the same way as the backend: one milestone at a time, tested before moving
 - [x] M7 — Settings: same fields as the backend's `/ui/settings`, via a JSON API — the
       backend side of this (`GET/POST /api/settings`) is already done, see the-den's
       ROADMAP.md
-- [ ] M8 — ~~Flatpak packaging~~ Abandoned mid-attempt — see the "M8" note below.
-      Packaging approach still undecided. All 7 feature milestones (M0–M7) are done
-      regardless of how this is eventually packaged.
+- [x] M8 — Native Arch package (`PKGBUILD`, `.desktop` entry, icon), matching
+      the-den's own packaging approach. Built, installed, and verified for real —
+      see the "M8" note below.
 
 ## Notes
 
@@ -313,3 +313,37 @@ tried in case Flatpak comes back up later:
 Packaging approach is an open question again. Native Arch package (matching how
 the-den's own `PKGBUILD` already works, and consistent with this being a HoltOS-only
 app) is one obvious alternative worth considering before trying Flatpak again.
+
+## M8, take two: native Arch package
+
+Went with the alternative floated above. `PKGBUILD` (same no-source-array,
+build-from-`$startdir` pattern as the-den's own), `deploy/the-den-client` (a launcher
+script installed to `/usr/bin/the-den-client` that sets `QT_QUICK_CONTROLS_STYLE`
+before running `main.py`), `deploy/the-den-client.desktop`, and `assets/logo.svg`
+installed as the app icon.
+
+Built and installed for real: `makepkg -si` on genuine Arch (the same WSL2 environment
+the-den's own packaging was verified on) — resolved `depends=('python' 'pyside6'
+'kirigami' 'qqc2-desktop-style')` correctly, installed cleanly, and the real installed
+`the-den-client` command (not just running from the source tree) boots successfully.
+
+**Still couldn't get a real on-screen look**, and it's worth being precise about why:
+this isn't the same "no VM/display" limitation named throughout M1–M7 — WSLg (WSL2's
+GUI passthrough) *did* work once, for M0's very first visual check, and its
+Wayland/X11 sockets exist in this environment. But every later attempt to actually
+connect to them from a non-interactive `wsl -d archlinux -u builder -- bash -c '...'`
+invocation — including a fresh `wsl --shutdown` restart specifically to try clearing
+this — got "Failed to create wl_display (Connection refused)" / "could not connect to
+display :0". WSLg's compositor appears to need a genuine interactive terminal session
+to actually come up, which this harness's scripted invocations don't provide. Real
+visual confirmation still needs either a genuinely interactive WSLg session or, more
+usefully, just running the built package on the actual HoltOS target hardware.
+
+**What's actually verified, twice over now**: the installed launcher runs cleanly
+under `QT_QPA_PLATFORM=offscreen` (the same headless-but-real technique used
+throughout M1–M7) — both `cd`-ing into `/opt/the-den-client/src` and running
+`main.py` directly, and running the real `the-den-client` command exactly as
+installed. Only output either way: a single benign `kf.iconthemes: Icon theme
+"breeze-internal" not found` warning, expected in this minimal environment and not
+expected to appear on a real KDE desktop where the Breeze icon theme is actually
+installed.
