@@ -1,5 +1,9 @@
-"""Force-compiles MoviesPage.qml against real MovieListModel/MovieSearchResultsModel +
-backend. Run under QT_QPA_PLATFORM=offscreen, no display needed.
+"""Force-compiles MoviesPage.qml against real models + backend, AND actually triggers
+an errorOccurred signal (adding a duplicate movie, assumed id=1/tmdb_id=27205 already
+seeded, which the backend rejects with 400) -- the earlier version of this test never
+exercised the Connections handlers that reference statusBanner by id, which is exactly
+what let the ListView.header id-scoping bug ship undetected. Run under
+QT_QPA_PLATFORM=offscreen, no display needed.
 """
 
 import sys
@@ -33,16 +37,25 @@ if not engine.rootObjects():
     print("FAIL: no root object created (compile/load error)")
     sys.exit(1)
 
-print(f"Loaded OK. QML warnings/errors: {errors or 'none'}")
+
+def trigger_error():
+    print("-- triggering movieModel.addMovie() with a duplicate tmdb_id to exercise onErrorOccurred --")
+    movie_model.addMovie(27205, "Inception", "2010", "", "")
 
 
 def finish():
-    if errors:
-        print(f"FAIL: {len(errors)} QML warning(s)/error(s)")
+    print(f"rowCount after load: {movie_model.rowCount()}")
+    if movie_model.rowCount() == 0:
+        print("FAIL: expected at least one real movie row to have loaded (delegate never instantiated)")
         sys.exit(1)
+    if errors:
+        print(f"FAIL: {len(errors)} QML warning(s)/error(s): {errors}")
+        sys.exit(1)
+    print("Loaded OK with real rows, error handler fired with no scoping errors.")
     print("PASS")
     app.quit()
 
 
-QTimer.singleShot(1500, finish)
+QTimer.singleShot(1000, trigger_error)
+QTimer.singleShot(2500, finish)
 sys.exit(app.exec())

@@ -9,27 +9,32 @@ Kirigami.ScrollablePage {
 
     Component.onCompleted: indexerModel.refresh()
 
-    Connections {
-        target: indexerModel
-        function onErrorOccurred(message) {
-            statusBanner.text = "Error: " + message
-            statusBanner.type = Kirigami.MessageType.Error
-            statusBanner.visible = true
-        }
-        function onTestResult(indexerId, ok, message) {
-            statusBanner.text = (ok ? "Test OK: " : "Test failed: ") + message
-            statusBanner.type = ok ? Kirigami.MessageType.Positive : Kirigami.MessageType.Warning
-            statusBanner.visible = true
-        }
-    }
-
     ListView {
         id: listView
         model: indexerModel
 
         header: ColumnLayout {
-            width: listView.width
+            width: ListView.view.width
             spacing: Kirigami.Units.largeSpacing
+
+            // Nested here (not as a page-level sibling of the ListView) because
+            // ListView.header is a Component-typed property: an inline item assigned
+            // to it gets implicitly wrapped in its own Component, which isolates its
+            // ids from the rest of the file. A Connections block outside couldn't see
+            // statusBanner by id -- this is the only scope it's actually visible in.
+            Connections {
+                target: indexerModel
+                function onErrorOccurred(message) {
+                    statusBanner.text = "Error: " + message
+                    statusBanner.type = Kirigami.MessageType.Error
+                    statusBanner.visible = true
+                }
+                function onTestResult(indexerId, ok, message) {
+                    statusBanner.text = (ok ? "Test OK: " : "Test failed: ") + message
+                    statusBanner.type = ok ? Kirigami.MessageType.Positive : Kirigami.MessageType.Warning
+                    statusBanner.visible = true
+                }
+            }
 
             Kirigami.InlineMessage {
                 id: statusBanner
@@ -75,7 +80,7 @@ Kirigami.ScrollablePage {
         }
 
         delegate: Kirigami.SwipeListItem {
-            width: listView.width
+            width: ListView.view.width
             contentItem: RowLayout {
                 spacing: Kirigami.Units.largeSpacing
 

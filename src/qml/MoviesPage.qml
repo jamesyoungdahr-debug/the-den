@@ -9,31 +9,35 @@ Kirigami.ScrollablePage {
 
     Component.onCompleted: movieModel.refresh()
 
-    Connections {
-        target: movieModel
-        function onErrorOccurred(message) {
-            statusBanner.text = "Error: " + message
-            statusBanner.type = Kirigami.MessageType.Error
-            statusBanner.visible = true
-        }
-    }
-
-    Connections {
-        target: movieSearchModel
-        function onErrorOccurred(message) {
-            statusBanner.text = "Search error: " + message
-            statusBanner.type = Kirigami.MessageType.Error
-            statusBanner.visible = true
-        }
-    }
-
     ListView {
         id: listView
         model: movieModel
 
         header: ColumnLayout {
-            width: listView.width
+            width: ListView.view.width
             spacing: Kirigami.Units.largeSpacing
+
+            // Nested here, not as a page-level sibling: ListView.header is
+            // Component-typed, so an inline item assigned to it gets implicitly
+            // wrapped in its own Component with its own id scope -- statusBanner
+            // is only visible to things declared inside that same wrapped scope.
+            Connections {
+                target: movieModel
+                function onErrorOccurred(message) {
+                    statusBanner.text = "Error: " + message
+                    statusBanner.type = Kirigami.MessageType.Error
+                    statusBanner.visible = true
+                }
+            }
+
+            Connections {
+                target: movieSearchModel
+                function onErrorOccurred(message) {
+                    statusBanner.text = "Search error: " + message
+                    statusBanner.type = Kirigami.MessageType.Error
+                    statusBanner.visible = true
+                }
+            }
 
             Kirigami.InlineMessage {
                 id: statusBanner
@@ -61,7 +65,7 @@ Kirigami.ScrollablePage {
                 id: searchRepeater
                 model: movieSearchModel
                 delegate: Kirigami.SwipeListItem {
-                    width: listView.width
+                    Layout.fillWidth: true
                     contentItem: RowLayout {
                         spacing: Kirigami.Units.largeSpacing
 
@@ -103,7 +107,7 @@ Kirigami.ScrollablePage {
         }
 
         delegate: Kirigami.SwipeListItem {
-            width: listView.width
+            width: ListView.view.width
             contentItem: RowLayout {
                 spacing: Kirigami.Units.largeSpacing
 
@@ -133,6 +137,12 @@ Kirigami.ScrollablePage {
                 }
             }
             actions: [
+                Kirigami.Action {
+                    text: "Find releases"
+                    visible: !hasFile
+                    onTriggered: applicationWindow().pageStack.push(
+                        Qt.resolvedUrl("CandidatesPage.qml"), { movieId: movieId, movieTitle: title })
+                },
                 Kirigami.Action { text: "Remove"; onTriggered: movieModel.deleteMovie(movieId) }
             ]
         }

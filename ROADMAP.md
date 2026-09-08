@@ -15,7 +15,7 @@ Built the same way as the backend: one milestone at a time, tested before moving
       connected/not-connected status
 - [x] M1 — Indexers: list/add/delete/test-connection (mirrors the backend's `/indexers`)
 - [x] M2 — Movie library: TMDB search, add, missing/have status
-- [ ] M3 — Release browsing + grab: view scored candidates for a movie, grab the best
+- [x] M3 — Release browsing + grab: view scored candidates for a movie, grab the best
       (or a chosen) one
 - [ ] M4 — Downloads view: status list, manual "check now"
 - [ ] M5 — TV library: series/episodes (mirrors backend M5/M6)
@@ -104,3 +104,59 @@ either. Real M2 work started from a clean `master`, not built on top of any of t
 the-den): `app/tmdb.py`'s `search_movie()` calls `resp.raise_for_status()` uncaught, so
 an unconfigured/invalid `TMDB_API_KEY` produces a raw 500 instead of a clean error the
 client could show a nicer message for. Worth a small backend fix at some point.
+
+## M3: release browsing + grab
+
+`src/models/candidates_model.py` (`CandidatesModel`) — GET `/movies/{id}/candidates` +
+POST `/movies/{id}/grab`, stateful (`load(movieId)` remembers which movie subsequent
+`grab()` calls act on). `CandidatesPage.qml` — pushed from a new "Find releases" action
+on missing library rows in `MoviesPage.qml`, via `applicationWindow().pageStack.push(url,
+{movieId, movieTitle})`. The best-scored release gets a purple left-edge accent + a
+"best match" `StatusPill`.
+
+**Set up real end-to-end verification for this, not just empty-list happy paths**:
+temporarily stopped the systemd `the-den` service, ran a throwaway dev instance of the
+current backend code with a real mock indexer (`tests/mock_torznab.py`) and mock
+qBittorrent (`tests/mock_qbit.py`) behind it, seeded a real movie, then drove the whole
+thing through the client: load real candidates (correct quality/seeders/is_best data),
+grab the best one, confirm `grabFinished(true, ...)`. Restored the systemd service
+afterward.
+
+**That real-data setup caught a serious, systemic bug that had been shipping silently
+in M1 and M2**: `ListView.header` is a `Component`-typed property, so assigning an
+inline item to it (as all three pages do, for the search-box-and-status-banner section
+above the list) implicitly wraps that item in its own `Component` — which isolates its
+`id`s from the rest of the file. Every page had a page-level `Connections` block
+*outside* the `ListView` trying to reach a `statusBanner` `id` declared *inside* the
+header's implicit Component — invisible from there. `IndexersPage.qml`'s and
+`MoviesPage.qml`'s earlier offscreen tests never caught this because neither test ever
+actually triggered an error/result signal during its run (M1's test never called
+`testIndexer`/`addIndexer`/`deleteIndexer`; M2's never triggered a write failure) — so
+the broken `Connections` handler was never actually invoked. **Passing tests were
+hiding a real bug because the tests never exercised the code path that used it.**
+Separately, `delegate: Kirigami.SwipeListItem { width: listView.width }` (referencing
+the containing `ListView`'s own `id` from inside its own delegate) resolved to `null`
+specifically when the delegate was for-real instantiated with actual model rows — never
+caught either, since no earlier page test had real rows flowing through a `ListView`'s
+own direct delegate (M1/M2's `Component.onCompleted` only called `refresh()`, and the
+model was always empty at that point in a fresh test DB).
+
+Fixed in all three pages: moved each `Connections` block to be a *sibling of
+`statusBanner` inside the header*, not a sibling of the `ListView` outside it. Replaced
+every `width: listView.width` in a `ListView`'s own delegate with the attached
+`ListView.view.width` property — the Qt-documented, robust way to reference a
+containing view from inside its own delegate, which doesn't depend on `id` visibility
+at all. For the one delegate that lives inside a `Repeater` inside a `ColumnLayout`
+(the search-results list in `MoviesPage.qml`), used `Layout.fillWidth: true` instead of
+an explicit width binding, since Repeater items inside a Layout are normal
+layout-managed children.
+
+**The lesson, not just the fix**: a headless test that passes only proves the paths it
+actually exercised are fine. `Component.onCompleted` calling `refresh()` against an
+empty test database is a weak test — it proves the page *loads*, not that it *works*.
+From here, every new page's test should seed real data and actually fire every signal
+the page listens for (error paths included) before being treated as verified, not just
+confirm a clean load with zero rows. Updated `check_indexers_page_qml.py` and
+`check_movies_page_qml.py` accordingly (they now trigger `testIndexer`/a duplicate-add
+error against real seeded data) alongside the new `check_candidates_model.py` and
+`check_candidates_page_qml.py`.

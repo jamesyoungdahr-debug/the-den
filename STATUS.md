@@ -1,30 +1,33 @@
 # Status
 
 ## Last completed
-M2: movie library. `src/models/movie_model.py` (`MovieListModel` + `MovieSearchResultsModel`)
-and `MoviesPage.qml` — search TMDB, add to library, missing/have status via `StatusPill`.
-Verified headlessly against the real backend: add/list/delete round-trip correctly;
-search error handling works (surfaces via `errorOccurred`, doesn't crash — see below).
-Before that: the HoltOS design system applied (M0/M1 restyled), M0 (connect) and M1
-(indexers) done.
+M3: release browsing + grab. `CandidatesModel` + `CandidatesPage.qml`, reachable via a
+new "Find releases" action on missing movies. Set up real end-to-end verification
+(temporary dev backend + mock indexer + mock qBittorrent, not just empty-list tests) —
+which caught a serious pre-existing bug in **all three** pages (M1 and M2 included):
+`ListView.header`'s implicit `Component` wrapping isolated `statusBanner`'s `id` from
+the page-level `Connections` blocks trying to reach it, and `delegate: { width:
+listView.width }` resolved to `null` once real rows actually instantiated a delegate.
+Neither had ever been exercised by the earlier "loads with zero rows" tests. Fixed in
+all three pages; full story and the testing lesson are in ROADMAP.md's "M3" section —
+worth reading before writing the next page's test.
 
-Also cleaned up before starting: a previous, non-memory-having attempt at M2 left
-`src/models/movie_model.py` as an actual empty directory (not a file) and a `context/`
-folder of fabricated docs claiming false progress. Deleted; real M2 work started clean
-from `master`. Full story in ROADMAP.md's "M2: movie library" section.
+Before that: M2 (movie library), the HoltOS design system applied, M0/M1. Also
+repo-branded on GitHub (description, topics, logo, README header).
 
 ## Currently working on
-Nothing in progress — M2 is finished, tested, committed, and pushed.
+Nothing in progress — M3 is finished, tested for real (not just headlessly against an
+empty DB), committed, and pushed.
 
 ## Next steps
-- **M3** (next milestone): release browsing + grab — view scored candidates for a
-  movie, grab the best/a chosen one. Mirrors the backend's `/movies/{id}/candidates`
-  and `/movies/{id}/grab`.
-- Known backend gap found via M2 testing, not yet fixed (belongs in the-den, not
-  here): `app/tmdb.py`'s `search_movie()` lets `resp.raise_for_status()` bubble up
-  uncaught, so an unconfigured/invalid TMDB key produces a raw 500 instead of a clean
-  error. The client already handles this gracefully either way, but a nicer backend
-  error would let it show a better message.
+- **M4** (next milestone): downloads view — status list, manual "check now". Mirrors
+  the backend's `/downloads` + `/downloads/{id}/check`.
+- **Apply the M3 testing lesson going forward**: any new page's test must seed real
+  data and actually fire every signal the page listens for, not just confirm a clean
+  load with zero rows. A passing test that never exercised a code path proves nothing
+  about that path.
+- Known backend gap (not yet fixed, belongs in the-den): `app/tmdb.py`'s
+  `search_movie()` 500s on an unconfigured/invalid TMDB key instead of a clean error.
 - Still no real visual look at the app on an actual screen (no VM/display this
-  session). Headless tests confirm compile-correctness and network-correctness, not
-  on-screen layout.
+  session). Headless tests now confirm real network/data correctness quite thoroughly
+  (see above) — the remaining gap is purely visual/layout polish.
