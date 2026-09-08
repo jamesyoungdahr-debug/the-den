@@ -1,11 +1,17 @@
-# The Den
+<p align="center">
+  <img src="assets/logo.svg" width="72" alt="The Den">
+</p>
+<h1 align="center">The Den</h1>
+<p align="center"><code>PART OF HOLTOS</code></p>
 
 A single self-hosted app combining what Sonarr, Radarr, and Prowlarr do separately:
 indexer search, a movie + TV library, quality-based release picking, download-client
-integration, and a background loop that finds and grabs what's missing on its own.
+integration, and a background loop that finds and grabs what's missing on its own. See
+the companion native desktop app: [the-den-client](
+https://github.com/jamesyoungdahr-debug/the-den-client).
 
-See [ROADMAP.md](ROADMAP.md) for how it was built, milestone by milestone, and what's
-still a known simplification.
+See [ROADMAP.md](ROADMAP.md) for how it was built, milestone by milestone, and
+[STATUS.md](STATUS.md) for what's done/next right now.
 
 ## Running it for development
 

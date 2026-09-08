@@ -1,0 +1,7 @@
+<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- The reduced HoltOS mark: a ring -- also an eye, a lens, a platter.
+       Same mark used in app/templates/base.html's .den-ringmark and in
+       the-den-client's assets/logo.svg / RingMark.qml, for brand consistency
+       across both repos. -->
+  <circle cx="32" cy="32" r="22" fill="none" stroke="#B14DFF" stroke-width="15"/>
+</svg>
