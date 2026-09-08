@@ -77,10 +77,34 @@ Kirigami.ScrollablePage {
         delegate: Kirigami.SwipeListItem {
             width: listView.width
             contentItem: RowLayout {
-                Controls.Label {
-                    text: name + " (" + protocol + ") — " + url
+                spacing: Kirigami.Units.largeSpacing
+
+                ColumnLayout {
                     Layout.fillWidth: true
-                    elide: Text.ElideRight
+                    spacing: 2
+
+                    Text {
+                        text: name
+                        font.family: Theme.fontCore
+                        font.weight: Font.Bold
+                        font.pixelSize: 13
+                        color: Theme.ink
+                        elide: Text.ElideRight
+                        Layout.fillWidth: true
+                    }
+                    Text {
+                        text: protocol + " — " + url
+                        font.family: Theme.fontMono
+                        font.pixelSize: 10
+                        color: Theme.ink42
+                        elide: Text.ElideRight
+                        Layout.fillWidth: true
+                    }
+                }
+
+                StatusPill {
+                    label: indexerEnabled ? "enabled" : "disabled"
+                    tone: indexerEnabled ? "healthy" : "idle"
                 }
             }
             actions: [

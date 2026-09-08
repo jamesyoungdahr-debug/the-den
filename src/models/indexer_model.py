@@ -47,7 +47,10 @@ class IndexerListModel(QAbstractListModel):
             self.NameRole: b"name",
             self.UrlRole: b"url",
             self.ProtocolRole: b"protocol",
-            self.EnabledRole: b"enabled",
+            # Named "indexerEnabled", not "enabled" -- every QML Item already has a
+            # built-in "enabled" property, and a model role of that name would collide
+            # with it in delegate scope rather than cleanly injecting.
+            self.EnabledRole: b"indexerEnabled",
         }
 
     @Slot()

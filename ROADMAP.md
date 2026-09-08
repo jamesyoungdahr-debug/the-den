@@ -46,3 +46,37 @@ Built the same way as the backend: one milestone at a time, tested before moving
   These two together catch nearly everything a screenshot would (JSON/network wiring,
   Python↔QML binding correctness) — the one thing they can't catch is visual layout
   problems (overlapping widgets, bad spacing), which still needs an eventual real look.
+
+## Post-M1 addition: HoltOS design system
+
+Applied the same HoltOS design tokens used for the-den's web UI redesign, translated
+into Qt's theming model instead of CSS:
+- `src/theme.py` — the design tokens (colors, fonts, radii, spacing) as a `Theme`
+  QObject with Qt `Property`s, registered as the `Theme` context property, so any .qml
+  file can reference `Theme.current`, `Theme.deep`, etc. — the QML-side equivalent of
+  the web UI's CSS custom properties.
+- `Main.qml` sets `Kirigami.Theme.backgroundColor` / `textColor` / `highlightColor` /
+  etc. at the `ApplicationWindow` root. Kirigami's theme properties are attached
+  properties that cascade to every descendant Kirigami/QQC2 control automatically —
+  the direct QML parallel to how the web UI's `--holt-*` CSS variables cascade, so
+  standard buttons/text fields/InlineMessage pick up the brand colors for free.
+- `RingMark.qml` and `StatusPill.qml` — small reusable components for the two things
+  Kirigami has no equivalent for (the brand mark, and the web UI's `.holt-pill` look).
+  Didn't build a generic "Panel" wrapper component to match the web UI's — the app is
+  only 2 pages so far and a generic slot-content abstraction would be premature; revisit
+  once there's enough real repetition to justify it.
+- Two real bugs caught by the headless test suite during this work, worth remembering
+  as a class: (1) Qt's 8-digit hex is `#AARRGGBB` (alpha first), CSS's is `#RRGGBBAA`
+  (alpha last) — copying a translucent color's hex straight out of the CSS file gives a
+  syntactically valid but *wrong* color, silently, no error. Added
+  `tests/check_theme_colors.py` specifically to catch this class of bug by asserting
+  actual parsed RGBA, not just "valid hex". (2) `font.pixelSize` is typed `int` in QML;
+  writing the CSS spec's `10.5` verbatim throws "Invalid property assignment: int
+  expected" — caught immediately by the offscreen QML-load test.
+- Also fixed a latent bug unrelated to the redesign: `IndexerListModel`'s `enabled` role
+  name collided with every QML `Item`'s built-in `enabled` property. Renamed to
+  `indexerEnabled`.
+- Visual confirmation is still outstanding — same "no VM/display" situation as the rest
+  of M1 onward. The headless suite gives strong confidence the theme *compiles and
+  resolves correctly*; actual layout/spacing on screen is unverified until someone
+  looks at it for real.
