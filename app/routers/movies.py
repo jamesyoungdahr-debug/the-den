@@ -2,12 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app import qbittorrent, tmdb
+from app.candidates import scored_candidates
 from app.deps import get_db
-from app.models import DownloadRecord, Indexer, Movie, QualityProfile
-from app.parser import parse_quality
-from app.scoring import best_release
+from app.models import DownloadRecord, Movie, QualityProfile
 from app.schemas import DownloadRecordOut, GrabRequest, MovieCreate, MovieOut, ScoredReleaseOut
-from app.torznab import search as torznab_search
 
 router = APIRouter(prefix="/movies", tags=["movies"])
 
@@ -47,34 +45,9 @@ async def movie_candidates(movie_id: int, db: Session = Depends(get_db)):
     if not movie:
         raise HTTPException(404, "Movie not found")
 
-    indexers = db.query(Indexer).filter(Indexer.enabled == True).all()  # noqa: E712
     query = f"{movie.title} {movie.year}" if movie.year else movie.title
-    releases = []
-    for indexer in indexers:
-        try:
-            releases.extend(await torznab_search(indexer.url, indexer.api_key, query, indexer.name))
-        except Exception:
-            pass
-
     profile = db.get(QualityProfile, movie.quality_profile_id) if movie.quality_profile_id else db.query(QualityProfile).first()
-    best = best_release(releases, profile) if profile else None
-
-    scored = []
-    for r in releases:
-        scored.append(
-            ScoredReleaseOut(
-                title=r.title,
-                download_url=r.download_url,
-                indexer_name=r.indexer_name,
-                size=r.size,
-                seeders=r.seeders,
-                peers=r.peers,
-                quality=parse_quality(r.title),
-                is_best=(r is best),
-            )
-        )
-    scored.sort(key=lambda r: (not r.is_best, -(r.seeders or 0)))
-    return scored
+    return await scored_candidates(db, query, profile)
 
 
 @router.post("/{movie_id}/grab", response_model=DownloadRecordOut)

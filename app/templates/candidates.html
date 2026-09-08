@@ -11,8 +11,8 @@
   </style>
 </head>
 <body>
-  <nav><a href="/">Indexers &amp; Search</a> <a href="/library">Movie Library</a> <a href="/ui/downloads">Downloads</a></nav>
-  <h1>Releases for {{ movie.title }} ({{ movie.year }})</h1>
+  <nav><a href="/">Indexers &amp; Search</a> <a href="/library">Movie Library</a> <a href="/tv">TV Library</a> <a href="/ui/downloads">Downloads</a></nav>
+  <h1>Releases for {{ heading }}</h1>
   <table>
     <tr><th>Title</th><th>Indexer</th><th>Quality</th><th>Seeders</th><th></th></tr>
     {% for r in candidates %}
@@ -22,7 +22,7 @@
       <td>{{ r.quality }}</td>
       <td>{{ r.seeders if r.seeders is not none else "-" }}</td>
       <td>
-        <form method="post" action="/ui/movies/{{ movie.id }}/grab">
+        <form method="post" action="{{ grab_action }}">
           <input type="hidden" name="download_url" value="{{ r.download_url }}">
           <input type="hidden" name="release_title" value="{{ r.title }}">
           <button type="submit">Grab</button>

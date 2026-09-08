@@ -56,9 +56,38 @@ class GrabRequest(BaseModel):
 
 class DownloadRecordOut(BaseModel):
     id: int
-    movie_id: int
+    movie_id: int | None = None
+    episode_id: int | None = None
     release_title: str
     status: str
+
+    class Config:
+        from_attributes = True
+
+
+class SeriesCreate(BaseModel):
+    tmdb_id: int
+    title: str
+    year: int | None = None
+    overview: str | None = None
+    poster_path: str | None = None
+
+
+class SeriesOut(SeriesCreate):
+    id: int
+
+    class Config:
+        from_attributes = True
+
+
+class EpisodeOut(BaseModel):
+    id: int
+    series_id: int
+    season_number: int
+    episode_number: int
+    title: str | None = None
+    air_date: str | None = None
+    has_file: bool
 
     class Config:
         from_attributes = True

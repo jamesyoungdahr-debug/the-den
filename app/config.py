@@ -8,3 +8,4 @@ QBIT_USERNAME = os.environ.get("QBIT_USERNAME", "admin")
 QBIT_PASSWORD = os.environ.get("QBIT_PASSWORD", "adminadmin")
 
 MOVIES_ROOT = os.environ.get("MOVIES_ROOT", "./library/movies")
+TV_ROOT = os.environ.get("TV_ROOT", "./library/tv")

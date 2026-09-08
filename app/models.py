@@ -42,11 +42,37 @@ class Movie(Base):
     quality_profile_id = Column(Integer, ForeignKey("quality_profiles.id"), nullable=True)
 
 
+class Series(Base):
+    __tablename__ = "series"
+
+    id = Column(Integer, primary_key=True)
+    tmdb_id = Column(Integer, nullable=False, unique=True)
+    title = Column(String, nullable=False)
+    year = Column(Integer, nullable=True)
+    overview = Column(String, nullable=True)
+    poster_path = Column(String, nullable=True)
+    quality_profile_id = Column(Integer, ForeignKey("quality_profiles.id"), nullable=True)
+
+
+class Episode(Base):
+    __tablename__ = "episodes"
+
+    id = Column(Integer, primary_key=True)
+    series_id = Column(Integer, ForeignKey("series.id"), nullable=False)
+    season_number = Column(Integer, nullable=False)
+    episode_number = Column(Integer, nullable=False)
+    title = Column(String, nullable=True)
+    air_date = Column(String, nullable=True)
+    has_file = Column(Boolean, nullable=False, default=False)
+
+
 class DownloadRecord(Base):
     __tablename__ = "download_records"
 
     id = Column(Integer, primary_key=True)
-    movie_id = Column(Integer, ForeignKey("movies.id"), nullable=False)
+    # Exactly one of these is set, depending on whether this download is a movie or an episode.
+    movie_id = Column(Integer, ForeignKey("movies.id"), nullable=True)
+    episode_id = Column(Integer, ForeignKey("episodes.id"), nullable=True)
     release_title = Column(String, nullable=False)
     download_url = Column(String, nullable=False)
     category = Column(String, nullable=False)

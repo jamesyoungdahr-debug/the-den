@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>The Den — Downloads</title>
+  <title>The Den — {{ series.title }}</title>
   <style>
     body { font-family: sans-serif; max-width: 900px; margin: 2rem auto; }
     table { border-collapse: collapse; width: 100%; }
@@ -11,25 +11,18 @@
 </head>
 <body>
   <nav><a href="/">Indexers &amp; Search</a> <a href="/library">Movie Library</a> <a href="/tv">TV Library</a> <a href="/ui/downloads">Downloads</a></nav>
-  <h1>Downloads</h1>
+  <h1>{{ series.title }} ({{ series.year }})</h1>
   <table>
-    <tr><th>Release</th><th>Status</th><th></th></tr>
-    {% for d in downloads %}
+    <tr><th>Season</th><th>Episode</th><th>Title</th><th>Status</th><th></th></tr>
+    {% for e in episodes %}
     <tr>
-      <td>{{ d.release_title }}</td>
-      <td>{{ d.status }}</td>
-      <td>
-        {% if d.status != "imported" %}
-        <form method="post" action="/ui/downloads/{{ d.id }}/check">
-          <button type="submit">Check status</button>
-        </form>
-        {% endif %}
-      </td>
+      <td>{{ e.season_number }}</td>
+      <td>{{ e.episode_number }}</td>
+      <td>{{ e.title or "-" }}</td>
+      <td>{{ "have" if e.has_file else "missing" }}</td>
+      <td>{% if not e.has_file %}<a href="/ui/episodes/{{ e.id }}/candidates">find releases</a>{% endif %}</td>
     </tr>
     {% endfor %}
-    {% if not downloads %}
-    <tr><td colspan="3">No downloads yet.</td></tr>
-    {% endif %}
   </table>
 </body>
 </html>

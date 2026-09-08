@@ -3,12 +3,13 @@ from sqlalchemy import text
 
 from app.db import SessionLocal, engine
 from app.models import QualityProfile
-from app.routers import downloads, indexers, movies, search, ui
+from app.routers import downloads, indexers, movies, search, series, ui
 
 app = FastAPI(title="The Den")
 app.include_router(indexers.router)
 app.include_router(search.router)
 app.include_router(movies.router)
+app.include_router(series.router)
 app.include_router(downloads.router)
 app.include_router(ui.router)
 

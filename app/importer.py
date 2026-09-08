@@ -2,7 +2,7 @@ import shutil
 from pathlib import Path
 
 from app import config
-from app.models import Movie
+from app.models import Episode, Movie, Series
 
 VIDEO_EXTENSIONS = {".mkv", ".mp4", ".avi"}
 
@@ -17,18 +17,23 @@ def _largest_video_file(content_path: str) -> Path | None:
     return None
 
 
-def import_finished_download(torrent_info: dict, movie: Movie) -> bool:
-    """Move the downloaded video file into the library. Returns True if imported."""
+def _move_into(torrent_info: dict, dest_dir: Path) -> bool:
     content_path = torrent_info.get("content_path") or torrent_info.get("save_path")
     if not content_path:
         return False
-
     source = _largest_video_file(content_path)
     if source is None:
         return False
-
-    dest_dir = Path(config.MOVIES_ROOT) / f"{movie.title} ({movie.year})"
     dest_dir.mkdir(parents=True, exist_ok=True)
-    dest = dest_dir / source.name
-    shutil.move(str(source), str(dest))
+    shutil.move(str(source), str(dest_dir / source.name))
     return True
+
+
+def import_movie(torrent_info: dict, movie: Movie) -> bool:
+    dest_dir = Path(config.MOVIES_ROOT) / f"{movie.title} ({movie.year})"
+    return _move_into(torrent_info, dest_dir)
+
+
+def import_episode(torrent_info: dict, series: Series, episode: Episode) -> bool:
+    dest_dir = Path(config.TV_ROOT) / series.title / f"Season {episode.season_number:02d}"
+    return _move_into(torrent_info, dest_dir)

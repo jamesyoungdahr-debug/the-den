@@ -13,19 +13,24 @@ Deploy target: native systemd service on Arch Linux (no Docker).
 - [x] M2 — Movie library (Radarr core): TMDB lookup, add to library, missing/have status
 - [x] M3 — Release scoring: quality profiles + release-title parser, pick best result for a movie
 - [x] M4 — Download + import (movies): send to qBittorrent, monitor, auto-import/rename
-- [ ] M5 — TV library (Sonarr core): series/season/episode via TVDB
-- [ ] M6 — TV search/grab/import: reuse M3/M4, SxxEyy parsing
+- [x] M5 — TV library (Sonarr core): series/season/episode via TMDB (not TVDB, see notes)
+- [x] M6 — TV search/grab/import: reuse M3/M4, SxxEyy in the search query
 - [ ] M7 — Scheduler/RSS automation: background auto-grab on a timer
 - [ ] M8 — Notifications + calendar
 - [ ] M9 — Distro packaging: systemd unit, config conventions, PKGBUILD
 
 ## Notes
 - TMDB: free for non-commercial use, attribution required.
-- TVDB: needs either a per-user subscription PIN or a free open-source/self-hosted
-  license (<$50k revenue, attribution) — same path Sonarr uses. Sort out at M5.
+- Decided against TheTVDB for M5: TMDB's `/tv` endpoints give full series/season/episode
+  data for free too, so one metadata provider covers both movies and TV — no second API
+  key, no TVDB per-user-PIN/licensing question to deal with.
 - Real config goes in `.env` (see `.env.example`): TMDB_API_KEY, QBIT_URL/USERNAME/PASSWORD,
-  MOVIES_ROOT. Until you set a real TMDB key/qBittorrent, `tests/mock_tmdb.py` and
-  `tests/mock_qbit.py` (plus `tests/mock_torznab.py` from M1) let the whole app be
-  tested end-to-end without live accounts.
-- Download tracking uses qBittorrent categories (`the-den-movie-<id>`), not info-hash,
-  since the add API doesn't return one synchronously.
+  MOVIES_ROOT, TV_ROOT. Until you set a real TMDB key/qBittorrent, `tests/mock_tmdb.py`,
+  `tests/mock_qbit.py`, and `tests/mock_torznab.py` let the whole app be tested
+  end-to-end without live accounts.
+- Download tracking uses qBittorrent categories (`the-den-movie-<id>` /
+  `the-den-episode-<id>`), not info-hash, since the add API doesn't return one synchronously.
+- Known simplification: episode search doesn't verify the grabbed release's season/episode
+  actually matches (relies on the SxxEyy search query steering indexer results correctly).
+  Fine for now; a stricter release-title parser could validate this later if it causes
+  wrong grabs in practice.
