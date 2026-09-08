@@ -16,11 +16,12 @@ python -m venv .venv
 .venv/Scripts/python -m uvicorn app.main:app --port 8686
 ```
 
-Then open http://127.0.0.1:8686. Copy `.env.example` to `.env` (or export the same
-variables) and fill in a real `TMDB_API_KEY` and your `QBIT_*` settings — without them
-the app still runs, just against nothing real. See `tests/mock_*.py` for fake
-TMDB/qBittorrent/Torznab servers used during development, if you want to poke at the
-app without live accounts.
+Then open http://127.0.0.1:8686. Configure TMDB key, qBittorrent connection, library
+folders, automation interval, and Discord webhook from **Settings** in the app itself —
+or copy `.env.example` to `.env` (or export the same variables) if you'd rather manage
+config as files; the in-app settings win if both are set. Without either, the app still
+runs, just against nothing real. See `tests/mock_*.py` for fake TMDB/qBittorrent/Torznab
+servers used during development, if you want to poke at the app without live accounts.
 
 ## Running it as a system service (Arch)
 

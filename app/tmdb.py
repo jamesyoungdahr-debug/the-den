@@ -3,11 +3,11 @@ import httpx
 from app import config
 
 
-async def search_movie(query: str) -> list[dict]:
+async def search_movie(query: str, api_key: str) -> list[dict]:
     async with httpx.AsyncClient(timeout=10) as client:
         resp = await client.get(
             f"{config.TMDB_BASE_URL}/search/movie",
-            params={"api_key": config.TMDB_API_KEY, "query": query},
+            params={"api_key": api_key, "query": query},
         )
         resp.raise_for_status()
         data = resp.json()

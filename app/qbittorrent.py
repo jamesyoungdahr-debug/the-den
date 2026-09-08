@@ -7,21 +7,16 @@ returns "Ok." with no id, so each grab gets its own category
 
 import httpx
 
-from app import config
 
-
-async def _client() -> httpx.AsyncClient:
-    client = httpx.AsyncClient(base_url=config.QBIT_URL, timeout=15)
-    resp = await client.post(
-        "/api/v2/auth/login",
-        data={"username": config.QBIT_USERNAME, "password": config.QBIT_PASSWORD},
-    )
+async def _client(url: str, username: str, password: str) -> httpx.AsyncClient:
+    client = httpx.AsyncClient(base_url=url, timeout=15)
+    resp = await client.post("/api/v2/auth/login", data={"username": username, "password": password})
     resp.raise_for_status()
     return client
 
 
-async def add_torrent(download_url: str, category: str) -> None:
-    client = await _client()
+async def add_torrent(download_url: str, category: str, *, url: str, username: str, password: str) -> None:
+    client = await _client(url, username, password)
     try:
         resp = await client.post(
             "/api/v2/torrents/add",
@@ -32,9 +27,9 @@ async def add_torrent(download_url: str, category: str) -> None:
         await client.aclose()
 
 
-async def get_by_category(category: str) -> dict | None:
+async def get_by_category(category: str, *, url: str, username: str, password: str) -> dict | None:
     """Return the first torrent's info dict for this category, or None if not found yet."""
-    client = await _client()
+    client = await _client(url, username, password)
     try:
         resp = await client.get("/api/v2/torrents/info", params={"category": category})
         resp.raise_for_status()

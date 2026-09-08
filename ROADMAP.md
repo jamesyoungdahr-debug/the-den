@@ -44,6 +44,18 @@ Deploy target: native systemd service on Arch Linux (no Docker).
   but was authored on a Windows dev machine — it has not been through an actual
   `makepkg -si` + `pacman -U` cycle. Test it for real on the distro before trusting it.
 
+## Post-M9 addition: in-app Settings page
+
+Added a `settings` DB table + `/ui/settings` page so TMDB key, qBittorrent connection,
+library folders, automation interval, and the Discord webhook can all be set from the
+browser instead of hand-editing `.env`/the systemd env file. `app/settings.py`'s
+`effective(db)` layers DB overrides on top of `app/config.py`'s env-var defaults — env
+vars still work (useful for the Arch packaging's `/etc/the-den/the-den.env`), the UI
+just wins when both are set. Secret fields (TMDB key, qBit password, Discord webhook)
+never echo their stored value back into the page; leaving them blank on save keeps the
+existing value. Changing the automation interval reschedules the running APScheduler
+job immediately via `scheduler.reschedule()`, no restart needed.
+
 ## All milestones done — what's next is real-world shakedown, not new code
 
 The build is feature-complete per this roadmap. What's left is exercising it against

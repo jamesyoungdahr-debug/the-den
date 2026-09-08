@@ -3,6 +3,8 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
+from app import scheduler
+from app import settings as settings_module
 from app import tmdb, torznab, tvmaze
 from app.candidates import scored_candidates
 from app.deps import get_db
@@ -61,7 +63,7 @@ def ui_delete_indexer(indexer_id: int, db: Session = Depends(get_db)):
 @router.get("/library", response_class=HTMLResponse)
 async def library(request: Request, q: str | None = None, db: Session = Depends(get_db)):
     movies = db.query(Movie).all()
-    candidates = await tmdb.search_movie(q) if q else None
+    candidates = await tmdb.search_movie(q, settings_module.effective(db).tmdb_api_key) if q else None
     return templates.TemplateResponse(
         "library.html", {"request": request, "movies": movies, "query": q, "candidates": candidates}
     )
@@ -281,3 +283,60 @@ def calendar(request: Request, db: Session = Depends(get_db)):
         "calendar.html",
         {"request": request, "missing_movies": missing_movies, "missing_episodes": missing_episodes},
     )
+
+
+# --- Settings -----------------------------------------------------------------
+
+@router.get("/ui/settings", response_class=HTMLResponse)
+def ui_settings(request: Request, db: Session = Depends(get_db)):
+    row = settings_module.get_row(db)
+    s = settings_module.effective(db)
+    return templates.TemplateResponse(
+        "settings.html",
+        {
+            "request": request,
+            "s": s,
+            "has_tmdb_api_key": bool(row.tmdb_api_key),
+            "has_qbit_password": bool(row.qbit_password),
+            "has_discord_webhook": bool(row.discord_webhook_url),
+        },
+    )
+
+
+@router.post("/ui/settings")
+def ui_save_settings(
+    tmdb_api_key: str = Form(""),
+    qbit_url: str = Form(""),
+    qbit_username: str = Form(""),
+    qbit_password: str = Form(""),
+    movies_root: str = Form(""),
+    tv_root: str = Form(""),
+    automation_interval_seconds: str = Form(""),
+    discord_webhook_url: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    row = settings_module.get_row(db)
+
+    # Secret fields: only overwrite if the user actually typed something new.
+    if tmdb_api_key:
+        row.tmdb_api_key = tmdb_api_key
+    if qbit_password:
+        row.qbit_password = qbit_password
+    if discord_webhook_url:
+        row.discord_webhook_url = discord_webhook_url
+
+    # Non-secret fields: always take the submitted value (blank means "use the default").
+    row.qbit_url = qbit_url or None
+    row.qbit_username = qbit_username or None
+    row.movies_root = movies_root or None
+    row.tv_root = tv_root or None
+    old_interval = row.automation_interval_seconds
+    row.automation_interval_seconds = int(automation_interval_seconds) if automation_interval_seconds.isdigit() else None
+
+    db.commit()
+
+    new_interval = settings_module.effective(db).automation_interval_seconds
+    if new_interval != old_interval:
+        scheduler.reschedule(new_interval)
+
+    return RedirectResponse("/ui/settings", status_code=303)

@@ -66,6 +66,23 @@ class Episode(Base):
     has_file = Column(Boolean, nullable=False, default=False)
 
 
+class Settings(Base):
+    """Single-row table (id is always 1) of user-editable overrides for app/config.py's
+    env-var defaults. A blank/null field here means "use the env-var default"."""
+
+    __tablename__ = "settings"
+
+    id = Column(Integer, primary_key=True)
+    tmdb_api_key = Column(String, nullable=True)
+    qbit_url = Column(String, nullable=True)
+    qbit_username = Column(String, nullable=True)
+    qbit_password = Column(String, nullable=True)
+    movies_root = Column(String, nullable=True)
+    tv_root = Column(String, nullable=True)
+    automation_interval_seconds = Column(Integer, nullable=True)
+    discord_webhook_url = Column(String, nullable=True)
+
+
 class DownloadRecord(Base):
     __tablename__ = "download_records"
 

@@ -1,15 +1,13 @@
 import httpx
 
-from app import config
 
-
-async def notify(message: str) -> None:
+async def notify(message: str, webhook_url: str) -> None:
     """Best-effort Discord webhook post. Silently does nothing if unconfigured or unreachable
     — a notification failing should never take down the grab/import it's reporting on."""
-    if not config.DISCORD_WEBHOOK_URL:
+    if not webhook_url:
         return
     try:
         async with httpx.AsyncClient(timeout=10) as client:
-            await client.post(config.DISCORD_WEBHOOK_URL, json={"content": message})
+            await client.post(webhook_url, json={"content": message})
     except Exception:
         pass

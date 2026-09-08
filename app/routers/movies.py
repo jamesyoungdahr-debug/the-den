@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app import settings as settings_module
 from app import tmdb
 from app.candidates import scored_candidates
 from app.deps import get_db
@@ -12,8 +13,9 @@ router = APIRouter(prefix="/movies", tags=["movies"])
 
 
 @router.get("/search-tmdb")
-async def search_tmdb(q: str):
-    return await tmdb.search_movie(q)
+async def search_tmdb(q: str, db: Session = Depends(get_db)):
+    api_key = settings_module.effective(db).tmdb_api_key
+    return await tmdb.search_movie(q, api_key)
 
 
 @router.get("", response_model=list[MovieOut])
