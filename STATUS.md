@@ -1,27 +1,23 @@
 # Status
 
 ## Last completed
-M6: calendar view. `CalendarMoviesModel`/`CalendarEpisodesModel` compose the view
-client-side from `/movies` and `/series/{id}/episodes` (no `/calendar` JSON endpoint
-exists on the backend) — the episodes model does a real fan-out/fan-in over N series'
-worth of requests. `CalendarPage.qml` uses plain `Repeater`s in a `ColumnLayout`, no
-`ListView.header` involved, so the M3 scoping bug's precondition doesn't even apply
-here. Verified against real aggregated, sorted data plus a forced real network error.
-Also surfaced (and worked around) a testing-process gap: the regression scripts assume
-shared pre-seeded fixture state rather than being self-contained — noted in
-ROADMAP.md's M6 section for whenever this gets a real CI pipeline. Before that: M5 (TV
-library + generalized candidates), M4, M3 (+ the id-scoping bug fix), M2, the design
-system, M0/M1, and repo branding.
+M7: settings screen. `SettingsController` (plain `QObject` with NOTIFY-backed Qt
+Properties, not a list model — one record) + `SettingsPage.qml` (plain
+`Kirigami.FormLayout`, no `ListView`). Backend JSON API was already done. Verified the
+security-relevant behavior specifically, not just assumed it: a blank secret field on
+save leaves the stored value untouched rather than wiping it — tested by actually
+saving a real TMDB key, then saving again with that field blank, confirming it stayed
+set. Before that: M6 (calendar), M5 (TV library + generalized candidates), M4, M3 (+
+the id-scoping bug fix), M2, the design system, M0/M1, and repo branding.
 
 ## Currently working on
-Nothing in progress — M6 is finished, tested for real, committed, and pushed.
+Nothing in progress — M7 is finished, tested for real, committed, and pushed.
 
 ## Next steps
-- **M7** (next milestone): settings screen. Backend JSON API side is already done
-  (`GET/POST /api/settings`, see the-den's ROADMAP.md) — purely client QML/model work.
-- **M8** after that: Flatpak packaging (`org.kde.Platform`, `flatpak-builder`, verified
-  with a real build+run) — the one that actually matters for pulling this into the
-  main HoltOS distro, per the user's stated goal.
+- **M8** (final milestone): Flatpak packaging (`org.kde.Platform`, `flatpak-builder`,
+  verified with a real build+run). This is the one that actually matters for the
+  user's stated goal — pulling this into the main HoltOS distro. All 7 feature
+  milestones are now done; M8 is what's left before the client is genuinely "done."
 - Known backend gaps (not fixed here, belong in the-den): `tmdb.search_movie()` 500s
   on a bad key; `GET /series/{id}/episodes` doesn't 404 on a nonexistent series id.
 - Known client-side gap: no `QAbstractListModel` subclass guards against out-of-order

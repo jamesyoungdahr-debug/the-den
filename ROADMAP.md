@@ -20,7 +20,7 @@ Built the same way as the backend: one milestone at a time, tested before moving
 - [x] M4 — Downloads view: status list, manual "check now"
 - [x] M5 — TV library: series/episodes (mirrors backend M5/M6)
 - [x] M6 — Calendar view
-- [ ] M7 — Settings: same fields as the backend's `/ui/settings`, via a JSON API — the
+- [x] M7 — Settings: same fields as the backend's `/ui/settings`, via a JSON API — the
       backend side of this (`GET/POST /api/settings`) is already done, see the-den's
       ROADMAP.md
 - [ ] M8 — Flatpak packaging: manifest using `org.kde.Platform`, build via
@@ -262,3 +262,24 @@ re-seeding the missing pieces and re-running. Fine for now since these are run
 individually by hand as each milestone lands, not as automated CI, but if this project
 ever gets a CI pipeline these will need to become self-seeding (or share one setup
 script) rather than depending on accumulated hand-run `curl` state.
+
+## M7: settings screen
+
+`src/models/settings_controller.py` (`SettingsController`) — a plain `QObject` with Qt
+`Property`s (NOTIFY-backed, so QML text fields populate once `load()` returns), not a
+`QAbstractListModel`, since this is one record rather than a list. `GET`/`POST
+/api/settings` were already built on the backend for exactly this
+(the-den's M7-adjacent work). `SettingsPage.qml` is a plain `Kirigami.FormLayout` — no
+`ListView` at all here either, same reasoning as `CalendarPage.qml`.
+
+Followed the web UI's settings form exactly on the secret-field handling, since it's a
+real correctness-and-security property worth preserving deliberately, not just
+incidentally: `GET` never returns a stored secret (TMDB key, qBittorrent password,
+Discord webhook), only a `has_*` boolean; a blank field on `save()` means "leave the
+stored value alone," not "clear it." Verified this specific behavior for real, not just
+assumed it from reading the backend code: saved a real TMDB key, confirmed
+`hasTmdbApiKey` flipped true; saved again with that field blank, confirmed it stayed
+true (i.e. confirmed the *absence* of a bug — an empty-string save silently wiping a
+previously-set secret would be a real, easy-to-make mistake here, and the specific
+scenario that would have caught it was deliberately included in the test rather than
+assumed away).

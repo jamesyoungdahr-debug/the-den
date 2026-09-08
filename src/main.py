@@ -12,6 +12,7 @@ from models.episodes_model import EpisodesModel
 from models.indexer_model import IndexerListModel
 from models.movie_model import MovieListModel, MovieSearchResultsModel
 from models.series_model import SeriesListModel, SeriesSearchResultsModel
+from models.settings_controller import SettingsController
 from theme import Theme
 
 
@@ -33,6 +34,7 @@ def main() -> None:
     episode_candidates_model = CandidatesModel(lambda: api_client.baseUrl, resource="episodes")
     missing_movies_model = CalendarMoviesModel(lambda: api_client.baseUrl)
     missing_episodes_model = CalendarEpisodesModel(lambda: api_client.baseUrl)
+    settings_controller = SettingsController(lambda: api_client.baseUrl)
     theme = Theme()
     engine.rootContext().setContextProperty("apiClient", api_client)
     engine.rootContext().setContextProperty("indexerModel", indexer_model)
@@ -46,6 +48,7 @@ def main() -> None:
     engine.rootContext().setContextProperty("episodeCandidatesModel", episode_candidates_model)
     engine.rootContext().setContextProperty("missingMoviesModel", missing_movies_model)
     engine.rootContext().setContextProperty("missingEpisodesModel", missing_episodes_model)
+    engine.rootContext().setContextProperty("settingsController", settings_controller)
     engine.rootContext().setContextProperty("Theme", theme)
 
     qml_file = Path(__file__).parent / "qml" / "Main.qml"
