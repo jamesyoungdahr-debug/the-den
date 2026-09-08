@@ -4,10 +4,12 @@ After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/opt/the-den
-ExecStart=/opt/the-den/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8686
-Restart=on-failure
 User=the-den
+Group=the-den
+WorkingDirectory=/opt/the-den
+EnvironmentFile=-/etc/the-den/the-den.env
+ExecStart=/opt/the-den/.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8686
+Restart=on-failure
 
 [Install]
 WantedBy=multi-user.target

@@ -17,7 +17,7 @@ Deploy target: native systemd service on Arch Linux (no Docker).
 - [x] M6 — TV search/grab/import: reuse M3/M4, SxxEyy in the search query
 - [x] M7 — Scheduler/RSS automation: background auto-grab on a timer
 - [x] M8 — Notifications + calendar
-- [ ] M9 — Distro packaging: systemd unit, config conventions, PKGBUILD
+- [x] M9 — Distro packaging: systemd unit, config conventions, PKGBUILD
 
 ## Notes
 - TMDB: free for non-commercial use, attribution required.
@@ -34,3 +34,15 @@ Deploy target: native systemd service on Arch Linux (no Docker).
   actually matches (relies on the SxxEyy search query steering indexer results correctly).
   Fine for now; a stricter release-title parser could validate this later if it causes
   wrong grabs in practice.
+- No authentication anywhere in the app. Fine on localhost/behind a VPN; do not expose
+  it directly to the internet without adding one (or fronting it with an auth-checking
+  reverse proxy).
+- M9 packaging (PKGBUILD, systemd, sysusers/tmpfiles) is written to real Arch conventions
+  but was authored on a Windows dev machine — it has not been through an actual
+  `makepkg -si` + `pacman -U` cycle. Test it for real on the distro before trusting it.
+
+## All milestones done — what's next is real-world shakedown, not new code
+
+The build is feature-complete per this roadmap. What's left is exercising it against
+real accounts/services (see README) and fixing whatever that surfaces — that's expected
+to turn up rough edges no amount of mock-based testing catches.

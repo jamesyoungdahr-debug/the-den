@@ -1,5 +1,7 @@
 import os
 
+DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./den.db")
+
 TMDB_API_KEY = os.environ.get("TMDB_API_KEY", "")
 TMDB_BASE_URL = os.environ.get("TMDB_BASE_URL", "https://api.themoviedb.org/3")
 

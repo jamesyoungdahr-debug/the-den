@@ -1,0 +1,24 @@
+post_install() {
+    systemd-sysusers the-den.conf
+    systemd-tmpfiles --create the-den.conf
+    DATABASE_URL="sqlite:////var/lib/the-den/den.db" \
+        runuser -u the-den -- /opt/the-den/.venv/bin/python -m alembic -c /opt/the-den/alembic.ini upgrade head
+
+    echo "==> Edit /etc/the-den/the-den.env (at least TMDB_API_KEY, QBIT_USERNAME/PASSWORD,"
+    echo "    MOVIES_ROOT/TV_ROOT), then: systemctl enable --now the-den"
+    echo "==> The app listens on 127.0.0.1:8686 only. Put a reverse proxy in front of it"
+    echo "    (or change --host in the-den.service) before exposing it beyond localhost —"
+    echo "    there is no login/auth layer yet."
+}
+
+post_upgrade() {
+    systemd-sysusers the-den.conf
+    systemd-tmpfiles --create the-den.conf
+    DATABASE_URL="sqlite:////var/lib/the-den/den.db" \
+        runuser -u the-den -- /opt/the-den/.venv/bin/python -m alembic -c /opt/the-den/alembic.ini upgrade head
+    echo "==> Migrations applied. Restart to pick up the new version: systemctl restart the-den"
+}
+
+pre_remove() {
+    systemctl stop the-den.service || true
+}
