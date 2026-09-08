@@ -10,9 +10,9 @@ Deploy target: native systemd service on Arch Linux (no Docker).
 
 - [x] M0 — Skeleton: FastAPI boots, SQLite connects, `/health` works, systemd unit stub
 - [x] M1 — Indexer search (Prowlarr core): add Torznab/Newznab indexer, test connection, manual search, ranked results
-- [ ] M2 — Movie library (Radarr core): TMDB lookup, add to library, missing/have status
-- [ ] M3 — Release scoring: quality profiles + release-title parser, pick best result for a movie
-- [ ] M4 — Download + import (movies): send to qBittorrent, monitor, auto-import/rename
+- [x] M2 — Movie library (Radarr core): TMDB lookup, add to library, missing/have status
+- [x] M3 — Release scoring: quality profiles + release-title parser, pick best result for a movie
+- [x] M4 — Download + import (movies): send to qBittorrent, monitor, auto-import/rename
 - [ ] M5 — TV library (Sonarr core): series/season/episode via TVDB
 - [ ] M6 — TV search/grab/import: reuse M3/M4, SxxEyy parsing
 - [ ] M7 — Scheduler/RSS automation: background auto-grab on a timer
@@ -23,3 +23,9 @@ Deploy target: native systemd service on Arch Linux (no Docker).
 - TMDB: free for non-commercial use, attribution required.
 - TVDB: needs either a per-user subscription PIN or a free open-source/self-hosted
   license (<$50k revenue, attribution) — same path Sonarr uses. Sort out at M5.
+- Real config goes in `.env` (see `.env.example`): TMDB_API_KEY, QBIT_URL/USERNAME/PASSWORD,
+  MOVIES_ROOT. Until you set a real TMDB key/qBittorrent, `tests/mock_tmdb.py` and
+  `tests/mock_qbit.py` (plus `tests/mock_torznab.py` from M1) let the whole app be
+  tested end-to-end without live accounts.
+- Download tracking uses qBittorrent categories (`the-den-movie-<id>`), not info-hash,
+  since the add API doesn't return one synchronously.

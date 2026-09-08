@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>The Den — Downloads</title>
+  <style>
+    body { font-family: sans-serif; max-width: 900px; margin: 2rem auto; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #ccc; padding: 4px 8px; text-align: left; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <nav><a href="/">Indexers &amp; Search</a> <a href="/library">Movie Library</a> <a href="/ui/downloads">Downloads</a></nav>
+  <h1>Downloads</h1>
+  <table>
+    <tr><th>Release</th><th>Status</th><th></th></tr>
+    {% for d in downloads %}
+    <tr>
+      <td>{{ d.release_title }}</td>
+      <td>{{ d.status }}</td>
+      <td>
+        {% if d.status != "imported" %}
+        <form method="post" action="/ui/downloads/{{ d.id }}/check">
+          <button type="submit">Check status</button>
+        </form>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+    {% if not downloads %}
+    <tr><td colspan="3">No downloads yet.</td></tr>
+    {% endif %}
+  </table>
+</body>
+</html>

@@ -26,3 +26,39 @@ class ReleaseOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class ScoredReleaseOut(ReleaseOut):
+    quality: str
+    is_best: bool = False
+
+
+class MovieCreate(BaseModel):
+    tmdb_id: int
+    title: str
+    year: int | None = None
+    overview: str | None = None
+    poster_path: str | None = None
+
+
+class MovieOut(MovieCreate):
+    id: int
+    has_file: bool
+
+    class Config:
+        from_attributes = True
+
+
+class GrabRequest(BaseModel):
+    download_url: str
+    release_title: str
+
+
+class DownloadRecordOut(BaseModel):
+    id: int
+    movie_id: int
+    release_title: str
+    status: str
+
+    class Config:
+        from_attributes = True

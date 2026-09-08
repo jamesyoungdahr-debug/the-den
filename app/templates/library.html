@@ -1,0 +1,63 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>The Den — Library</title>
+  <style>
+    body { font-family: sans-serif; max-width: 900px; margin: 2rem auto; }
+    table { border-collapse: collapse; width: 100%; margin-bottom: 1.5rem; }
+    th, td { border: 1px solid #ccc; padding: 4px 8px; text-align: left; font-size: 14px; }
+    nav a { margin-right: 1rem; }
+    form.inline { display: inline; }
+  </style>
+</head>
+<body>
+  <nav><a href="/">Indexers &amp; Search</a> <a href="/library">Movie Library</a> <a href="/ui/downloads">Downloads</a></nav>
+  <h1>Movie Library</h1>
+
+  <table>
+    <tr><th>Title</th><th>Year</th><th>Status</th><th></th></tr>
+    {% for m in movies %}
+    <tr>
+      <td>{{ m.title }}</td>
+      <td>{{ m.year or "-" }}</td>
+      <td>{{ "have" if m.has_file else "missing" }}</td>
+      <td>
+        {% if not m.has_file %}<a href="/ui/movies/{{ m.id }}/candidates">find releases</a>&nbsp;{% endif %}
+        <form class="inline" method="post" action="/ui/movies/{{ m.id }}/delete">
+          <button type="submit">remove</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <h3>Add a movie</h3>
+  <form method="get" action="/library">
+    <input name="q" placeholder="Search TMDB" value="{{ query or '' }}">
+    <button type="submit">Search</button>
+  </form>
+
+  {% if candidates is not none %}
+  <table>
+    <tr><th>Title</th><th>Year</th><th></th></tr>
+    {% for c in candidates %}
+    <tr>
+      <td>{{ c.title }}</td>
+      <td>{{ c.year or "-" }}</td>
+      <td>
+        <form method="post" action="/ui/movies">
+          <input type="hidden" name="tmdb_id" value="{{ c.tmdb_id }}">
+          <input type="hidden" name="title" value="{{ c.title }}">
+          <input type="hidden" name="year" value="{{ c.year or '' }}">
+          <input type="hidden" name="overview" value="{{ c.overview or '' }}">
+          <input type="hidden" name="poster_path" value="{{ c.poster_path or '' }}">
+          <button type="submit">Add</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+</body>
+</html>
