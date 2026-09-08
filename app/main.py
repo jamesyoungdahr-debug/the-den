@@ -1,7 +1,10 @@
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from sqlalchemy import text
+from sqlalchemy.orm import Session
 
+from app import automation, scheduler
 from app.db import SessionLocal, engine
+from app.deps import get_db
 from app.models import QualityProfile
 from app.routers import downloads, indexers, movies, search, series, ui
 
@@ -23,6 +26,22 @@ def seed_default_quality_profile():
             db.commit()
     finally:
         db.close()
+
+
+@app.on_event("startup")
+def start_scheduler():
+    scheduler.start()
+
+
+@app.on_event("shutdown")
+def stop_scheduler():
+    scheduler.stop()
+
+
+@app.post("/automation/run-now")
+async def run_automation_now(db: Session = Depends(get_db)):
+    await automation.run_cycle(db)
+    return {"status": "ok"}
 
 
 @app.get("/health")

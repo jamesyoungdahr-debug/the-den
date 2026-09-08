@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app import qbittorrent, tmdb
+from app import tmdb
 from app.candidates import scored_candidates
 from app.deps import get_db
-from app.models import DownloadRecord, Movie, QualityProfile
+from app.grabber import grab_movie as do_grab_movie
+from app.models import Movie, QualityProfile
 from app.schemas import DownloadRecordOut, GrabRequest, MovieCreate, MovieOut, ScoredReleaseOut
 
 router = APIRouter(prefix="/movies", tags=["movies"])
@@ -55,21 +56,7 @@ async def grab_movie(movie_id: int, payload: GrabRequest, db: Session = Depends(
     movie = db.get(Movie, movie_id)
     if not movie:
         raise HTTPException(404, "Movie not found")
-
-    category = f"the-den-movie-{movie_id}"
     try:
-        await qbittorrent.add_torrent(payload.download_url, category)
+        return await do_grab_movie(db, movie, payload.download_url, payload.release_title)
     except Exception as exc:
         raise HTTPException(502, f"Failed to send to download client: {exc}")
-
-    record = DownloadRecord(
-        movie_id=movie_id,
-        release_title=payload.release_title,
-        download_url=payload.download_url,
-        category=category,
-        status="queued",
-    )
-    db.add(record)
-    db.commit()
-    db.refresh(record)
-    return record

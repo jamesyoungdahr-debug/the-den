@@ -3,10 +3,12 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
-from app import qbittorrent, tmdb, torznab
+from app import tmdb, torznab
 from app.candidates import scored_candidates
 from app.deps import get_db
 from app.download_check import check_and_import
+from app.grabber import grab_episode as do_grab_episode
+from app.grabber import grab_movie as do_grab_movie
 from app.models import DownloadRecord, Episode, Indexer, Movie, QualityProfile, Series
 
 router = APIRouter(tags=["ui"])
@@ -126,18 +128,10 @@ async def ui_grab_movie(
     movie = db.get(Movie, movie_id)
     if not movie:
         raise HTTPException(404, "Movie not found")
-    category = f"the-den-movie-{movie_id}"
     try:
-        await qbittorrent.add_torrent(download_url, category)
+        await do_grab_movie(db, movie, download_url, release_title)
     except Exception as exc:
         raise HTTPException(502, f"Failed to send to download client: {exc}")
-    db.add(
-        DownloadRecord(
-            movie_id=movie_id, release_title=release_title, download_url=download_url,
-            category=category, status="queued",
-        )
-    )
-    db.commit()
     return RedirectResponse("/ui/downloads", status_code=303)
 
 
@@ -238,18 +232,10 @@ async def ui_grab_episode(
     episode = db.get(Episode, episode_id)
     if not episode:
         raise HTTPException(404, "Episode not found")
-    category = f"the-den-episode-{episode_id}"
     try:
-        await qbittorrent.add_torrent(download_url, category)
+        await do_grab_episode(db, episode, download_url, release_title)
     except Exception as exc:
         raise HTTPException(502, f"Failed to send to download client: {exc}")
-    db.add(
-        DownloadRecord(
-            episode_id=episode_id, release_title=release_title, download_url=download_url,
-            category=category, status="queued",
-        )
-    )
-    db.commit()
     return RedirectResponse("/ui/downloads", status_code=303)
 
 
