@@ -2,10 +2,9 @@
 
 A native KDE (Qt6/QML/Kirigami) desktop app that talks to a running [The Den](
 https://github.com/jamesyoungdahr-debug/the-den) backend over its existing JSON API,
-as an alternative to using the web UI in a browser. Packaged as a Flatpak using the KDE
-runtime. Deliberately a **separate repo** from the backend so the two can be released
-and updated independently — the client only depends on the backend's HTTP API staying
-stable, not on its internals.
+as an alternative to using the web UI in a browser. Deliberately a **separate repo**
+from the backend so the two can be released and updated independently — the client
+only depends on the backend's HTTP API staying stable, not on its internals.
 
 Built the same way as the backend: one milestone at a time, tested before moving on.
 
@@ -23,8 +22,9 @@ Built the same way as the backend: one milestone at a time, tested before moving
 - [x] M7 — Settings: same fields as the backend's `/ui/settings`, via a JSON API — the
       backend side of this (`GET/POST /api/settings`) is already done, see the-den's
       ROADMAP.md
-- [ ] M8 — Flatpak packaging: manifest using `org.kde.Platform`, build via
-      `flatpak-builder`, verified with a real build+run
+- [ ] M8 — ~~Flatpak packaging~~ Abandoned mid-attempt — see the "M8" note below.
+      Packaging approach still undecided. All 7 feature milestones (M0–M7) are done
+      regardless of how this is eventually packaged.
 
 ## Notes
 
@@ -283,3 +283,33 @@ true (i.e. confirmed the *absence* of a bug — an empty-string save silently wi
 previously-set secret would be a real, easy-to-make mistake here, and the specific
 scenario that would have caught it was deliberately included in the test rather than
 assumed away).
+
+## M8: Flatpak packaging — abandoned mid-attempt
+
+Started, hit real friction, then the user called it off. Recording what was actually
+tried in case Flatpak comes back up later:
+
+- Installed `flatpak`/`flatpak-builder` and the `org.kde.Platform`/`org.kde.Sdk` 6.10
+  runtimes in the WSL Arch environment — this part worked.
+- PySide6 isn't bundled in the KDE runtime; it needs to be `pip install`ed as a build
+  module. `flatpak-builder`'s build step runs network-isolated by design (only the
+  declared "sources" fetch phase gets network, for reproducibility), so this needs
+  either the official `flatpak-pip-generator` tool (which pulls in its own Python
+  dependency, `python-requirements-parser`, not in the Arch repos) or hand-pinning each
+  wheel's exact PyPI URL + sha256 in the manifest.
+- Went the hand-pinning route. Hit two points of real friction along the way, both
+  solvable but time-consuming: (1) `flatpak run` sandboxes network and arbitrary host
+  paths by default — needed `--share=network` and an explicit `--filesystem=` grant,
+  and running as `root` (rather than a normal user) caused permission errors inside the
+  sandbox that only cleared up switching to a regular user. (2) The downloaded wheels
+  (`PySide6-Addons` alone is 167MB) can't be committed to the repo at all — GitHub
+  rejects files over 100MB outright — so the only sane approach is pinning upstream
+  PyPI URLs + sha256 hashes directly in the manifest (the standard, correct way real
+  Flathub manifests do this) rather than vendoring binaries, which was the next step in
+  progress when this was called off.
+- Nothing was committed to this repo for any of this — all of it lived in the WSL
+  scratch environment and one now-removed empty local directory.
+
+Packaging approach is an open question again. Native Arch package (matching how
+the-den's own `PKGBUILD` already works, and consistent with this being a HoltOS-only
+app) is one obvious alternative worth considering before trying Flatpak again.
