@@ -76,10 +76,19 @@ Kirigami.ApplicationWindow {
                 text: apiClient.statusText
             }
 
-            Controls.Button {
-                text: "Indexers"
-                enabled: apiClient.connected
-                onClicked: root.pageStack.push(Qt.resolvedUrl("IndexersPage.qml"))
+            RowLayout {
+                spacing: Kirigami.Units.smallSpacing
+
+                Controls.Button {
+                    text: "Indexers"
+                    enabled: apiClient.connected
+                    onClicked: root.pageStack.push(Qt.resolvedUrl("IndexersPage.qml"))
+                }
+                Controls.Button {
+                    text: "Movies"
+                    enabled: apiClient.connected
+                    onClicked: root.pageStack.push(Qt.resolvedUrl("MoviesPage.qml"))
+                }
             }
 
             Item { Layout.fillHeight: true }

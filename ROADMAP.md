@@ -14,15 +14,15 @@ Built the same way as the backend: one milestone at a time, tested before moving
 - [x] M0 — Skeleton: Kirigami window boots, "Connect" button hits `/health`, shows
       connected/not-connected status
 - [x] M1 — Indexers: list/add/delete/test-connection (mirrors the backend's `/indexers`)
-- [ ] M2 — Movie library: TMDB search, add, missing/have status
+- [x] M2 — Movie library: TMDB search, add, missing/have status
 - [ ] M3 — Release browsing + grab: view scored candidates for a movie, grab the best
       (or a chosen) one
 - [ ] M4 — Downloads view: status list, manual "check now"
 - [ ] M5 — TV library: series/episodes (mirrors backend M5/M6)
 - [ ] M6 — Calendar view
-- [ ] M7 — Settings: same fields as the backend's `/ui/settings`, via a JSON API
-      (needs a small backend addition — it currently only exposes settings as an HTML
-      form, not JSON; add a `GET/POST /api/settings` alongside the existing UI route)
+- [ ] M7 — Settings: same fields as the backend's `/ui/settings`, via a JSON API — the
+      backend side of this (`GET/POST /api/settings`) is already done, see the-den's
+      ROADMAP.md
 - [ ] M8 — Flatpak packaging: manifest using `org.kde.Platform`, build via
       `flatpak-builder`, verified with a real build+run
 
@@ -80,3 +80,27 @@ into Qt's theming model instead of CSS:
   of M1 onward. The headless suite gives strong confidence the theme *compiles and
   resolves correctly*; actual layout/spacing on screen is unverified until someone
   looks at it for real.
+
+## M2: movie library
+
+`src/models/movie_model.py` — two models, mirroring the web UI's split between the
+persisted library and ephemeral search results: `MovieListModel` (GET/POST/DELETE
+`/movies`) and `MovieSearchResultsModel` (GET `/movies/search-tmdb`). `MoviesPage.qml`:
+a search box + results list (each with an Add button) as the `ListView`'s header, the
+library itself as the main delegate list, `StatusPill` for have/missing. Verified
+headlessly: library add/list/delete round-tripped correctly against the real backend;
+search correctly surfaced a backend error via `errorOccurred` without crashing (see
+note below — the backend itself 500s on an unconfigured TMDB key, a backend-side gap,
+not a client bug: the client's error handling did exactly what it should).
+
+Found and cleaned up before starting: a previous attempt (not from a session with
+memory of this project) left `src/models/movie_model.py` as an actual empty
+**directory** instead of a file, plus a `context/` folder of fabricated-sounding docs
+claiming "M2–M7 100% scaffolded" and a nonexistent "tooling can't edit this file"
+blocker. Neither claim held up — verified against the real filesystem before trusting
+either. Real M2 work started from a clean `master`, not built on top of any of that.
+
+**Known backend gap surfaced by testing** (out of scope for this repo, noted for
+the-den): `app/tmdb.py`'s `search_movie()` calls `resp.raise_for_status()` uncaught, so
+an unconfigured/invalid `TMDB_API_KEY` produces a raw 500 instead of a clean error the
+client could show a nicer message for. Worth a small backend fix at some point.
