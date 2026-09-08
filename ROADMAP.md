@@ -40,9 +40,17 @@ Deploy target: native systemd service on Arch Linux (no Docker).
 - No authentication anywhere in the app. Fine on localhost/behind a VPN; do not expose
   it directly to the internet without adding one (or fronting it with an auth-checking
   reverse proxy).
-- M9 packaging (PKGBUILD, systemd, sysusers/tmpfiles) is written to real Arch conventions
-  but was authored on a Windows dev machine — it has not been through an actual
-  `makepkg -si` + `pacman -U` cycle. Test it for real on the distro before trusting it.
+- M9 packaging (PKGBUILD, systemd, sysusers/tmpfiles) has been verified for real: a
+  genuine Arch Linux environment (WSL2, systemd enabled), full `makepkg -si` +
+  `pacman -U` + `systemctl enable --now`, service came up and answered `/health`.
+  Found and fixed one real bug this way: the post-install migration failed with
+  `ModuleNotFoundError: No module named 'app'` because `runuser` doesn't `cd` into
+  `/opt/the-den` on its own, so alembic's `env.py` (which does `from app.db import
+  Base`) couldn't find the package. Also disabled makepkg's debug-package generation
+  — meaningless for pure Python and it chokes on Python 3.14 venv's new `𝜋thon`
+  symlink easter egg. Not literally CachyOS (its kernel/scheduler differences don't
+  come into play under a shared-kernel WSL environment), but identical at the
+  pacman/systemd level that this packaging actually touches.
 
 ## Post-M9 addition: in-app Settings page
 
