@@ -8,10 +8,13 @@ _JSON_CONTENT_TYPE = "application/json"
 
 
 class CandidatesModel(QAbstractListModel):
-    """Scored release candidates for one movie -- GET /movies/{id}/candidates -- plus
-    grabbing one of them -- POST /movies/{id}/grab. Stateful: load(movieId) remembers
-    which movie subsequent grab() calls act on, matching the natural "open this movie's
-    releases, pick one" UI flow."""
+    """Scored release candidates for one movie or episode -- GET
+    /{resource}/{id}/candidates -- plus grabbing one of them -- POST
+    /{resource}/{id}/grab. `resource` is "movies" or "episodes"; both share identical
+    candidates/grab semantics on the backend, only the URL prefix differs, so one class
+    serves both rather than duplicating it. Stateful: load(itemId) remembers which
+    movie/episode subsequent grab() calls act on, matching the natural "open this
+    item's releases, pick one" UI flow."""
 
     TitleRole = Qt.ItemDataRole.UserRole + 1
     DownloadUrlRole = Qt.ItemDataRole.UserRole + 2
@@ -23,12 +26,14 @@ class CandidatesModel(QAbstractListModel):
     errorOccurred = Signal(str)
     grabFinished = Signal(bool, str)  # ok, message
 
-    def __init__(self, base_url_provider: Callable[[], str], parent=None):
+    def __init__(self, base_url_provider: Callable[[], str], resource: str, parent=None):
         super().__init__(parent)
+        assert resource in ("movies", "episodes"), resource
+        self._resource = resource
         self._items: list[dict] = []
         self._manager = QNetworkAccessManager(self)
         self._base_url = base_url_provider
-        self._movie_id: int | None = None
+        self._item_id: int | None = None
 
     def rowCount(self, parent=QModelIndex()) -> int:
         return 0 if parent.isValid() else len(self._items)
@@ -57,9 +62,10 @@ class CandidatesModel(QAbstractListModel):
         }
 
     @Slot(int)
-    def load(self, movieId: int) -> None:
-        self._movie_id = movieId
-        reply = self._manager.get(QNetworkRequest(QUrl(f"{self._base_url()}/movies/{movieId}/candidates")))
+    def load(self, itemId: int) -> None:
+        self._item_id = itemId
+        url = f"{self._base_url()}/{self._resource}/{itemId}/candidates"
+        reply = self._manager.get(QNetworkRequest(QUrl(url)))
         reply.finished.connect(lambda: self._on_load_reply(reply))
 
     def _on_load_reply(self, reply: QNetworkReply) -> None:
@@ -78,11 +84,12 @@ class CandidatesModel(QAbstractListModel):
 
     @Slot(str, str)
     def grab(self, downloadUrl: str, releaseTitle: str) -> None:
-        if self._movie_id is None:
-            self.grabFinished.emit(False, "No movie loaded")
+        if self._item_id is None:
+            self.grabFinished.emit(False, "Nothing loaded")
             return
         payload = {"download_url": downloadUrl, "release_title": releaseTitle}
-        request = QNetworkRequest(QUrl(f"{self._base_url()}/movies/{self._movie_id}/grab"))
+        url = f"{self._base_url()}/{self._resource}/{self._item_id}/grab"
+        request = QNetworkRequest(QUrl(url))
         request.setHeader(QNetworkRequest.KnownHeaders.ContentTypeHeader, _JSON_CONTENT_TYPE)
         reply = self._manager.post(request, json.dumps(payload).encode())
         reply.finished.connect(lambda: self._on_grab_reply(reply))

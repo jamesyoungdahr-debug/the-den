@@ -7,14 +7,20 @@ Kirigami.ScrollablePage {
     id: page
     title: "Releases"
 
-    property int movieId: 0
-    property string movieTitle: ""
+    // Movies push this page with just itemId/heading, taking the default
+    // candidatesSource (the movie CandidatesModel). Episodes override
+    // candidatesSource to the episode CandidatesModel at push time -- same page,
+    // same underlying model class, different backend resource ("movies" vs
+    // "episodes"), see src/models/candidates_model.py.
+    property var candidatesSource: candidatesModel
+    property int itemId: 0
+    property string heading: ""
 
-    Component.onCompleted: candidatesModel.load(movieId)
+    Component.onCompleted: candidatesSource.load(itemId)
 
     ListView {
         id: listView
-        model: candidatesModel
+        model: page.candidatesSource
 
         header: ColumnLayout {
             width: ListView.view.width
@@ -25,7 +31,7 @@ Kirigami.ScrollablePage {
             // wrapped in its own Component with its own id scope -- statusBanner
             // is only visible to things declared inside that same wrapped scope.
             Connections {
-                target: candidatesModel
+                target: page.candidatesSource
                 function onErrorOccurred(message) {
                     statusBanner.text = "Error: " + message
                     statusBanner.type = Kirigami.MessageType.Error
@@ -39,7 +45,7 @@ Kirigami.ScrollablePage {
             }
 
             Kirigami.Heading {
-                text: page.movieTitle
+                text: page.heading
                 level: 2
                 Layout.fillWidth: true
                 elide: Text.ElideRight
@@ -95,7 +101,7 @@ Kirigami.ScrollablePage {
                 Controls.Button {
                     text: "Grab"
                     highlighted: true
-                    onClicked: candidatesModel.grab(downloadUrl, title)
+                    onClicked: page.candidatesSource.grab(downloadUrl, title)
                 }
             }
         }

@@ -1,8 +1,9 @@
-"""Force-compiles CandidatesPage.qml against real CandidatesModel + backend data (see
-check_candidates_model.py for the fixture setup this assumes is already running/seeded).
-Loading real rows here is what actually exercises the delegate's per-row bindings
-(isBest accent, StatusPill, seeders null-check) -- an empty list wouldn't instantiate
-the delegate at all. Run under QT_QPA_PLATFORM=offscreen, no display needed.
+"""Force-compiles CandidatesPage.qml (movie variant, the default candidatesSource)
+against real CandidatesModel + backend data (see check_candidates_model.py for the
+fixture setup this assumes is already running/seeded). Loading real rows here is what
+actually exercises the delegate's per-row bindings (isBest accent, StatusPill, seeders
+null-check) -- an empty list wouldn't instantiate the delegate at all.
+Run under QT_QPA_PLATFORM=offscreen, no display needed.
 """
 
 import sys
@@ -19,7 +20,7 @@ from theme import Theme
 
 app = QGuiApplication(sys.argv)
 engine = QQmlApplicationEngine()
-candidates_model = CandidatesModel(lambda: "http://127.0.0.1:8686")
+candidates_model = CandidatesModel(lambda: "http://127.0.0.1:8686", resource="movies")
 theme = Theme()
 engine.rootContext().setContextProperty("candidatesModel", candidates_model)
 engine.rootContext().setContextProperty("Theme", theme)
@@ -35,9 +36,9 @@ if not engine.rootObjects():
     sys.exit(1)
 
 root = engine.rootObjects()[0]
-root.setProperty("movieId", 1)
-root.setProperty("movieTitle", "Inception")
-candidates_model.load(1)  # movieId=1 as a property doesn't retrigger Component.onCompleted
+root.setProperty("itemId", 1)
+root.setProperty("heading", "Inception")
+candidates_model.load(1)  # property set after load(), so retrigger for real data
 
 
 def finish():

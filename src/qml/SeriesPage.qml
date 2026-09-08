@@ -5,13 +5,13 @@ import org.kde.kirigami as Kirigami
 
 Kirigami.ScrollablePage {
     id: page
-    title: "Movies"
+    title: "TV"
 
-    Component.onCompleted: movieModel.refresh()
+    Component.onCompleted: seriesModel.refresh()
 
     ListView {
         id: listView
-        model: movieModel
+        model: seriesModel
 
         header: ColumnLayout {
             width: ListView.view.width
@@ -22,7 +22,7 @@ Kirigami.ScrollablePage {
             // wrapped in its own Component with its own id scope -- statusBanner
             // is only visible to things declared inside that same wrapped scope.
             Connections {
-                target: movieModel
+                target: seriesModel
                 function onErrorOccurred(message) {
                     statusBanner.text = "Error: " + message
                     statusBanner.type = Kirigami.MessageType.Error
@@ -31,7 +31,7 @@ Kirigami.ScrollablePage {
             }
 
             Connections {
-                target: movieSearchModel
+                target: seriesSearchModel
                 function onErrorOccurred(message) {
                     statusBanner.text = "Search error: " + message
                     statusBanner.type = Kirigami.MessageType.Error
@@ -52,18 +52,18 @@ Kirigami.ScrollablePage {
                 Controls.TextField {
                     id: searchField
                     Layout.fillWidth: true
-                    placeholderText: "Search TMDB..."
-                    onAccepted: movieSearchModel.search(text)
+                    placeholderText: "Search TVmaze..."
+                    onAccepted: seriesSearchModel.search(text)
                 }
                 Controls.Button {
                     text: "Search"
-                    onClicked: movieSearchModel.search(searchField.text)
+                    onClicked: seriesSearchModel.search(searchField.text)
                 }
             }
 
             Repeater {
                 id: searchRepeater
-                model: movieSearchModel
+                model: seriesSearchModel
                 delegate: Kirigami.SwipeListItem {
                     Layout.fillWidth: true
                     contentItem: RowLayout {
@@ -92,7 +92,7 @@ Kirigami.ScrollablePage {
                         Controls.Button {
                             text: "Add"
                             highlighted: true
-                            onClicked: movieModel.addMovie(tmdbId, title, year ? String(year) : "", overview, posterPath)
+                            onClicked: seriesModel.addSeries(tvmazeId, title, year ? String(year) : "", overview, posterPath)
                         }
                     }
                 }
@@ -130,20 +130,14 @@ Kirigami.ScrollablePage {
                         color: Theme.ink42
                     }
                 }
-
-                StatusPill {
-                    label: hasFile ? "have" : "missing"
-                    tone: hasFile ? "healthy" : "idle"
-                }
             }
             actions: [
                 Kirigami.Action {
-                    text: "Find releases"
-                    visible: !hasFile
+                    text: "View episodes"
                     onTriggered: applicationWindow().pageStack.push(
-                        Qt.resolvedUrl("CandidatesPage.qml"), { itemId: movieId, heading: title })
+                        Qt.resolvedUrl("EpisodesPage.qml"), { seriesId: seriesId, seriesTitle: title })
                 },
-                Kirigami.Action { text: "Remove"; onTriggered: movieModel.deleteMovie(movieId) }
+                Kirigami.Action { text: "Remove"; onTriggered: seriesModel.deleteSeries(seriesId) }
             ]
         }
     }

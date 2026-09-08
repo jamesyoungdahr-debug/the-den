@@ -18,7 +18,7 @@ Built the same way as the backend: one milestone at a time, tested before moving
 - [x] M3 — Release browsing + grab: view scored candidates for a movie, grab the best
       (or a chosen) one
 - [x] M4 — Downloads view: status list, manual "check now"
-- [ ] M5 — TV library: series/episodes (mirrors backend M5/M6)
+- [x] M5 — TV library: series/episodes (mirrors backend M5/M6)
 - [ ] M6 — Calendar view
 - [ ] M7 — Settings: same fields as the backend's `/ui/settings`, via a JSON API — the
       backend side of this (`GET/POST /api/settings`) is already done, see the-den's
@@ -182,3 +182,55 @@ backgrounded `nohup ... &` process starts across *separate* `wsl -d archlinux --
 '...'` invocations doesn't reliably keep them alive — put all of them in *one* `bash -c`
 invocation (as done successfully throughout this project) or they can silently die when
 that particular `wsl.exe` call returns.
+
+## M5: TV library
+
+`src/models/series_model.py` (`SeriesListModel` + `SeriesSearchResultsModel`, mirroring
+M2's movie split) and `src/models/episodes_model.py` (`EpisodesModel`, GET
+`/series/{id}/episodes`). `SeriesPage.qml` mirrors `MoviesPage.qml`'s search+library
+layout. `EpisodesPage.qml` groups episodes by season using `ListView`'s built-in
+`section.property`/`section.delegate` + `Kirigami.ListSectionHeader` — a much cleaner
+mechanism than the web UI's Jinja `loop.previtem` trick for the same grouping.
+
+**Generalized `CandidatesModel`/`CandidatesPage.qml` for a second real use case**
+(episodes), not preemptively: `CandidatesModel` now takes a `resource` ("movies" or
+"episodes") since the candidates/grab endpoints are identical except for the URL
+prefix. `CandidatesPage.qml`'s `movieId`/`movieTitle` properties became generic
+`itemId`/`heading`, plus a `candidatesSource` property (defaults to the movie
+`CandidatesModel`, overridable at push time) so both `MoviesPage.qml` and
+`EpisodesPage.qml`'s "Find releases" actions push the *same* page, just pointed at a
+different model instance. Verified both variants load real, independent data with zero
+cross-contamination between the two model instances.
+
+**Two more real findings from applying the M3 testing discipline for real** (not
+cosmetic this time, actual test-design bugs caught while writing the tests):
+1. `GET /series/{id}/episodes` on the backend doesn't validate the series exists — it
+   returns `200 []` for a nonexistent id rather than 404. First draft of
+   `check_episodes_page_qml.py` tried to use a bad id as its "error path" trigger and
+   silently tested nothing (no error, no exception, just an empty and *plausible-looking*
+   result) — caught by actually checking what came back rather than assuming. Fixed
+   the test by forcing a genuine network error (pointing the model at an unreachable
+   URL) instead. Noted as a known backend gap below, not fixed here.
+2. Seeding a pushed page's properties via `root.setProperty()` *after* `engine.load()`
+   (the pattern every earlier test used) has a real race: `Component.onCompleted`
+   already fires once with the property's *default* value before your `setProperty()`
+   call lands, firing a spurious first `load()` whose reply can arrive out of order and
+   clobber the real one — this is exactly what happened here, landing on `rowCount: 0`
+   after a run that looked otherwise fine. The fix, `engine.setInitialProperties({...})`
+   *before* `engine.load()`, is also the more accurate test in the first place: it's
+   what `pageStack.push(url, {props})` actually does in the real app, where only one
+   `load()` call ever happens. Worth rechecking whether the earlier `check_*_page_qml.py`
+   scripts should be updated to this pattern too, even though they haven't shown
+   symptoms — `CandidatesModel`'s backend routes happen to 404 on a bad id (unlike
+   episodes), which is probably why the same race hasn't bitten those tests yet.
+
+**Known backend gaps found by testing** (not fixed here, noted for the-den):
+`GET /series/{id}/episodes` doesn't 404 on a nonexistent series id (see above); plus
+the pre-existing `tmdb.search_movie()` 500-on-bad-key gap from M2.
+
+**Latent model-level gap, also not fixed here**: none of this app's `QAbstractListModel`
+subclasses guard against out-of-order replies when `load()`/`refresh()` is called twice
+in quick succession (no request generation counter to discard a stale reply). Doesn't
+affect the current app, since every real navigation only ever calls `load()` once per
+page visit — but worth hardening before this matters, e.g. if a future page adds a
+manual refresh button someone could double-tap.

@@ -90,6 +90,11 @@ Kirigami.ApplicationWindow {
                     onClicked: root.pageStack.push(Qt.resolvedUrl("MoviesPage.qml"))
                 }
                 Controls.Button {
+                    text: "TV"
+                    enabled: apiClient.connected
+                    onClicked: root.pageStack.push(Qt.resolvedUrl("SeriesPage.qml"))
+                }
+                Controls.Button {
                     text: "Downloads"
                     enabled: apiClient.connected
                     onClicked: root.pageStack.push(Qt.resolvedUrl("DownloadsPage.qml"))
