@@ -1,8 +1,8 @@
 post_install() {
     systemd-sysusers the-den.conf
     systemd-tmpfiles --create the-den.conf
-    DATABASE_URL="sqlite:////var/lib/the-den/den.db" \
-        runuser -u the-den -- /opt/the-den/.venv/bin/python -m alembic -c /opt/the-den/alembic.ini upgrade head
+    cd /opt/the-den && DATABASE_URL="sqlite:////var/lib/the-den/den.db" \
+        runuser -u the-den -- /opt/the-den/.venv/bin/python -m alembic upgrade head
 
     echo "==> Edit /etc/the-den/the-den.env (at least TMDB_API_KEY, QBIT_USERNAME/PASSWORD,"
     echo "    MOVIES_ROOT/TV_ROOT), then: systemctl enable --now the-den"
@@ -14,8 +14,8 @@ post_install() {
 post_upgrade() {
     systemd-sysusers the-den.conf
     systemd-tmpfiles --create the-den.conf
-    DATABASE_URL="sqlite:////var/lib/the-den/den.db" \
-        runuser -u the-den -- /opt/the-den/.venv/bin/python -m alembic -c /opt/the-den/alembic.ini upgrade head
+    cd /opt/the-den && DATABASE_URL="sqlite:////var/lib/the-den/den.db" \
+        runuser -u the-den -- /opt/the-den/.venv/bin/python -m alembic upgrade head
     echo "==> Migrations applied. Restart to pick up the new version: systemctl restart the-den"
 }
 

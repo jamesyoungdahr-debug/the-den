@@ -17,6 +17,10 @@ makedepends=('python-virtualenv')
 optdepends=('qbittorrent-nox: default download client')
 backup=('etc/the-den/the-den.env')
 install=the-den.install
+# No compiled binaries of our own here — the bundled interpreter's debug symbols
+# aren't ours to strip, and makepkg's debug-package step chokes on the venv's
+# non-ASCII '𝜋thon' symlink (a real Python 3.14 venv easter egg) anyway.
+options=('!debug' '!strip')
 
 package() {
     # This PKGBUILD has no source array, so $startdir is the repo checkout itself.
