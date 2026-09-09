@@ -37,7 +37,13 @@ Kirigami.ScrollablePage {
                     statusBanner.type = Kirigami.MessageType.Error
                     statusBanner.visible = true
                 }
-                function onGrabFinished(ok, message) {
+                function onGrabFinished(itemId, ok, message) {
+                    // candidatesSource is a single shared model instance reused across
+                    // every item's Releases page -- if the user grabbed here, then
+                    // navigated to a different item before this (slow) reply came
+                    // back, itemId won't match this page's, so ignore it: it's not
+                    // this page's result to show.
+                    if (itemId !== page.itemId) return
                     statusBanner.text = ok ? "Grabbed — check Downloads" : "Grab failed: " + message
                     statusBanner.type = ok ? Kirigami.MessageType.Positive : Kirigami.MessageType.Warning
                     statusBanner.visible = true

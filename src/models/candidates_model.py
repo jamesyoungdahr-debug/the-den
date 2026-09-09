@@ -24,7 +24,7 @@ class CandidatesModel(QAbstractListModel):
     IsBestRole = Qt.ItemDataRole.UserRole + 6
 
     errorOccurred = Signal(str)
-    grabFinished = Signal(bool, str)  # ok, message
+    grabFinished = Signal(int, bool, str)  # itemId, ok, message
 
     def __init__(self, base_url_provider: Callable[[], str], resource: str, parent=None):
         super().__init__(parent)
@@ -34,6 +34,12 @@ class CandidatesModel(QAbstractListModel):
         self._manager = QNetworkAccessManager(self)
         self._base_url = base_url_provider
         self._item_id: int | None = None
+        # This model is a single shared instance reused across every movie/episode's
+        # Releases page (see main.py). Bumped on every load() so a reply from a
+        # superseded load (the user navigated to a different item before it returned)
+        # can be told apart from the current one and dropped instead of clobbering
+        # whatever's now on screen with a different item's data.
+        self._request_seq = 0
 
     def rowCount(self, parent=QModelIndex()) -> int:
         return 0 if parent.isValid() else len(self._items)
@@ -64,11 +70,20 @@ class CandidatesModel(QAbstractListModel):
     @Slot(int)
     def load(self, itemId: int) -> None:
         self._item_id = itemId
+        self._request_seq += 1
+        seq = self._request_seq
         url = f"{self._base_url()}/{self._resource}/{itemId}/candidates"
         reply = self._manager.get(QNetworkRequest(QUrl(url)))
-        reply.finished.connect(lambda: self._on_load_reply(reply))
+        reply.finished.connect(lambda: self._on_load_reply(reply, seq))
 
-    def _on_load_reply(self, reply: QNetworkReply) -> None:
+    def _on_load_reply(self, reply: QNetworkReply, seq: int) -> None:
+        reply.deleteLater()
+        if seq != self._request_seq:
+            # A newer load() has already superseded this one (the user opened a
+            # different item's page before this reply came back) -- whatever page
+            # is showing now isn't for this reply, so drop it rather than reset
+            # the model to a different item's candidates or bounce an error onto it.
+            return
         if reply.error() == QNetworkReply.NetworkError.NoError:
             body = bytes(reply.readAll().data())
             try:
@@ -80,25 +95,29 @@ class CandidatesModel(QAbstractListModel):
             self.endResetModel()
         else:
             self.errorOccurred.emit(reply.errorString())
-        reply.deleteLater()
 
     @Slot(str, str)
     def grab(self, downloadUrl: str, releaseTitle: str) -> None:
         if self._item_id is None:
-            self.grabFinished.emit(False, "Nothing loaded")
+            self.grabFinished.emit(-1, False, "Nothing loaded")
             return
+        item_id = self._item_id
         payload = {"download_url": downloadUrl, "release_title": releaseTitle}
-        url = f"{self._base_url()}/{self._resource}/{self._item_id}/grab"
+        url = f"{self._base_url()}/{self._resource}/{item_id}/grab"
         request = QNetworkRequest(QUrl(url))
         request.setHeader(QNetworkRequest.KnownHeaders.ContentTypeHeader, _JSON_CONTENT_TYPE)
         reply = self._manager.post(request, json.dumps(payload).encode())
-        reply.finished.connect(lambda: self._on_grab_reply(reply))
+        reply.finished.connect(lambda: self._on_grab_reply(reply, item_id))
 
-    def _on_grab_reply(self, reply: QNetworkReply) -> None:
+    def _on_grab_reply(self, reply: QNetworkReply, item_id: int) -> None:
+        # itemId travels with the result so a page only reacts to a grab it actually
+        # started -- this model is a single shared instance across every item's page
+        # (see load()'s docstring note), so without this a slow grab finishing after
+        # the user has navigated to a different item would show its result there instead.
         if reply.error() == QNetworkReply.NetworkError.NoError:
-            self.grabFinished.emit(True, "Grabbed")
+            self.grabFinished.emit(item_id, True, "Grabbed")
         else:
             body = bytes(reply.readAll().data()).decode(errors="replace")
             message = f"{reply.errorString()} — {body}" if body else reply.errorString()
-            self.grabFinished.emit(False, message)
+            self.grabFinished.emit(item_id, False, message)
         reply.deleteLater()

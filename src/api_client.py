@@ -17,6 +17,11 @@ class ApiClient(QObject):
         self._connected = False
         self._status_text = "Not connected"
         self._manager = QNetworkAccessManager(self)
+        # Bumped on every checkHealth() so a reply from a superseded check (e.g. the
+        # user fixed a typo'd URL and clicked Connect again while the first, now-stale
+        # attempt was still timing out) can be dropped instead of overwriting a newer,
+        # correct result with a stale one.
+        self._request_seq = 0
 
     def _get_base_url(self) -> str:
         return self._base_url
@@ -42,11 +47,20 @@ class ApiClient(QObject):
     def checkHealth(self) -> None:
         self._status_text = "Checking..."
         self.statusTextChanged.emit()
+        self._request_seq += 1
+        seq = self._request_seq
         request = QNetworkRequest(QUrl(f"{self._base_url}/health"))
         reply = self._manager.get(request)
-        reply.finished.connect(lambda: self._on_health_reply(reply))
+        reply.finished.connect(lambda: self._on_health_reply(reply, seq))
 
-    def _on_health_reply(self, reply: QNetworkReply) -> None:
+    def _on_health_reply(self, reply: QNetworkReply, seq: int) -> None:
+        reply.deleteLater()
+        if seq != self._request_seq:
+            # A newer checkHealth() has already superseded this one -- e.g. the user
+            # corrected the URL and clicked Connect again while this one was still
+            # working through a timeout. Drop it rather than clobbering the newer
+            # (possibly successful) result with this stale one.
+            return
         if reply.error() == QNetworkReply.NetworkError.NoError:
             body = bytes(reply.readAll().data()).decode()
             self._connected = '"status":"ok"' in body
@@ -54,6 +68,5 @@ class ApiClient(QObject):
         else:
             self._connected = False
             self._status_text = f"Connection failed: {reply.errorString()}"
-        reply.deleteLater()
         self.connectedChanged.emit()
         self.statusTextChanged.emit()

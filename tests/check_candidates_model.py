@@ -57,8 +57,10 @@ def step3_grab(download_url: str, title: str) -> None:
     model.grab(download_url, title)
 
 
-def on_grab_finished(ok: bool, message: str) -> None:
-    print(f"grabFinished: ok={ok} message={message}")
+def on_grab_finished(item_id: int, ok: bool, message: str) -> None:
+    print(f"grabFinished: itemId={item_id} ok={ok} message={message}")
+    if item_id != 1:
+        fail(f"expected grabFinished for itemId=1, got {item_id}")
     if not ok:
         fail(f"grab failed: {message}")
     print("-- done --")
