@@ -45,9 +45,12 @@ def _parse_items(xml_bytes: bytes, indexer_name: str) -> list[Release]:
                 title=title,
                 download_url=download_url,
                 indexer_name=indexer_name,
-                size=int(attrs["size"]) if attrs.get("size", "").isdigit() else None,
-                seeders=int(attrs["seeders"]) if attrs.get("seeders", "").isdigit() else None,
-                peers=int(attrs["peers"]) if attrs.get("peers", "").isdigit() else None,
+                # `or ""` (not `.get(x, "")`): a <torznab:attr name="x"/> with no
+                # value attribute stores None for a *present* key, which the ", \"\""
+                # default doesn't cover -- only an absent key would fall back to it.
+                size=int(attrs["size"]) if (attrs.get("size") or "").isdigit() else None,
+                seeders=int(attrs["seeders"]) if (attrs.get("seeders") or "").isdigit() else None,
+                peers=int(attrs["peers"]) if (attrs.get("peers") or "").isdigit() else None,
             )
         )
     return releases

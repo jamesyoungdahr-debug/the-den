@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app import scheduler
@@ -19,7 +19,11 @@ class SettingsUpdate(BaseModel):
     qbit_password: str | None = None
     movies_root: str | None = None
     tv_root: str | None = None
-    automation_interval_seconds: int | None = None
+    # Same minimum as the HTML settings form (app/templates/settings.html's
+    # min="60"). Without it, an explicit 0 would be stored and then silently
+    # discarded by settings.effective()'s `row.automation_interval_seconds or
+    # default` fallback, with no indication to the caller that it was ignored.
+    automation_interval_seconds: int | None = Field(default=None, ge=60)
     discord_webhook_url: str | None = None
 
 

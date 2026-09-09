@@ -12,6 +12,11 @@ async def _client(url: str, username: str, password: str) -> httpx.AsyncClient:
     client = httpx.AsyncClient(base_url=url, timeout=15)
     resp = await client.post("/api/v2/auth/login", data={"username": username, "password": password})
     resp.raise_for_status()
+    # qBittorrent's login endpoint always returns 200 -- "Ok." on success, "Fails."
+    # on bad credentials -- so raise_for_status() can never catch a login failure.
+    if resp.text.strip() != "Ok.":
+        await client.aclose()
+        raise RuntimeError("qBittorrent login failed -- check the configured username/password")
     return client
 
 

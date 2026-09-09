@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import tvmaze
 from app.candidates import scored_candidates
 from app.deps import get_db
 from app.grabber import grab_episode as do_grab_episode
-from app.models import Episode, QualityProfile, Series
+from app.models import DownloadRecord, Episode, QualityProfile, Series
 from app.schemas import DownloadRecordOut, EpisodeOut, GrabRequest, ScoredReleaseOut, SeriesCreate, SeriesOut
 
 router = APIRouter(tags=["series"])
@@ -25,12 +26,24 @@ def list_series(db: Session = Depends(get_db)):
 async def add_series(payload: SeriesCreate, db: Session = Depends(get_db)):
     if db.query(Series).filter(Series.tvmaze_id == payload.tvmaze_id).first():
         raise HTTPException(400, "Series already in library")
+
+    # Fetch episodes before committing anything: if this raises, nothing's been
+    # added yet, so the uniqueness check above won't block a retry with the same
+    # tvmaze_id -- unlike committing the series first and fetching episodes after.
+    episodes = await tvmaze.get_tv_episodes(payload.tvmaze_id)
+
     series = Series(**payload.model_dump())
     db.add(series)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        # Two concurrent adds for the same tvmaze_id both passed the check above --
+        # the loser hits the DB's unique constraint instead. Same clean error either way.
+        db.rollback()
+        raise HTTPException(400, "Series already in library")
     db.refresh(series)
 
-    for ep in await tvmaze.get_tv_episodes(payload.tvmaze_id):
+    for ep in episodes:
         db.add(Episode(series_id=series.id, **ep))
     db.commit()
     return series
@@ -40,6 +53,15 @@ async def add_series(payload: SeriesCreate, db: Session = Depends(get_db)):
 def delete_series(series_id: int, db: Session = Depends(get_db)):
     series = db.get(Series, series_id)
     if series:
+        episode_ids = [e.id for e in db.query(Episode.id).filter(Episode.series_id == series_id)]
+        # Mark any in-flight download as failed rather than leaving it pointing at an
+        # episode that's about to stop existing -- check_and_import() dereferences
+        # record.episode_id unconditionally and has no way to know it's gone.
+        if episode_ids:
+            db.query(DownloadRecord).filter(
+                DownloadRecord.episode_id.in_(episode_ids),
+                DownloadRecord.status.notin_(["imported", "failed"]),
+            ).update({"status": "failed"})
         db.query(Episode).filter(Episode.series_id == series_id).delete()
         db.delete(series)
         db.commit()
@@ -56,6 +78,8 @@ async def episode_candidates(episode_id: int, db: Session = Depends(get_db)):
     if not episode:
         raise HTTPException(404, "Episode not found")
     series = db.get(Series, episode.series_id)
+    if not series:
+        raise HTTPException(404, "Series not found")
 
     query = f"{series.title} S{episode.season_number:02d}E{episode.episode_number:02d}"
     profile = db.get(QualityProfile, series.quality_profile_id) if series.quality_profile_id else db.query(QualityProfile).first()

@@ -21,12 +21,20 @@ async def check_and_import(db: Session, record: DownloadRecord) -> None:
         imported = False
         if record.movie_id:
             movie = db.get(Movie, record.movie_id)
+            if movie is None:
+                record.status = "failed"
+                db.commit()
+                return
             imported = importer.import_movie(info, movie, s.movies_root)
             if imported:
                 movie.has_file = True
         elif record.episode_id:
             episode = db.get(Episode, record.episode_id)
-            series = db.get(Series, episode.series_id)
+            series = db.get(Series, episode.series_id) if episode else None
+            if episode is None or series is None:
+                record.status = "failed"
+                db.commit()
+                return
             imported = importer.import_episode(info, series, episode, s.tv_root)
             if imported:
                 episode.has_file = True

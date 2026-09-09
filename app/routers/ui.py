@@ -330,6 +330,7 @@ def ui_save_settings(
     db: Session = Depends(get_db),
 ):
     row = settings_module.get_row(db)
+    old_interval = settings_module.effective(db).automation_interval_seconds
 
     # Secret fields: only overwrite if the user actually typed something new.
     if tmdb_api_key:
@@ -344,13 +345,17 @@ def ui_save_settings(
     row.qbit_username = qbit_username or None
     row.movies_root = movies_root or None
     row.tv_root = tv_root or None
-    old_interval = row.automation_interval_seconds
     row.automation_interval_seconds = int(automation_interval_seconds) if automation_interval_seconds.isdigit() else None
 
     db.commit()
 
     new_interval = settings_module.effective(db).automation_interval_seconds
     if new_interval != old_interval:
-        scheduler.reschedule(new_interval)
+        try:
+            scheduler.reschedule(new_interval)
+        except Exception:
+            # Scheduler only runs in the live app (started on startup); under tests or
+            # if it isn't running, the next startup picks up the new interval anyway.
+            pass
 
     return RedirectResponse("/ui/settings", status_code=303)

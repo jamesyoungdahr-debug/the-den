@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import settings as settings_module
@@ -6,7 +7,7 @@ from app import tmdb
 from app.candidates import scored_candidates
 from app.deps import get_db
 from app.grabber import grab_movie as do_grab_movie
-from app.models import Movie, QualityProfile
+from app.models import DownloadRecord, Movie, QualityProfile
 from app.schemas import DownloadRecordOut, GrabRequest, MovieCreate, MovieOut, ScoredReleaseOut
 
 router = APIRouter(prefix="/movies", tags=["movies"])
@@ -29,7 +30,13 @@ def add_movie(payload: MovieCreate, db: Session = Depends(get_db)):
         raise HTTPException(400, "Movie already in library")
     movie = Movie(**payload.model_dump())
     db.add(movie)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        # Two concurrent adds for the same tmdb_id both passed the check above --
+        # the loser hits the DB's unique constraint instead. Same clean error either way.
+        db.rollback()
+        raise HTTPException(400, "Movie already in library")
     db.refresh(movie)
     return movie
 
@@ -38,6 +45,13 @@ def add_movie(payload: MovieCreate, db: Session = Depends(get_db)):
 def delete_movie(movie_id: int, db: Session = Depends(get_db)):
     movie = db.get(Movie, movie_id)
     if movie:
+        # Mark any in-flight download as failed rather than leaving it pointing at a
+        # movie that's about to stop existing -- check_and_import() dereferences
+        # record.movie_id unconditionally and has no way to know it's gone.
+        db.query(DownloadRecord).filter(
+            DownloadRecord.movie_id == movie_id,
+            DownloadRecord.status.notin_(["imported", "failed"]),
+        ).update({"status": "failed"})
         db.delete(movie)
         db.commit()
 
