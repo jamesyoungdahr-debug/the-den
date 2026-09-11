@@ -18,7 +18,8 @@ two loopback-swarm gotchas that cost the most debugging time.
 
 ## Currently working on
 Nothing in progress. **Next milestone is planned:** M11 Discover + Requests -- design,
-milestones and open decisions are in `docs/requests-plan.md`. Not started.
+milestones and open decisions are in `docs/requests-plan.md`. Also planned: a full UI redesign
+("HoltOS Glass", `docs/ui-redesign-plan.md`) whose shell/component work comes before M11's pages. Not started.
 
 ## Next steps
 - **Real-world shakedown** (still the one thing never done): a real TMDB key, a real

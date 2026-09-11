@@ -4,6 +4,9 @@ Status: **planned, not started.** Written 2026-09-11 after researching Overseerr
 here is built yet; this is the design to build against once the open decisions at the
 bottom are settled.
 
+See also [ui-redesign-plan.md](ui-redesign-plan.md): the Discover/Requests pages are to be
+built on the redesigned shell and component set, so that plan's U0/U1 come first.
+
 ## What we're adding, in one paragraph
 
 Today The Den's front page is "Indexers & Search": admin plumbing (add/test indexers) plus a
