@@ -2,7 +2,11 @@ import os
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./den.db")
 
-TMDB_API_KEY = os.environ.get("TMDB_API_KEY", "")
+# A key shipped with the build, used when neither Settings nor TMDB_API_KEY provides one
+# (the approach Overseerr takes). Non-commercial use only; TMDB requires the attribution the
+# Settings page and README carry. Paste the key between the quotes to bake it in.
+BUILTIN_TMDB_API_KEY = ""
+TMDB_API_KEY = os.environ.get("TMDB_API_KEY", "") or BUILTIN_TMDB_API_KEY
 TMDB_BASE_URL = os.environ.get("TMDB_BASE_URL", "https://api.themoviedb.org/3")
 
 # TVmaze needs no key/account at all, for real use -- this override exists only for tests.

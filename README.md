@@ -114,6 +114,8 @@ system and `design/docs/brand-cheat-sheet.md` for the palette/type quick referen
 - The app logic, protocol clients (Torznab/Newznab, TMDB), the torrent engine, scoring,
   scheduler, and packaging are all real and tested (against the local swarm and mocks --
   see above).
-- You still need: real indexer accounts/API keys, a real TMDB API key for movies (free,
-  2-minute signup -- TV metadata uses TVmaze instead, which needs no key or account at
-  all), and -- if you want it -- a Discord webhook URL for notifications.
+- You still need: real indexer accounts/API keys and -- if you want it -- a Discord webhook
+  URL for notifications. Movie metadata comes from TMDB: a key shipped with the build
+  (`BUILTIN_TMDB_API_KEY` in `app/config.py`) is used unless you set your own in Settings
+  or `TMDB_API_KEY`. TV metadata uses TVmaze, which needs no key. This product uses the
+  TMDB API but is not endorsed or certified by TMDB; non-commercial use only.
