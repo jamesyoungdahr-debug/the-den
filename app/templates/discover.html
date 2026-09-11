@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% from "_cards.html" import card, rail, badge %}
+{% block content %}
+  {% if not has_key %}
+  <div class="holt-empty holt-panel">
+    <div class="holt-empty-title">Discover needs a TMDB key</div>
+    <div class="holt-body">Add one in Settings → Library, or set <code>TMDB_API_KEY</code>. Your library still works without it.</div>
+    {% if is_admin %}<a class="holt-btn holt-btn-primary holt-btn-sm" href="/ui/settings#library">Open Settings</a>{% endif %}
+  </div>
+  {% elif errors|length == 5 %}
+  <div class="holt-message holt-message-warning">TMDB didn't answer just now. Your library below still works; Discover will retry on the next visit.</div>
+  {% endif %}
+
+  {% if hero %}
+  <section class="holt-hero has-art" style="background-image:url('https://image.tmdb.org/t/p/w1280{{ hero.backdrop_path }}')">
+    <div class="holt-hero-body">
+      <div class="holt-eyebrow">Trending this week · #1</div>
+      <h1 class="holt-hero-title">{{ hero.title }}</h1>
+      <div class="holt-meta">{{ hero.year or '' }} · {{ 'Movie' if hero.media_type == 'movie' else 'Series' }}{% if hero.rating %} · ★ {{ hero.rating }}{% endif %}</div>
+      {% if hero.overview %}<div style="font-size:14px;line-height:1.55;color:var(--holt-ink-70);text-wrap:pretty;max-width:560px">{{ hero.overview[:220] }}{% if hero.overview|length > 220 %}…{% endif %}</div>{% endif %}
+      <div class="holt-hero-actions">
+        <a class="holt-btn holt-btn-primary" href="/discover/{{ hero.media_type }}/{{ hero.tmdb_id }}">Details</a>
+        {{ badge(hero.status) }}
+        {% if not hero.status %}<span class="holt-badge holt-badge-solid holt-badge-missing"><span class="dot"></span>not in library</span>{% endif %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  {{ rail("Recommended for you", recommended, "based on what you've added") }}
+  {{ rail("Trending this week", rails.trending) }}
+  {{ rail("Popular movies", rails.popular_movies) }}
+  {{ rail("Upcoming movies", rails.upcoming_movies) }}
+  {{ rail("Popular series", rails.popular_tv) }}
+  {{ rail("On the air", rails.on_the_air, "series with new episodes this week") }}
+
+  {% if stats.movies or stats.series %}
+  <section class="holt-section">
+    <div class="holt-rail-head">
+      <div class="holt-eyebrow">Your library</div>
+      <div class="holt-meta">{{ stats.movies }} movies · {{ stats.series }} series{% if stats.downloading %} · {{ stats.downloading }} downloading{% endif %}</div>
+    </div>
+    <div class="holt-toolbar">
+      <a class="holt-chip" href="/library">Movies</a>
+      <a class="holt-chip" href="/tv">TV</a>
+      <a class="holt-chip" href="/calendar">Calendar</a>
+      {% if stats.downloading and is_admin %}<a class="holt-chip" href="/ui/downloads">Downloads</a>{% endif %}
+    </div>
+  </section>
+  {% endif %}
+{% endblock %}

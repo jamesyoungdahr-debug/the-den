@@ -794,6 +794,46 @@ dialog.holt-dialog::backdrop { background: var(--holt-ambient-scrim-mid); -webki
   .den-cal-item { padding: 3px; width: 12px; justify-content: center; }
 }
 
+/* ---------- Hero with real art (Discover) ---------- */
+
+.holt-hero.has-art { background-size: cover; background-position: center 25%; min-height: 320px; }
+.holt-hero.has-art::before { background: none; }
+
+/* ---------- Discover detail page ---------- */
+
+.den-detail-hero {
+  position: relative;
+  border-radius: var(--holt-radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--holt-hairline);
+  background: linear-gradient(110deg, #2b1257 0%, #0f2740 55%, #3a1230 100%) center 20% / cover no-repeat;
+}
+.den-detail-hero::after {
+  content: "";
+  position: absolute; inset: 0;
+  background:
+    linear-gradient(90deg, var(--holt-ambient-scrim-strong) 0%, rgba(13,11,18,.78) 45%, rgba(13,11,18,.35) 100%),
+    linear-gradient(0deg, rgba(13,11,18,.92) 0%, rgba(13,11,18,.2) 60%);
+}
+.den-detail-hero-inner { position: relative; z-index: 1; display: flex; gap: var(--holt-space-4); align-items: flex-end; padding: var(--holt-space-5); }
+.den-detail-hero .den-detail-poster { width: 200px; box-shadow: var(--holt-shadow-3); border-color: var(--holt-hairline-strong); }
+.den-detail-hero .den-detail-body { padding-top: 0; }
+@media (max-width: 899px) {
+  .den-detail-hero-inner { flex-direction: column; align-items: flex-start; padding: var(--holt-space-3); }
+  .den-detail-hero .den-detail-poster { width: 120px; }
+  .den-detail-hero .holt-hero-title { font-size: 30px !important; }
+}
+
+.den-detail-grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: var(--holt-space-4); align-items: start; }
+.den-detail-aside { position: sticky; top: calc(var(--holt-size-top-bar) + var(--holt-space-4)); }
+@media (max-width: 1100px) { .den-detail-grid { grid-template-columns: 1fr; } .den-detail-aside { position: static; } }
+
+.den-cast { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 6px; scrollbar-width: none; }
+.den-cast::-webkit-scrollbar { display: none; }
+.den-cast-item { width: 96px; flex: none; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
+.den-cast-photo { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; background: var(--holt-raised); border: 1px solid var(--holt-hairline); }
+.den-cast-name { font-size: 11.5px; font-weight: 700; color: var(--holt-ink); line-height: 1.2; }
+
 /* ---------- Detail header (series) ---------- */
 
 .den-detail { display: flex; gap: var(--holt-space-4); align-items: flex-start; }

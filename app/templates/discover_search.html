@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% from "_cards.html" import card %}
+{% block title_suffix %} — Search{% endblock %}
+{% block content %}
+  <div class="holt-page-head">
+    <div>
+      <h1 class="holt-page-title">{% if query %}Results for “{{ query }}”{% else %}Search{% endif %}</h1>
+      <div class="holt-meta">{% if query %}{{ results|length }} found on TMDB · titles in your library are marked{% else %}Movies and series, from TMDB{% endif %}</div>
+    </div>
+    {% if query %}
+    <div class="holt-toolbar">
+      <a class="holt-chip {{ 'is-on' if type == 'all' else '' }}" href="/discover/search?q={{ query|urlencode }}">All</a>
+      <a class="holt-chip {{ 'is-on' if type == 'movie' else '' }}" href="/discover/search?q={{ query|urlencode }}&type=movie">Movies</a>
+      <a class="holt-chip {{ 'is-on' if type == 'tv' else '' }}" href="/discover/search?q={{ query|urlencode }}&type=tv">Series</a>
+    </div>
+    {% endif %}
+  </div>
+
+  {% if error %}<div class="holt-message holt-message-warning">{{ error }}</div>{% endif %}
+
+  {% if results %}
+  <div class="holt-grid">{% for item in results %}{{ card(item) }}{% endfor %}</div>
+  {% elif query %}
+  <div class="holt-empty holt-panel"><div class="holt-empty-title">Nothing matched</div><div class="holt-body">Try a different title or spelling.</div></div>
+  {% else %}
+  <div class="holt-empty holt-panel"><div class="holt-empty-title">Type a title above</div><div class="holt-body">Search covers movies and series together.</div></div>
+  {% endif %}
+{% endblock %}

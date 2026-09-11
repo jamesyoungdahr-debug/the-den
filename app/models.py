@@ -47,6 +47,7 @@ class Series(Base):
 
     id = Column(Integer, primary_key=True)
     tvmaze_id = Column(Integer, nullable=False, unique=True)
+    tmdb_id = Column(Integer, nullable=True, index=True)  # set when added from Discover (M11d)
     title = Column(String, nullable=False)
     year = Column(Integer, nullable=True)
     overview = Column(String, nullable=True)

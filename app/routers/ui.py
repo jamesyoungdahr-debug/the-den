@@ -45,24 +45,6 @@ def _downloading_movie_ids(db: Session) -> set[int]:
     return {movie_id for (movie_id,) in rows}
 
 
-@router.get("/", response_class=HTMLResponse, dependencies=USER)
-def discover(request: Request, db: Session = Depends(get_db)):
-    """Home. Until M11's TMDB-driven Discover lands this is the library at a glance."""
-    recent_movies = db.query(Movie).order_by(Movie.id.desc()).limit(12).all()
-    recent_series = _series_rows(db, db.query(Series).order_by(Series.id.desc()).limit(12).all())
-    stats = {
-        "movies": db.query(Movie).count(),
-        "series": db.query(Series).count(),
-        "missing_movies": db.query(Movie).filter(Movie.has_file == False).count(),  # noqa: E712
-        "missing_episodes": db.query(Episode).filter(Episode.has_file == False).count(),  # noqa: E712
-        "downloading": db.query(DownloadRecord).filter(DownloadRecord.status.notin_(["imported", "failed"])).count(),
-    }
-    return templates.TemplateResponse(
-        "index.html",
-        {"request": request, "stats": stats, "recent_movies": recent_movies, "recent_series": recent_series, "active_nav": "discover"},
-    )
-
-
 @router.get("/ui/indexers", response_class=HTMLResponse, dependencies=ADMIN)  # GET /indexers is the JSON API
 async def indexers_page(request: Request, q: str | None = None, db: Session = Depends(get_db)):
     indexers = db.query(Indexer).all()
@@ -238,11 +220,13 @@ async def ui_add_series(
     year: str = Form(""),
     overview: str = Form(""),
     poster_path: str = Form(""),
+    tmdb_id: str = Form(""),
     db: Session = Depends(get_db),
 ):
     if not db.query(Series).filter(Series.tvmaze_id == tvmaze_id).first():
         series = Series(
             tvmaze_id=tvmaze_id,
+            tmdb_id=int(tmdb_id) if tmdb_id.isdigit() else None,
             title=title,
             year=int(year) if year.isdigit() else None,
             overview=overview or None,

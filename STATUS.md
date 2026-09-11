@@ -17,6 +17,12 @@ restores torrents from resume data. See ROADMAP.md's M10 section for the details
 two loopback-swarm gotchas that cost the most debugging time.
 
 ## Currently working on
+**M11d Discover is done** (2026-09-11): TMDB-driven home (hero, Recommended for you, trending,
+popular, upcoming, on the air), multi-search, movie/series detail pages with cast, trailer,
+seasons, availability and recommendations, admin add-to-library with TMDB→TVmaze mapping,
+`/api/discover/*`. Verified live against TMDB with the built-in key. **Next is M11e (Plex
+library scan)** so Discover can also show what's already on Plex, then M11f (Requests).
+
 **M11c Plex login is done** (2026-09-11): PIN sign-in on /login and /setup, first Plex
 sign-in on a fresh install becomes the owner/admin, shared users of the chosen server may
 sign in (or anyone, if allowed), Plex panel in Settings picks the server and libraries,

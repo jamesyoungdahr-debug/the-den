@@ -72,9 +72,9 @@
 
     <div class="holt-main">
       <header class="holt-topbar holt-glass">
-        <form class="holt-search" method="get" action="{% block search_action %}/library{% endblock %}" role="search">
+        <form class="holt-search" method="get" action="{% block search_action %}/discover/search{% endblock %}" role="search">
           {{ icon("search") }}
-          <input name="q" placeholder="{% block search_placeholder %}Search movies to add{% endblock %}" value="{{ query or '' }}" autocomplete="off">
+          <input name="q" placeholder="{% block search_placeholder %}Search movies and series{% endblock %}" value="{{ query or '' }}" autocomplete="off">
         </form>
         <div class="holt-topbar-spacer"></div>
         {% block primary_action %}{% endblock %}

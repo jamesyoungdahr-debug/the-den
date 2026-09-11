@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% from "_cards.html" import rail, badge %}
+{% block title_suffix %} — {{ item.title }}{% endblock %}
+{% block content %}
+  {% if notice %}<div class="holt-message holt-message-positive">{{ notice }}</div>{% endif %}
+  {% if error %}<div class="holt-message holt-message-warning">{{ error }}</div>{% endif %}
+
+  <section class="den-detail-hero" {% if item.backdrop_path %}style="background-image:url('https://image.tmdb.org/t/p/w1280{{ item.backdrop_path }}')"{% endif %}>
+    <div class="den-detail-hero-inner">
+      <div class="den-detail-poster holt-poster">
+        {% if item.poster_path %}<img src="{{ item.poster_path|poster }}" alt="">{% else %}<span class="holt-poster-letter">{{ item.title[:1] }}</span>{% endif %}
+      </div>
+      <div class="den-detail-body">
+        <div class="holt-eyebrow">{{ 'Movie' if kind == 'movie' else 'Series' }}{% if item.tagline %} · {{ item.tagline }}{% endif %}</div>
+        <h1 class="holt-hero-title" style="font-size:42px;letter-spacing:-1.8px">{{ item.title }}</h1>
+        <div class="holt-meta">
+          {{ item.year or '' }}
+          {% if kind == 'movie' and item.runtime %} · {{ item.runtime // 60 }}h {{ '%02d'|format(item.runtime % 60) }}m{% endif %}
+          {% if kind == 'tv' %} · {{ item.number_of_seasons }} season{{ '' if item.number_of_seasons == 1 else 's' }} · {{ item.number_of_episodes }} episodes{% if item.networks %} · {{ item.networks[0] }}{% endif %}{% endif %}
+          {% if item.rating %} · ★ {{ item.rating }} ({{ item.vote_count }}){% endif %}
+        </div>
+        {% if item.genres %}<div style="display:flex;gap:8px;flex-wrap:wrap">{% for g in item.genres %}<span class="holt-chip" style="padding:5px 10px;font-size:11.5px">{{ g }}</span>{% endfor %}</div>{% endif %}
+        <div class="holt-hero-actions">
+          {{ badge(item.status) }}
+          {% if item.library %}
+            <a class="holt-btn holt-btn-secondary" href="{{ item.library_href }}">View in library</a>
+          {% elif is_admin %}
+            <form method="post" action="/ui/discover/{{ kind }}/{{ item.tmdb_id }}/add" style="margin:0"><button type="submit" class="holt-btn holt-btn-primary">Add to library</button></form>
+          {% else %}
+            <button class="holt-btn holt-btn-primary" disabled title="Requests arrive in the next update">Request</button>
+          {% endif %}
+          {% if item.trailer_key %}<a class="holt-btn holt-btn-quiet" href="https://www.youtube.com/watch?v={{ item.trailer_key }}" target="_blank" rel="noopener">Trailer ↗</a>{% endif %}
+          {% if item.imdb_id %}<a class="holt-btn holt-btn-quiet" href="https://www.imdb.com/title/{{ item.imdb_id }}/" target="_blank" rel="noopener">IMDb ↗</a>{% endif %}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="den-detail-grid">
+    <div style="display:flex;flex-direction:column;gap:var(--holt-space-4);min-width:0">
+      {% if item.overview %}<p class="holt-body" style="font-size:14.5px;margin:0;max-width:720px">{{ item.overview }}</p>{% endif %}
+
+      {% if item.cast %}
+      <section class="holt-section">
+        <div class="holt-eyebrow" style="color:var(--holt-ink-28)">Cast</div>
+        <div class="den-cast">
+          {% for c in item.cast %}
+          <div class="den-cast-item">
+            {% if c.profile_path %}<img class="den-cast-photo" src="https://image.tmdb.org/t/p/w185{{ c.profile_path }}" alt="" loading="lazy">{% else %}<div class="den-cast-photo holt-avatar" style="width:72px;height:72px;font-size:22px">{{ c.name[:1] }}</div>{% endif %}
+            <div class="den-cast-name">{{ c.name }}</div>
+            {% if c.character %}<div class="holt-meta" style="line-height:1.3">{{ c.character }}</div>{% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+
+      {% if kind == 'tv' and item.seasons %}
+      <section class="holt-section">
+        <div class="holt-rail-head"><div class="holt-eyebrow" style="color:var(--holt-ink-28)">Seasons</div>{% if item.library %}<div class="holt-meta">{{ item.library.have }} of {{ item.library.total }} episodes in your library</div>{% endif %}</div>
+        <div class="holt-row-list">
+          {% for s in item.seasons if s.season_number > 0 %}
+          {% set lib = item.library.seasons.get(s.season_number) if item.library else None %}
+          <div class="holt-row">
+            <div class="holt-thumb" style="width:36px;height:54px">{% if s.poster_path %}<img src="https://image.tmdb.org/t/p/w92{{ s.poster_path }}" alt="" loading="lazy">{% endif %}</div>
+            <div class="holt-row-main">
+              <div class="holt-row-title">{{ s.name or 'Season ' ~ s.season_number }}</div>
+              <div class="holt-row-meta">{{ s.episode_count }} episodes{% if s.air_date %} · from {{ s.air_date }}{% endif %}</div>
+            </div>
+            {% if lib %}
+              {% if lib.total and lib.have == lib.total %}<span class="holt-badge holt-badge-available"><span class="dot"></span>complete</span>
+              {% elif lib.have %}<span class="holt-badge holt-badge-partial"><span class="dot"></span>{{ lib.have }}/{{ lib.total }}</span>
+              {% else %}<span class="holt-badge holt-badge-pending"><span class="dot"></span>wanted</span>{% endif %}
+            {% else %}<span class="holt-badge holt-badge-missing"><span class="dot"></span>not in library</span>{% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+    </div>
+
+    <aside class="holt-panel holt-glass den-detail-aside">
+      <div class="holt-panel-head"><div class="holt-eyebrow">Availability</div></div>
+      <div style="display:flex;flex-direction:column;gap:10px;font-size:12.5px">
+        <div style="display:flex;justify-content:space-between;align-items:center"><span style="color:var(--holt-ink-70)">The Den library</span>
+          {% if item.status == 'available' %}<span class="holt-badge holt-badge-available"><span class="dot"></span>{{ 'have' if kind == 'movie' else 'complete' }}</span>
+          {% elif item.status == 'partial' %}<span class="holt-badge holt-badge-partial"><span class="dot"></span>{{ item.library.have }}/{{ item.library.total }}</span>
+          {% elif item.status == 'wanted' %}<span class="holt-badge holt-badge-pending"><span class="dot"></span>wanted</span>
+          {% else %}<span class="holt-badge holt-badge-missing"><span class="dot"></span>not added</span>{% endif %}
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center"><span style="color:var(--holt-ink-70)">Plex</span><span class="holt-meta" style="line-height:1">scan arrives in M11e</span></div>
+      </div>
+      {% if item.status == 'wanted' and is_admin %}
+      <div class="holt-meta" style="margin-top:var(--holt-space-3);line-height:1.5">Automation searches your indexers for wanted titles every cycle.</div>
+      {% endif %}
+    </aside>
+  </div>
+
+  {{ rail("Recommended", item.recommendations, "because you looked at " ~ item.title) }}
+{% endblock %}

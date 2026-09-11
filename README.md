@@ -87,6 +87,17 @@ This packaging has been run for real through `makepkg -si` + `pacman -U` +
 `systemctl enable --now` on genuine Arch Linux (WSL2, not literally CachyOS -- see
 ROADMAP.md for details) and came up cleanly.
 
+## Discover
+
+The home page browses TMDB: a trending hero, a **Recommended for you** rail built from
+TMDB's recommendations for the titles you added most recently (minus what you already
+have), then trending, popular and upcoming movies, popular series and what's on the air.
+Every card carries your library's status, search covers movies and series together, and
+the detail pages show cast, trailer, seasons and recommendations with an availability
+card. Admins add a title to the library from there; series are matched to TVmaze (by TVDB
+id, IMDb id, then exact title) for their episode lists. Users get a Request button once
+M11f lands. `tests/mock_tmdb.py` stands in for TMDB offline (`TMDB_BASE_URL`).
+
 ## How the built-in torrent client works
 
 `app/torrent/engine.py` wraps one libtorrent session for the whole app. A grab adds the

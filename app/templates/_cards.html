@@ -1,0 +1,27 @@
+{#- Shared PosterCard / Rail macros for TMDB cards (the shape app/tmdb.py normalises to). -#}
+{% macro badge(status) -%}
+  {%- if status == 'available' %}<span class="holt-badge holt-badge-solid holt-badge-available"><span class="dot"></span>available</span>
+  {%- elif status == 'partial' %}<span class="holt-badge holt-badge-solid holt-badge-partial"><span class="dot"></span>partial</span>
+  {%- elif status == 'wanted' %}<span class="holt-badge holt-badge-solid holt-badge-pending"><span class="dot"></span>in library</span>
+  {%- endif -%}
+{%- endmacro %}
+
+{% macro card(item) -%}
+<a class="holt-card" href="/discover/{{ item.media_type }}/{{ item.tmdb_id }}" style="color:inherit">
+  <div class="holt-poster">
+    {% if item.poster_path %}<img src="{{ item.poster_path|poster }}" alt="" loading="lazy">{% else %}<span class="holt-poster-letter">{{ item.title[:1] }}</span>{% endif %}
+    {{ badge(item.status) }}
+  </div>
+  <div class="holt-card-title" title="{{ item.title }}">{{ item.title }}</div>
+  <div class="holt-card-meta">{{ item.year or '-' }} · {{ 'Movie' if item.media_type == 'movie' else 'Series' }}{% if item.rating %} · ★ {{ item.rating }}{% endif %}</div>
+</a>
+{%- endmacro %}
+
+{% macro rail(title, items, meta=None) -%}
+{% if items %}
+<section class="holt-section">
+  <div class="holt-rail-head"><div class="holt-eyebrow">{{ title }}</div>{% if meta %}<div class="holt-meta">{{ meta }}</div>{% endif %}</div>
+  <div class="holt-rail">{% for item in items %}{{ card(item) }}{% endfor %}</div>
+</section>
+{% endif %}
+{%- endmacro %}

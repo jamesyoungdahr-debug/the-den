@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title_suffix %} — Movies{% endblock %}
+{% block search_action %}/library{% endblock %}
 {% block search_placeholder %}Search TMDB to add a movie{% endblock %}
 {% block content %}
   {% if candidates is not none %}
