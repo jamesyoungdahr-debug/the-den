@@ -1,3 +1,4 @@
+import json
 from dataclasses import dataclass
 
 from sqlalchemy.orm import Session
@@ -22,6 +23,14 @@ class EffectiveSettings:
     upload_rate_limit_kib: int
     seed_ratio_limit: float
     seed_time_limit_minutes: int
+    plex_token: str
+    plex_owner_id: int | None
+    plex_owner_username: str | None
+    plex_server_name: str | None
+    plex_machine_id: str | None
+    plex_url: str
+    plex_sections: list[str]
+    plex_allow_any_account: bool
 
     def engine_config(self) -> EngineConfig:
         return EngineConfig(
@@ -69,4 +78,12 @@ def effective(db: Session) -> EffectiveSettings:
         upload_rate_limit_kib=_pick(row.upload_rate_limit_kib, config.UPLOAD_RATE_LIMIT_KIB),
         seed_ratio_limit=_pick(row.seed_ratio_limit, config.SEED_RATIO_LIMIT),
         seed_time_limit_minutes=_pick(row.seed_time_limit_minutes, config.SEED_TIME_LIMIT_MINUTES),
+        plex_token=_pick(row.plex_token, config.PLEX_TOKEN),
+        plex_owner_id=row.plex_owner_id,
+        plex_owner_username=row.plex_owner_username,
+        plex_server_name=row.plex_server_name,
+        plex_machine_id=row.plex_machine_id,
+        plex_url=_pick(row.plex_url, config.PLEX_URL),
+        plex_sections=json.loads(row.plex_sections) if row.plex_sections else [],
+        plex_allow_any_account=bool(row.plex_allow_any_account),
     )

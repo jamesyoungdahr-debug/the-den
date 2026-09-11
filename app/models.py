@@ -85,6 +85,15 @@ class Settings(Base):
     upload_rate_limit_kib = Column(Integer, nullable=True)
     seed_ratio_limit = Column(Float, nullable=True)
     seed_time_limit_minutes = Column(Integer, nullable=True)
+    # Plex (M11c): the owner's account + the server The Den is tied to
+    plex_token = Column(String, nullable=True)
+    plex_owner_id = Column(Integer, nullable=True)
+    plex_owner_username = Column(String, nullable=True)
+    plex_server_name = Column(String, nullable=True)
+    plex_machine_id = Column(String, nullable=True)
+    plex_url = Column(String, nullable=True)
+    plex_sections = Column(String, nullable=True)  # JSON list of section keys
+    plex_allow_any_account = Column(Boolean, nullable=True)
 
 
 class DownloadRecord(Base):

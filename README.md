@@ -47,7 +47,15 @@ require sign-in everywhere; the first visit then shows `/setup` to create the ad
 
 Companion apps authenticate with a per-user **API token** (generate one on `/ui/profile`,
 send it as `X-Api-Key`) or a session from `POST /api/auth/login`. `GET /api/auth/me` tells a
-client who it is and whether it's an admin. Plex sign-in is the next milestone.
+client who it is and whether it's an admin.
+
+**Plex sign-in.** Sign in with the Plex account that owns your server and The Den links
+it as the owner (an admin) and keeps that account's token for reading the library. People
+the owner shares that server with can then sign in with their own Plex accounts (or anyone,
+if you allow it in Settings → Plex, where you also pick the server and libraries). Local
+accounts still work alongside. Native clients use `POST /api/auth/plex/pin` then poll
+`POST /api/auth/plex`. `tests/mock_plex.py` stands in for plex.tv and a Plex server when
+developing offline (`PLEX_TV_URL`/`PLEX_AUTH_URL` point the app at it).
 
 ### Testing without the internet
 

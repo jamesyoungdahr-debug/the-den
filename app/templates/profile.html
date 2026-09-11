@@ -23,6 +23,16 @@
     </div>
 
     <div class="holt-panel">
+      <div class="holt-panel-head"><div class="holt-eyebrow">Plex</div><div class="holt-meta">{{ 'linked' if user.plex_id else 'not linked' }}</div></div>
+      {% if user.plex_id %}
+      <p class="holt-body" style="font-size:13.5px;margin:0">Linked to Plex account <strong style="color:var(--holt-ink)">{{ user.plex_username or user.plex_id }}</strong>. You can sign in with either Plex or your password.</p>
+      {% else %}
+      <p class="holt-body" style="font-size:13.5px;margin:0 0 var(--holt-space-3)">Link your Plex account to sign in with the Plex button.</p>
+      <a class="holt-btn holt-btn-secondary" href="/login/plex?purpose=link">Link Plex account</a>
+      {% endif %}
+    </div>
+
+    <div class="holt-panel">
       <div class="holt-panel-head"><div class="holt-eyebrow">Password</div></div>
       <form method="post" action="/ui/profile/password">
         {% if user.password_hash %}<div class="holt-field"><label>Current password</label><input name="current_password" type="password" autocomplete="current-password" required></div>{% endif %}

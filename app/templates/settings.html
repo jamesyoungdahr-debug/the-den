@@ -17,6 +17,7 @@
       <a href="#torrent">Torrent client</a>
       <a href="#automation">Automation</a>
       <a href="#notifications">Notifications</a>
+      <a href="#plex">Plex</a>
       <a href="#accounts">Accounts</a>
     </nav>
 
@@ -71,6 +72,70 @@
         </div>
       </section>
     </form>
+
+    <section class="holt-panel" id="plex" style="grid-column: 2">
+      <div class="holt-panel-head">
+        <div class="holt-eyebrow">Plex</div>
+        {% if s.plex_token %}<span class="holt-badge holt-badge-available"><span class="dot"></span>connected as {{ s.plex_owner_username or 'owner' }}</span>{% else %}<span class="holt-badge holt-badge-missing"><span class="dot"></span>not connected</span>{% endif %}
+      </div>
+      {% if not s.plex_token %}
+      <p class="holt-body" style="font-size:13.5px;margin:0 0 var(--holt-space-3)">Connect the Plex account that owns your server. The Den uses it to see which library items you already have and to let the people you share the server with sign in.</p>
+      <a class="holt-btn holt-btn-primary" href="/login/plex?purpose=owner"><svg viewBox="0 0 24 24" style="width:16px;height:16px;fill:currentColor"><path d="M6 3h5l7 9-7 9H6l7-9z"></path></svg>Connect Plex account</a>
+      {% else %}
+      <form method="post" action="/ui/settings/plex" id="plex-form">
+        <div class="holt-field">
+          <label>Server</label>
+          <select name="server" id="plex-server" data-current="{{ s.plex_machine_id or '' }}">
+            {% if s.plex_machine_id %}<option value="{{ s.plex_machine_id }}|{{ s.plex_server_name }}|{{ s.plex_url }}" selected>{{ s.plex_server_name or s.plex_machine_id }}</option>{% else %}<option value="">loading servers…</option>{% endif %}
+          </select>
+          <div class="holt-meta" id="plex-server-meta">{{ s.plex_url or '' }}</div>
+        </div>
+        <div class="holt-field">
+          <label>Libraries to scan</label>
+          <div id="plex-sections" style="display:flex;flex-direction:column;gap:6px">
+            {% if s.plex_sections %}{% for key in s.plex_sections %}<label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-family:var(--holt-font-core);font-size:13px;color:var(--holt-ink-70)"><input type="checkbox" name="sections" value="{{ key }}" checked style="width:auto;margin:0"> section {{ key }}</label>{% endfor %}{% else %}<span class="holt-meta">pick a server first</span>{% endif %}
+          </div>
+        </div>
+        <div class="holt-field">
+          <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-family:var(--holt-font-core);font-size:13px;color:var(--holt-ink-70)"><input type="checkbox" name="allow_any" value="1" {% if s.plex_allow_any_account %}checked{% endif %} style="width:auto;margin:0"> Allow any Plex account to sign in (not just the people this server is shared with)</label>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button type="submit" class="holt-btn holt-btn-secondary">Save Plex settings</button>
+          <button type="submit" form="plex-disconnect" class="holt-btn holt-btn-quiet" onclick="return confirm('Disconnect the Plex owner account? Shared users will no longer be able to sign in until it is reconnected.')">Disconnect</button>
+        </div>
+      </form>
+      <form method="post" action="/ui/settings/plex/disconnect" id="plex-disconnect"></form>
+      <script>
+        (async function () {
+          const sel = document.getElementById("plex-server");
+          const meta = document.getElementById("plex-server-meta");
+          const secs = document.getElementById("plex-sections");
+          const chosen = new Set([...secs.querySelectorAll("input:checked")].map(i => i.value));
+          async function loadSections(machineId) {
+            if (!machineId) { secs.innerHTML = '<span class="holt-meta">pick a server first</span>'; return; }
+            secs.innerHTML = '<span class="holt-meta">loading libraries…</span>';
+            try {
+              const resp = await fetch("/api/plex/sections?machine_id=" + encodeURIComponent(machineId));
+              const data = await resp.json();
+              if (!resp.ok) { secs.innerHTML = '<span class="holt-message holt-message-warning">' + (data.detail || "failed") + '</span>'; return; }
+              meta.textContent = data.server.uri;
+              secs.innerHTML = data.sections.filter(s => s.type === "movie" || s.type === "show").map(s =>
+                `<label style="display:flex;align-items:center;gap:8px;font-family:var(--holt-font-core);font-size:13px;color:var(--holt-ink-70)"><input type="checkbox" name="sections" value="${s.key}" ${chosen.has(String(s.key)) || chosen.size === 0 ? "checked" : ""} style="width:auto;margin:0"> ${s.title} <span class="holt-meta">${s.type}</span></label>`).join("") || '<span class="holt-meta">no movie or show libraries on this server</span>';
+            } catch (e) { secs.innerHTML = '<span class="holt-message holt-message-warning">' + e + '</span>'; }
+          }
+          try {
+            const resp = await fetch("/api/plex/servers");
+            const servers = await resp.json();
+            if (!resp.ok) { meta.textContent = servers.detail || "could not list servers"; return; }
+            const current = sel.dataset.current;
+            sel.innerHTML = servers.map(s => `<option value="${s.machine_id}|${s.name}|${s.uri}" ${s.machine_id === current ? "selected" : ""}>${s.name}${s.owned ? "" : " (shared with you)"}</option>`).join("") || '<option value="">no servers visible to this account</option>';
+            if (sel.value) { meta.textContent = sel.value.split("|")[2]; loadSections(sel.value.split("|")[0]); }
+          } catch (e) { meta.textContent = String(e); }
+          sel.addEventListener("change", () => { chosen.clear(); loadSections(sel.value.split("|")[0]); });
+        })();
+      </script>
+      {% endif %}
+    </section>
 
     <section class="holt-panel" id="accounts" style="grid-column: 2">
       <div class="holt-panel-head"><div class="holt-eyebrow">Accounts</div><span class="holt-badge {{ 'holt-badge-available' if auth_required else 'holt-badge-missing' }}"><span class="dot"></span>{{ 'sign-in required' if auth_required else 'sign-in optional' }}</span></div>

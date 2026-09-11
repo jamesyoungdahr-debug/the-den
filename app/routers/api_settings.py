@@ -1,3 +1,5 @@
+import json
+
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
@@ -30,6 +32,12 @@ class SettingsUpdate(BaseModel):
     upload_rate_limit_kib: int | None = Field(default=None, ge=0)
     seed_ratio_limit: float | None = Field(default=None, ge=0)
     seed_time_limit_minutes: int | None = Field(default=None, ge=0)
+    # Plex (the owner token is only ever set through the sign-in flow, never posted here)
+    plex_machine_id: str | None = None
+    plex_server_name: str | None = None
+    plex_url: str | None = None
+    plex_sections: list[str] | None = None
+    plex_allow_any_account: bool | None = None
 
 
 @router.get("/settings")
@@ -57,6 +65,13 @@ def get_settings(db: Session = Depends(get_db)):
         "upload_rate_limit_kib": s.upload_rate_limit_kib,
         "seed_ratio_limit": s.seed_ratio_limit,
         "seed_time_limit_minutes": s.seed_time_limit_minutes,
+        "has_plex_token": bool(s.plex_token),
+        "plex_owner_username": s.plex_owner_username,
+        "plex_server_name": s.plex_server_name,
+        "plex_machine_id": s.plex_machine_id,
+        "plex_url": s.plex_url,
+        "plex_sections": s.plex_sections,
+        "plex_allow_any_account": s.plex_allow_any_account,
     }
 
 
@@ -99,6 +114,14 @@ def save_settings(payload: SettingsUpdate, db: Session = Depends(get_db)):
         value = getattr(payload, field)
         if value is not None:
             setattr(row, field, value)
+    for field in ("plex_machine_id", "plex_server_name", "plex_url"):
+        value = getattr(payload, field)
+        if value is not None:
+            setattr(row, field, value or None)
+    if payload.plex_sections is not None:
+        row.plex_sections = json.dumps(payload.plex_sections) if payload.plex_sections else None
+    if payload.plex_allow_any_account is not None:
+        row.plex_allow_any_account = payload.plex_allow_any_account
 
     db.commit()
     apply_runtime_changes(old, settings_module.effective(db))

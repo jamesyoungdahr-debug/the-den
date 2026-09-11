@@ -35,3 +35,10 @@ DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "")
 # generated once and kept under STATE_DIR.
 AUTH_REQUIRED = os.environ.get("AUTH_REQUIRED", "false").strip().lower() in ("1", "true", "yes", "on")
 SESSION_SECRET = os.environ.get("SESSION_SECRET", "")
+
+# Plex. The owner's token and server are normally set from Settings (stored in the DB);
+# these env defaults exist for headless setups. The two URLs only change for tests/mock_plex.py.
+PLEX_TOKEN = os.environ.get("PLEX_TOKEN", "")
+PLEX_URL = os.environ.get("PLEX_URL", "")
+PLEX_TV_URL = os.environ.get("PLEX_TV_URL", "https://plex.tv")
+PLEX_AUTH_URL = os.environ.get("PLEX_AUTH_URL", "https://app.plex.tv/auth")

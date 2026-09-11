@@ -17,6 +17,14 @@ restores torrents from resume data. See ROADMAP.md's M10 section for the details
 two loopback-swarm gotchas that cost the most debugging time.
 
 ## Currently working on
+**M11c Plex login is done** (2026-09-11): PIN sign-in on /login and /setup, first Plex
+sign-in on a fresh install becomes the owner/admin, shared users of the chosen server may
+sign in (or anyone, if allowed), Plex panel in Settings picks the server and libraries,
+JSON PIN flow for the native clients, Plex linking from the profile page. 34-check
+end-to-end run against `tests/mock_plex.py` passed. **Not yet tried against real plex.tv**
+(the client module follows Plex's documented flow and Overseerr's usage). **Next is M11d
+(TMDB Discover)** -- needs the TMDB key -- or M11e (Plex library scan).
+
 **U2 is done** (2026-09-11): every web page is now in the HoltOS Glass design -- Downloads,
 Settings, Calendar (real month grid + agenda), Series detail (season accordion), Candidates.
 The web UI redesign (U0-U2) is complete; what's left of the redesign is the two clients
