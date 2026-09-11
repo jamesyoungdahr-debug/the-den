@@ -17,7 +17,9 @@ restores torrents from resume data. See ROADMAP.md's M10 section for the details
 two loopback-swarm gotchas that cost the most debugging time.
 
 ## Currently working on
-Nothing in progress. **Next milestone is planned:** M11 Discover + Requests -- design,
+**UI redesign U0 is done** (`design/tokens.json`, `design/build_tokens.py`,
+`design/docs/glass-components.md`; see `docs/ui-redesign-plan.md`). **Next is U1, the web
+shell.** Also planned: M11 Discover + Requests -- design,
 milestones and open decisions are in `docs/requests-plan.md`. Also planned: a full UI redesign
 ("HoltOS Glass", `docs/ui-redesign-plan.md`) whose shell/component work comes before M11's pages. Not started.
 

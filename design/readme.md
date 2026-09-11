@@ -26,3 +26,12 @@ The brand and interface system for HoltOS — an Arch-based, media-first distro 
 
 ## Templates
 - **Setup step** — the five-step first-boot flow shell
+
+## Tokens (v2, HoltOS Glass)
+- **`tokens.json`** is the single source of truth. Run `python design/build_tokens.py` after
+  editing it: it regenerates `app/static/holt-tokens.css` and the client exports in
+  `exports/` (`holt_tokens.py` for the-den-client, `HoltTokens.kt` for the-den-android).
+  `--check` fails if any output is stale.
+- **`docs/glass-components.md`** -- the v2 component spec (surface levels, shell, PosterCard,
+  Rail, Hero, Badge, Dialog, Toast, ...) shared by the web UI and both native clients.
+- Mockups: https://claude.ai/code/artifact/ea042508-1ad1-4d27-b098-6f35a520f81b

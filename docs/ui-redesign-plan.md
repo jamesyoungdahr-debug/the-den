@@ -212,7 +212,7 @@ Android `Color.kt`. Today each is hand-copied and has drifted once already (the
 
 | Step | Scope | Size | Depends on |
 |---|---|---|---|
-| U0 | Tokens v2 + Glass recipes + component specs in `design/` (`tokens.json`, exporters for CSS / theme.py / Color.kt); optional mockup canvas of the six key screens | M | -- |
+| U0 | **Done 2026-09-11.** `design/tokens.json` is the single source; `python design/build_tokens.py` regenerates `app/static/holt-tokens.css` (reduced-transparency and reduced-motion handled at token level) plus `design/exports/holt_tokens.py` and `HoltTokens.kt` for the clients; component spec in `design/docs/glass-components.md`; mockups linked above | M | -- |
 | U1 | Web shell: sidebar, top bar, mobile tab bar, ground/ambient layers, `PosterCard`/`Rail`/`Badge`/`Dialog`/`Toast`; Movies + TV pages re-laid as poster grids with real TMDB art | L | U0 |
 | U2 | Remaining web pages in the new design: Downloads, Indexers, Settings, Calendar, Series detail; empty states, skeletons, reduced-motion/transparency passes | M | U1 |
 | U3 | M11's new pages (Discover, detail, Requests, Login/Setup, Users) built directly on U1 components | -- | U1 + M11 backend |
