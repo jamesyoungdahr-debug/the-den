@@ -4,26 +4,13 @@
   <h1 class="holt-page-title">Settings</h1>
   <p class="holt-body" style="max-width: 520px; margin-bottom: var(--holt-space-4);">Anything left blank here falls back to the matching environment variable (see <code>.env.example</code>), or the app's built-in default. Secret fields never show their current value — leave them blank to keep what's already set.</p>
 
-  <div class="holt-panel" style="max-width: 480px;">
-    <form method="post" action="/ui/settings">
+  <form method="post" action="/ui/settings">
+    <div class="holt-panel" style="max-width: 480px;">
+      <div class="holt-panel-head"><div class="holt-eyebrow">Library</div></div>
+
       <div class="holt-field">
         <label>TMDB API key {{ "· currently set" if has_tmdb_api_key else "· not set" }}</label>
         <input type="password" name="tmdb_api_key" placeholder="leave blank to keep current value" autocomplete="off">
-      </div>
-
-      <div class="holt-field">
-        <label>qBittorrent URL</label>
-        <input type="text" name="qbit_url" value="{{ s.qbit_url }}">
-      </div>
-
-      <div class="holt-field">
-        <label>qBittorrent username</label>
-        <input type="text" name="qbit_username" value="{{ s.qbit_username }}">
-      </div>
-
-      <div class="holt-field">
-        <label>qBittorrent password {{ "· currently set" if has_qbit_password else "· not set" }}</label>
-        <input type="password" name="qbit_password" placeholder="leave blank to keep current value" autocomplete="off">
       </div>
 
       <div class="holt-field">
@@ -41,12 +28,50 @@
         <input type="number" name="automation_interval_seconds" value="{{ s.automation_interval_seconds }}" min="60">
       </div>
 
-      <div class="holt-field">
+      <div class="holt-field" style="margin-bottom: 0;">
         <label>Discord webhook URL {{ "· currently set" if has_discord_webhook else "· not set (optional)" }}</label>
         <input type="password" name="discord_webhook_url" placeholder="leave blank to keep current value" autocomplete="off">
       </div>
+    </div>
 
-      <button type="submit" class="holt-btn holt-btn-primary">Save</button>
-    </form>
-  </div>
+    <div class="holt-panel" style="max-width: 480px;">
+      <div class="holt-panel-head"><div class="holt-eyebrow">Torrent client</div><div class="holt-meta">built in</div></div>
+
+      <div class="holt-field">
+        <label>Downloads folder</label>
+        <input type="text" name="downloads_root" value="{{ s.downloads_root }}">
+        <div class="holt-meta">Finished files are hard-linked from here into the library, so torrents keep seeding. State (resume data) lives in <code>{{ state_dir }}</code>.</div>
+      </div>
+
+      <div class="holt-field">
+        <label>Listen port</label>
+        <input type="number" name="torrent_port" value="{{ s.torrent_port }}" min="1024" max="65535">
+      </div>
+
+      <div class="holt-form-row" style="margin-bottom: var(--holt-space-3);">
+        <div class="holt-field">
+          <label>Download limit (KiB/s, 0 = unlimited)</label>
+          <input type="number" name="download_rate_limit_kib" value="{{ s.download_rate_limit_kib }}" min="0">
+        </div>
+        <div class="holt-field">
+          <label>Upload limit (KiB/s, 0 = unlimited)</label>
+          <input type="number" name="upload_rate_limit_kib" value="{{ s.upload_rate_limit_kib }}" min="0">
+        </div>
+      </div>
+
+      <div class="holt-form-row">
+        <div class="holt-field">
+          <label>Seed ratio limit (0 = seed forever)</label>
+          <input type="number" name="seed_ratio_limit" value="{{ s.seed_ratio_limit }}" min="0" step="0.1">
+        </div>
+        <div class="holt-field">
+          <label>Seed time limit (minutes, 0 = none)</label>
+          <input type="number" name="seed_time_limit_minutes" value="{{ s.seed_time_limit_minutes }}" min="0">
+        </div>
+      </div>
+      <div class="holt-meta" style="margin-top: var(--holt-space-2);">Once an imported torrent hits either limit it's stopped, and the next automation cycle removes it along with its downloaded files (the library keeps its copy).</div>
+    </div>
+
+    <button type="submit" class="holt-btn holt-btn-primary">Save</button>
+  </form>
 {% endblock %}

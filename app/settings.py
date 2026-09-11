@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app import config
 from app.models import Settings
+from app.torrent import EngineConfig
 
 SETTINGS_ROW_ID = 1
 
@@ -11,13 +12,27 @@ SETTINGS_ROW_ID = 1
 @dataclass
 class EffectiveSettings:
     tmdb_api_key: str
-    qbit_url: str
-    qbit_username: str
-    qbit_password: str
     movies_root: str
     tv_root: str
     automation_interval_seconds: int
     discord_webhook_url: str
+    downloads_root: str
+    torrent_port: int
+    download_rate_limit_kib: int
+    upload_rate_limit_kib: int
+    seed_ratio_limit: float
+    seed_time_limit_minutes: int
+
+    def engine_config(self) -> EngineConfig:
+        return EngineConfig(
+            state_dir=config.STATE_DIR,
+            downloads_root=self.downloads_root,
+            listen_port=self.torrent_port,
+            download_rate_limit_kib=self.download_rate_limit_kib,
+            upload_rate_limit_kib=self.upload_rate_limit_kib,
+            seed_ratio_limit=self.seed_ratio_limit,
+            seed_time_limit_minutes=self.seed_time_limit_minutes,
+        )
 
 
 def get_row(db: Session) -> Settings:
@@ -30,16 +45,28 @@ def get_row(db: Session) -> Settings:
     return row
 
 
+def _pick(stored, default):
+    """A stored null (or blank string) means "use the default". A stored 0 is a real
+    value -- for the rate/seed limits it means "unlimited" -- so this is deliberately
+    not `stored or default`."""
+    if stored is None or stored == "":
+        return default
+    return stored
+
+
 def effective(db: Session) -> EffectiveSettings:
     """DB overrides layered on top of app/config.py's env-var defaults."""
     row = get_row(db)
     return EffectiveSettings(
-        tmdb_api_key=row.tmdb_api_key or config.TMDB_API_KEY,
-        qbit_url=row.qbit_url or config.QBIT_URL,
-        qbit_username=row.qbit_username or config.QBIT_USERNAME,
-        qbit_password=row.qbit_password or config.QBIT_PASSWORD,
-        movies_root=row.movies_root or config.MOVIES_ROOT,
-        tv_root=row.tv_root or config.TV_ROOT,
-        automation_interval_seconds=row.automation_interval_seconds or config.AUTOMATION_INTERVAL_SECONDS,
-        discord_webhook_url=row.discord_webhook_url or config.DISCORD_WEBHOOK_URL,
+        tmdb_api_key=_pick(row.tmdb_api_key, config.TMDB_API_KEY),
+        movies_root=_pick(row.movies_root, config.MOVIES_ROOT),
+        tv_root=_pick(row.tv_root, config.TV_ROOT),
+        automation_interval_seconds=_pick(row.automation_interval_seconds, config.AUTOMATION_INTERVAL_SECONDS),
+        discord_webhook_url=_pick(row.discord_webhook_url, config.DISCORD_WEBHOOK_URL),
+        downloads_root=_pick(row.downloads_root, config.DOWNLOADS_ROOT),
+        torrent_port=_pick(row.torrent_port, config.TORRENT_PORT),
+        download_rate_limit_kib=_pick(row.download_rate_limit_kib, config.DOWNLOAD_RATE_LIMIT_KIB),
+        upload_rate_limit_kib=_pick(row.upload_rate_limit_kib, config.UPLOAD_RATE_LIMIT_KIB),
+        seed_ratio_limit=_pick(row.seed_ratio_limit, config.SEED_RATIO_LIMIT),
+        seed_time_limit_minutes=_pick(row.seed_time_limit_minutes, config.SEED_TIME_LIMIT_MINUTES),
     )

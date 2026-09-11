@@ -3,7 +3,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
-from app import scheduler
+from app import config
 from app import settings as settings_module
 from app import tmdb, torznab, tvmaze
 from app.candidates import scored_candidates
@@ -12,6 +12,8 @@ from app.download_check import check_and_import
 from app.grabber import grab_episode as do_grab_episode
 from app.grabber import grab_movie as do_grab_movie
 from app.models import DownloadRecord, Episode, Indexer, Movie, QualityProfile, Series
+from app.routers.api_settings import apply_runtime_changes
+from app.torrent import engine as torrent_engine
 
 router = APIRouter(tags=["ui"])
 templates = Jinja2Templates(directory="app/templates")
@@ -251,9 +253,29 @@ async def ui_grab_episode(
 
 @router.get("/ui/downloads", response_class=HTMLResponse)
 def ui_downloads(request: Request, db: Session = Depends(get_db)):
-    downloads = db.query(DownloadRecord).all()
+    # Live torrents are fetched by the page's own JS from /torrents. What's rendered
+    # here is the history: records whose torrent is gone (imported + reaped, or failed).
+    live_hashes = {t.info_hash for t in torrent_engine.list()}
+    records = (
+        db.query(DownloadRecord)
+        .filter(DownloadRecord.status.in_(["imported", "failed", "completed"]))
+        .order_by(DownloadRecord.id.desc())
+        .limit(50)
+        .all()
+    )
+    history = []
+    for d in records:
+        if d.info_hash and d.info_hash in live_hashes:
+            continue
+        label = None
+        if d.movie_id and (movie := db.get(Movie, d.movie_id)):
+            label = f"{movie.title} ({movie.year})" if movie.year else movie.title
+        elif d.episode_id and (episode := db.get(Episode, d.episode_id)):
+            series = db.get(Series, episode.series_id)
+            label = f"{series.title if series else '?'} S{episode.season_number:02d}E{episode.episode_number:02d}"
+        history.append({"release_title": d.release_title, "status": d.status, "label": label})
     return templates.TemplateResponse(
-        "downloads.html", {"request": request, "downloads": downloads, "active_nav": "downloads"}
+        "downloads.html", {"request": request, "history": history, "active_nav": "downloads"}
     )
 
 
@@ -310,52 +332,59 @@ def ui_settings(request: Request, db: Session = Depends(get_db)):
             "request": request,
             "s": s,
             "has_tmdb_api_key": bool(row.tmdb_api_key),
-            "has_qbit_password": bool(row.qbit_password),
             "has_discord_webhook": bool(row.discord_webhook_url),
+            "state_dir": config.STATE_DIR,
             "active_nav": "settings",
         },
     )
 
 
+def _int_or_none(value: str) -> int | None:
+    return int(value) if value.strip().isdigit() else None
+
+
+def _float_or_none(value: str) -> float | None:
+    try:
+        return float(value)
+    except ValueError:
+        return None
+
+
 @router.post("/ui/settings")
 def ui_save_settings(
     tmdb_api_key: str = Form(""),
-    qbit_url: str = Form(""),
-    qbit_username: str = Form(""),
-    qbit_password: str = Form(""),
     movies_root: str = Form(""),
     tv_root: str = Form(""),
     automation_interval_seconds: str = Form(""),
     discord_webhook_url: str = Form(""),
+    downloads_root: str = Form(""),
+    torrent_port: str = Form(""),
+    download_rate_limit_kib: str = Form(""),
+    upload_rate_limit_kib: str = Form(""),
+    seed_ratio_limit: str = Form(""),
+    seed_time_limit_minutes: str = Form(""),
     db: Session = Depends(get_db),
 ):
     row = settings_module.get_row(db)
-    old_interval = settings_module.effective(db).automation_interval_seconds
+    old = settings_module.effective(db)
 
     # Secret fields: only overwrite if the user actually typed something new.
     if tmdb_api_key:
         row.tmdb_api_key = tmdb_api_key
-    if qbit_password:
-        row.qbit_password = qbit_password
     if discord_webhook_url:
         row.discord_webhook_url = discord_webhook_url
 
     # Non-secret fields: always take the submitted value (blank means "use the default").
-    row.qbit_url = qbit_url or None
-    row.qbit_username = qbit_username or None
     row.movies_root = movies_root or None
     row.tv_root = tv_root or None
-    row.automation_interval_seconds = int(automation_interval_seconds) if automation_interval_seconds.isdigit() else None
+    row.automation_interval_seconds = _int_or_none(automation_interval_seconds)
+    row.downloads_root = downloads_root or None
+    row.torrent_port = _int_or_none(torrent_port)
+    row.download_rate_limit_kib = _int_or_none(download_rate_limit_kib)
+    row.upload_rate_limit_kib = _int_or_none(upload_rate_limit_kib)
+    row.seed_ratio_limit = _float_or_none(seed_ratio_limit)
+    row.seed_time_limit_minutes = _int_or_none(seed_time_limit_minutes)
 
     db.commit()
-
-    new_interval = settings_module.effective(db).automation_interval_seconds
-    if new_interval != old_interval:
-        try:
-            scheduler.reschedule(new_interval)
-        except Exception:
-            # Scheduler only runs in the live app (started on startup); under tests or
-            # if it isn't running, the next startup picks up the new interval anyway.
-            pass
-
+    apply_runtime_changes(old, settings_module.effective(db))
     return RedirectResponse("/ui/settings", status_code=303)

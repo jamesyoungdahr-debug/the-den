@@ -331,3 +331,12 @@ h2.holt-section-title {
 
 .holt-message-positive { border-color: rgba(40,224,200,.35); color: var(--holt-healthy); }
 .holt-message-warning { border-color: rgba(255,184,77,.35); color: var(--holt-warning); }
+
+/* ---------- Downloads page: live torrent rows (ProgressRow inside a Row) ---------- */
+
+.den-torrent { align-items: flex-start; }
+.den-torrent .holt-row-main { padding-right: var(--holt-space-2); }
+.den-torrent .holt-pill { margin-top: 3px; }
+.den-torrent .holt-row-actions { flex-wrap: wrap; justify-content: flex-end; max-width: 260px; }
+.den-engine-line code { font-family: var(--holt-font-mono); }
+.holt-field .holt-meta { line-height: 1.5; }

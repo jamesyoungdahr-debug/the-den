@@ -1,5 +1,8 @@
 """Tiny stand-in for a real Torznab indexer, for testing our client against
-real HTTP + real XML without needing a live tracker account."""
+real HTTP + real XML without needing a live tracker account.
+
+Download links point at tests/local_swarm.py (run it on :8083 too), so a grab
+from these results really downloads through the built-in torrent client."""
 
 from fastapi import FastAPI, Response
 
@@ -13,17 +16,17 @@ SEARCH_XML_TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
 <channel>
   <item>
     <title>{query}.2024.1080p.BluRay.x264-GROUP</title>
-    <link>http://mock/download/1</link>
-    <enclosure url="http://mock/download/1" length="4294967296" type="application/x-bittorrent"/>
-    <torznab:attr name="size" value="4294967296"/>
+    <link>http://127.0.0.1:8083/download/1.torrent</link>
+    <enclosure url="http://127.0.0.1:8083/download/1.torrent" length="8388608" type="application/x-bittorrent"/>
+    <torznab:attr name="size" value="8388608"/>
     <torznab:attr name="seeders" value="42"/>
     <torznab:attr name="peers" value="10"/>
   </item>
   <item>
     <title>{query}.2024.720p.WEB-DL.x264-GROUP</title>
-    <link>http://mock/download/2</link>
-    <enclosure url="http://mock/download/2" length="1500000000" type="application/x-bittorrent"/>
-    <torznab:attr name="size" value="1500000000"/>
+    <link>http://127.0.0.1:8083/magnet/2</link>
+    <enclosure url="http://127.0.0.1:8083/magnet/2" length="4194304" type="application/x-bittorrent"/>
+    <torznab:attr name="size" value="4194304"/>
     <torznab:attr name="seeders" value="7"/>
     <torznab:attr name="peers" value="2"/>
   </item>
