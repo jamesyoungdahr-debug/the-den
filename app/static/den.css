@@ -5,6 +5,7 @@
    No JS framework by design; den.js holds the few behaviours (sidebar, dialog, toast). */
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 
 html { scroll-behavior: smooth; }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
@@ -729,3 +730,84 @@ dialog.holt-dialog::backdrop { background: var(--holt-ambient-scrim-mid); -webki
   text-align: center;
 }
 .holt-empty-title { font-size: 16px; font-weight: 800; letter-spacing: -0.4px; color: var(--holt-ink); }
+
+/* ---------- Stat bars (drawn history) ---------- */
+
+.holt-stat-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.holt-bars { display: flex; align-items: flex-end; gap: 3px; height: 26px; }
+.holt-bars i { display: block; width: 6px; border-radius: 2px; background: var(--holt-current); opacity: .85; transition: height var(--holt-dur-base) var(--holt-ease-out); }
+.holt-bars.is-healthy i { background: var(--holt-healthy); }
+
+/* ---------- Settings: side index + sections ---------- */
+
+.den-settings { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: var(--holt-space-4); align-items: start; }
+.den-settings-index { position: sticky; top: calc(var(--holt-size-top-bar) + var(--holt-space-4)); display: flex; flex-direction: column; gap: 2px; padding: 8px; border-radius: var(--holt-radius-md); }
+.den-settings-index a { padding: 8px 10px; border-radius: var(--holt-radius-sm); font-size: 12.5px; font-weight: 700; color: var(--holt-ink-55); }
+.den-settings-index a:hover { color: var(--holt-ink); background: rgba(255,255,255,.04); }
+.den-settings-body { display: flex; flex-direction: column; gap: var(--holt-space-3); min-width: 0; }
+.den-settings-body .holt-panel { scroll-margin-top: calc(var(--holt-size-top-bar) + var(--holt-space-3)); }
+.den-settings .holt-field:last-child { margin-bottom: 0; }
+@media (max-width: 899px) {
+  .den-settings { grid-template-columns: 1fr; }
+  .den-settings-index { position: static; flex-direction: row; flex-wrap: wrap; }
+  .den-settings > .holt-panel { grid-column: 1 !important; }
+}
+
+/* ---------- Calendar ---------- */
+
+.den-cal-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: var(--holt-space-4); align-items: start; }
+.den-cal { padding: 12px; display: flex; flex-direction: column; gap: 6px; }
+.den-cal-head, .den-cal-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.den-cal-head > div { padding: 4px 8px; }
+.den-cal-day {
+  min-height: 96px;
+  border-radius: var(--holt-radius-sm);
+  background: var(--holt-raised);
+  border: 1px solid var(--holt-hairline);
+  padding: 6px;
+  display: flex; flex-direction: column; gap: 3px;
+  min-width: 0;
+}
+.den-cal-day.is-out { opacity: .38; }
+.den-cal-day.is-today { border-color: var(--holt-current); box-shadow: inset 0 0 0 1px var(--holt-current-tint); }
+.den-cal-daynum { font-family: var(--holt-font-mono); font-size: 10.5px; color: var(--holt-ink-42); padding: 0 2px 2px; }
+.den-cal-day.is-today .den-cal-daynum { color: var(--holt-current); }
+.den-cal-item {
+  display: flex; align-items: center; gap: 5px;
+  padding: 3px 6px;
+  border-radius: 5px;
+  background: rgba(13,11,18,.5);
+  font-size: 11px; font-weight: 700; color: var(--holt-ink-70);
+  min-width: 0;
+}
+.den-cal-item .dot { width: 6px; height: 6px; border-radius: 50%; flex: none; }
+.den-cal-item-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.den-cal-item.is-available .dot { background: var(--holt-badge-available); }
+.den-cal-item.is-partial .dot { background: var(--holt-badge-partial); }
+.den-cal-item.is-pending .dot { background: var(--holt-badge-pending); }
+.den-cal-legend { display: flex; gap: 16px; padding: 8px 6px 2px; }
+.den-cal-agenda { display: flex; flex-direction: column; gap: var(--holt-space-4); min-width: 0; }
+@media (max-width: 1100px) { .den-cal-layout { grid-template-columns: 1fr; } }
+@media (max-width: 899px) {
+  .den-cal-day { min-height: 56px; padding: 4px; }
+  .den-cal-item-text { display: none; }
+  .den-cal-item { padding: 3px; width: 12px; justify-content: center; }
+}
+
+/* ---------- Detail header (series) ---------- */
+
+.den-detail { display: flex; gap: var(--holt-space-4); align-items: flex-start; }
+.den-detail-poster { width: 180px; flex: none; }
+.den-detail-body { display: flex; flex-direction: column; gap: 12px; min-width: 0; flex: 1; padding-top: 6px; }
+@media (max-width: 899px) { .den-detail { flex-direction: column; } .den-detail-poster { width: 140px; } }
+
+.den-season { padding: 0; overflow: hidden; }
+.den-season-summary {
+  list-style: none; cursor: pointer;
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 17px;
+}
+.den-season-summary::-webkit-details-marker { display: none; }
+.den-season-chevron { color: var(--holt-ink-42); transition: transform var(--holt-dur-fast) var(--holt-ease-out); }
+.den-season[open] .den-season-chevron { transform: rotate(180deg); }
+.den-season > .holt-row-list { padding: 0 17px 17px; }

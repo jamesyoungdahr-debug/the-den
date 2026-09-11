@@ -1,3 +1,6 @@
+from calendar import monthrange
+from datetime import date, timedelta
+
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
@@ -182,6 +185,7 @@ async def ui_movie_candidates(movie_id: int, request: Request, db: Session = Dep
             "request": request,
             "heading": f"{movie.title} ({movie.year})",
             "grab_action": f"/ui/movies/{movie.id}/grab",
+            "back_url": "/library",
             "candidates": candidates,
             "active_nav": "movies",
         },
@@ -274,9 +278,20 @@ def ui_series_detail(series_id: int, request: Request, db: Session = Depends(get
         .order_by(Episode.season_number, Episode.episode_number)
         .all()
     )
+    seasons: list[dict] = []
+    for e in episodes:
+        if not seasons or seasons[-1]["number"] != e.season_number:
+            seasons.append({"number": e.season_number, "episodes": [], "have": 0, "total": 0})
+        seasons[-1]["episodes"].append(e)
+        seasons[-1]["total"] += 1
+        seasons[-1]["have"] += 1 if e.has_file else 0
     return templates.TemplateResponse(
         "series_detail.html",
-        {"request": request, "series": series, "episodes": episodes, "active_nav": "tv"}
+        {
+            "request": request, "series": series, "seasons": seasons,
+            "have": sum(s["have"] for s in seasons), "total": len(episodes),
+            "today": date.today().isoformat(), "active_nav": "tv",
+        },
     )
 
 
@@ -295,6 +310,7 @@ async def ui_episode_candidates(episode_id: int, request: Request, db: Session =
             "request": request,
             "heading": f"{series.title} S{episode.season_number:02d}E{episode.episode_number:02d}",
             "grab_action": f"/ui/episodes/{episode.id}/grab",
+            "back_url": f"/ui/series/{series.id}",
             "candidates": candidates,
             "active_nav": "tv",
         },
@@ -363,28 +379,76 @@ async def ui_check_download(download_id: int, db: Session = Depends(get_db)):
 # --- Calendar -----------------------------------------------------------------
 
 @router.get("/calendar", response_class=HTMLResponse, dependencies=USER)
-def calendar(request: Request, db: Session = Depends(get_db)):
-    missing_movies = db.query(Movie).filter(Movie.has_file == False).all()  # noqa: E712
+def calendar(request: Request, month: str | None = None, db: Session = Depends(get_db)):
+    today = date.today()
+    try:
+        year, mon = (int(x) for x in (month or "").split("-"))
+        first = date(year, mon, 1)
+    except (TypeError, ValueError):
+        first = date(today.year, today.month, 1)
+    last = date(first.year, first.month, monthrange(first.year, first.month)[1])
+    prev_first = (first - timedelta(days=1)).replace(day=1)
+    next_first = (last + timedelta(days=1))
+    grid_start = first - timedelta(days=first.weekday())  # Monday
+    grid_end = last + timedelta(days=6 - last.weekday())
 
-    missing_episodes = []
-    for episode in db.query(Episode).filter(Episode.has_file == False).order_by(Episode.air_date).all():
-        series = db.get(Series, episode.series_id)
-        missing_episodes.append(
-            {
-                "air_date": episode.air_date,
-                "series_title": series.title,
-                "season_number": episode.season_number,
-                "episode_number": episode.episode_number,
-                "title": episode.title,
-            }
-        )
+    series_titles = {s.id: s.title for s in db.query(Series.id, Series.title)}
+
+    def item(e: Episode) -> dict:
+        tone = "available" if e.has_file else ("pending" if e.air_date > today.isoformat() else "partial")
+        return {
+            "series_id": e.series_id, "series": series_titles.get(e.series_id, "?"), "season": e.season_number,
+            "episode": e.episode_number, "title": e.title, "air_date": e.air_date, "tone": tone,
+        }
+
+    in_grid = (
+        db.query(Episode)
+        .filter(Episode.air_date >= grid_start.isoformat(), Episode.air_date <= grid_end.isoformat())
+        .order_by(Episode.air_date, Episode.series_id, Episode.season_number, Episode.episode_number)
+        .all()
+    )
+    by_day: dict[str, list[dict]] = {}
+    for e in in_grid:
+        by_day.setdefault(e.air_date, []).append(item(e))
+
+    weeks, day = [], grid_start
+    while day <= grid_end:
+        week = []
+        for _ in range(7):
+            # "episodes", not "items": a dict key named items would shadow dict.items in Jinja.
+            week.append({"date": day, "in_month": day.month == first.month, "is_today": day == today, "episodes": by_day.get(day.isoformat(), [])})
+            day += timedelta(days=1)
+        weeks.append(week)
+
+    month_items = [i for k, items in by_day.items() for i in items if first.isoformat() <= k <= last.isoformat()]
+    month_counts = {
+        "have": sum(1 for i in month_items if i["tone"] == "available"),
+        "missing": sum(1 for i in month_items if i["tone"] == "partial"),
+        "upcoming": sum(1 for i in month_items if i["tone"] == "pending"),
+    }
+
+    agenda_missing = [
+        item(e) for e in db.query(Episode)
+        .filter(Episode.has_file == False, Episode.air_date.isnot(None), Episode.air_date <= today.isoformat())  # noqa: E712
+        .order_by(Episode.air_date.desc()).limit(20)
+    ]
+    horizon = (today + timedelta(days=14)).isoformat()
+    agenda_upcoming = [
+        item(e) for e in db.query(Episode)
+        .filter(Episode.air_date > today.isoformat(), Episode.air_date <= horizon)
+        .order_by(Episode.air_date).limit(20)
+    ]
+    missing_movies = db.query(Movie).filter(Movie.has_file == False).order_by(Movie.id.desc()).limit(12).all()  # noqa: E712
+
     return templates.TemplateResponse(
         "calendar.html",
         {
-            "request": request,
-            "missing_movies": missing_movies,
-            "missing_episodes": missing_episodes,
-            "active_nav": "calendar",
+            "request": request, "weeks": weeks, "month_label": first.strftime("%B %Y"),
+            "prev_month": prev_first.strftime("%Y-%m"), "prev_label": prev_first.strftime("%b"),
+            "next_month": next_first.strftime("%Y-%m"), "next_label": next_first.strftime("%b"),
+            "is_current_month": first.month == today.month and first.year == today.year,
+            "month_counts": month_counts, "agenda_missing": agenda_missing, "agenda_upcoming": agenda_upcoming,
+            "missing_movies": missing_movies, "active_nav": "calendar",
         },
     )
 
@@ -403,6 +467,7 @@ def ui_settings(request: Request, db: Session = Depends(get_db)):
             "has_tmdb_api_key": bool(row.tmdb_api_key),
             "has_discord_webhook": bool(row.discord_webhook_url),
             "state_dir": config.STATE_DIR,
+            "saved": request.query_params.get("saved") == "1",
             "active_nav": "settings",
         },
     )
@@ -456,4 +521,4 @@ def ui_save_settings(
 
     db.commit()
     apply_runtime_changes(old, settings_module.effective(db))
-    return RedirectResponse("/ui/settings", status_code=303)
+    return RedirectResponse("/ui/settings?saved=1", status_code=303)

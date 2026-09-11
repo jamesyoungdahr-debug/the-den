@@ -1,77 +1,81 @@
 {% extends "base.html" %}
 {% block title_suffix %} — Settings{% endblock %}
+{% block primary_action %}<button class="holt-btn holt-btn-primary" type="submit" form="settings-form">Save</button>{% endblock %}
 {% block content %}
-  <h1 class="holt-page-title">Settings</h1>
-  <p class="holt-body" style="max-width: 520px; margin-bottom: var(--holt-space-4);">Anything left blank here falls back to the matching environment variable (see <code>.env.example</code>), or the app's built-in default. Secret fields never show their current value — leave them blank to keep what's already set.</p>
-
-  <form method="post" action="/ui/settings">
-    <div class="holt-panel" style="max-width: 480px;">
-      <div class="holt-panel-head"><div class="holt-eyebrow">Library</div></div>
-
-      <div class="holt-field">
-        <label>TMDB API key {{ "· currently set" if has_tmdb_api_key else "· not set" }}</label>
-        <input type="password" name="tmdb_api_key" placeholder="leave blank to keep current value" autocomplete="off">
-      </div>
-
-      <div class="holt-field">
-        <label>Movies library folder</label>
-        <input type="text" name="movies_root" value="{{ s.movies_root }}">
-      </div>
-
-      <div class="holt-field">
-        <label>TV library folder</label>
-        <input type="text" name="tv_root" value="{{ s.tv_root }}">
-      </div>
-
-      <div class="holt-field">
-        <label>Automation interval (seconds)</label>
-        <input type="number" name="automation_interval_seconds" value="{{ s.automation_interval_seconds }}" min="60">
-      </div>
-
-      <div class="holt-field" style="margin-bottom: 0;">
-        <label>Discord webhook URL {{ "· currently set" if has_discord_webhook else "· not set (optional)" }}</label>
-        <input type="password" name="discord_webhook_url" placeholder="leave blank to keep current value" autocomplete="off">
-      </div>
+  <div class="holt-page-head">
+    <div>
+      <h1 class="holt-page-title">Settings</h1>
+      <div class="holt-meta">Blank fields fall back to the matching environment variable or the built-in default. Secrets never show their value; leave them blank to keep what's set.</div>
     </div>
+  </div>
 
-    <div class="holt-panel" style="max-width: 480px;">
-      <div class="holt-panel-head"><div class="holt-eyebrow">Torrent client</div><div class="holt-meta">built in</div></div>
+  {% if saved %}<div class="holt-message holt-message-positive">Saved. Changes to the torrent client and automation interval are live already.</div>{% endif %}
 
-      <div class="holt-field">
-        <label>Downloads folder</label>
-        <input type="text" name="downloads_root" value="{{ s.downloads_root }}">
-        <div class="holt-meta">Finished files are hard-linked from here into the library, so torrents keep seeding. State (resume data) lives in <code>{{ state_dir }}</code>.</div>
-      </div>
+  <div class="den-settings">
+    <nav class="den-settings-index holt-glass">
+      <a href="#library">Library</a>
+      <a href="#torrent">Torrent client</a>
+      <a href="#automation">Automation</a>
+      <a href="#notifications">Notifications</a>
+      <a href="#accounts">Accounts</a>
+    </nav>
 
-      <div class="holt-field">
-        <label>Listen port</label>
-        <input type="number" name="torrent_port" value="{{ s.torrent_port }}" min="1024" max="65535">
-      </div>
-
-      <div class="holt-form-row" style="margin-bottom: var(--holt-space-3);">
+    <form id="settings-form" method="post" action="/ui/settings" class="den-settings-body">
+      <section class="holt-panel" id="library">
+        <div class="holt-panel-head"><div class="holt-eyebrow">Library</div></div>
         <div class="holt-field">
-          <label>Download limit (KiB/s, 0 = unlimited)</label>
-          <input type="number" name="download_rate_limit_kib" value="{{ s.download_rate_limit_kib }}" min="0">
+          <label>TMDB API key {{ "· currently set" if has_tmdb_api_key else "· not set" }}</label>
+          <input type="password" name="tmdb_api_key" placeholder="leave blank to keep current value" autocomplete="off">
+          <div class="holt-meta">Free key from themoviedb.org → Settings → API. Needed for movie search and, soon, Discover.</div>
         </div>
-        <div class="holt-field">
-          <label>Upload limit (KiB/s, 0 = unlimited)</label>
-          <input type="number" name="upload_rate_limit_kib" value="{{ s.upload_rate_limit_kib }}" min="0">
+        <div class="holt-form-row">
+          <div class="holt-field"><label>Movies library folder</label><input type="text" name="movies_root" value="{{ s.movies_root }}"></div>
+          <div class="holt-field"><label>TV library folder</label><input type="text" name="tv_root" value="{{ s.tv_root }}"></div>
         </div>
-      </div>
+      </section>
 
-      <div class="holt-form-row">
+      <section class="holt-panel" id="torrent">
+        <div class="holt-panel-head"><div class="holt-eyebrow">Torrent client</div><div class="holt-meta">built in</div></div>
         <div class="holt-field">
-          <label>Seed ratio limit (0 = seed forever)</label>
-          <input type="number" name="seed_ratio_limit" value="{{ s.seed_ratio_limit }}" min="0" step="0.1">
+          <label>Downloads folder</label>
+          <input type="text" name="downloads_root" value="{{ s.downloads_root }}">
+          <div class="holt-meta">Finished files are hard-linked from here into the library, so torrents keep seeding. Resume data lives in <code>{{ state_dir }}</code>.</div>
         </div>
-        <div class="holt-field">
-          <label>Seed time limit (minutes, 0 = none)</label>
-          <input type="number" name="seed_time_limit_minutes" value="{{ s.seed_time_limit_minutes }}" min="0">
+        <div class="holt-form-row">
+          <div class="holt-field"><label>Listen port</label><input type="number" name="torrent_port" value="{{ s.torrent_port }}" min="1024" max="65535"></div>
+          <div class="holt-field"><label>Download limit (KiB/s, 0 = unlimited)</label><input type="number" name="download_rate_limit_kib" value="{{ s.download_rate_limit_kib }}" min="0"></div>
+          <div class="holt-field"><label>Upload limit (KiB/s, 0 = unlimited)</label><input type="number" name="upload_rate_limit_kib" value="{{ s.upload_rate_limit_kib }}" min="0"></div>
         </div>
-      </div>
-      <div class="holt-meta" style="margin-top: var(--holt-space-2);">Once an imported torrent hits either limit it's stopped, and the next automation cycle removes it along with its downloaded files (the library keeps its copy).</div>
-    </div>
+        <div class="holt-form-row" style="margin-top: var(--holt-space-3)">
+          <div class="holt-field"><label>Seed ratio limit (0 = seed forever)</label><input type="number" name="seed_ratio_limit" value="{{ s.seed_ratio_limit }}" min="0" step="0.1"></div>
+          <div class="holt-field"><label>Seed time limit (minutes, 0 = none)</label><input type="number" name="seed_time_limit_minutes" value="{{ s.seed_time_limit_minutes }}" min="0"></div>
+        </div>
+        <div class="holt-meta" style="margin-top: var(--holt-space-2)">Once an imported torrent hits either limit it's stopped, and the next automation cycle removes it along with its downloaded files. The library keeps its copy.</div>
+      </section>
 
-    <button type="submit" class="holt-btn holt-btn-primary">Save</button>
-  </form>
+      <section class="holt-panel" id="automation">
+        <div class="holt-panel-head"><div class="holt-eyebrow">Automation</div></div>
+        <div class="holt-field">
+          <label>Check interval (seconds)</label>
+          <input type="number" name="automation_interval_seconds" value="{{ s.automation_interval_seconds }}" min="60">
+          <div class="holt-meta">How often The Den advances downloads, imports finished ones, and searches for anything missing. Applied immediately.</div>
+        </div>
+      </section>
+
+      <section class="holt-panel" id="notifications">
+        <div class="holt-panel-head"><div class="holt-eyebrow">Notifications</div><div class="holt-meta">optional</div></div>
+        <div class="holt-field" style="margin:0">
+          <label>Discord webhook URL {{ "· currently set" if has_discord_webhook else "· not set" }}</label>
+          <input type="password" name="discord_webhook_url" placeholder="leave blank to keep current value" autocomplete="off">
+          <div class="holt-meta">Channel settings → Integrations → Webhooks. Grabs and imports post there.</div>
+        </div>
+      </section>
+    </form>
+
+    <section class="holt-panel" id="accounts" style="grid-column: 2">
+      <div class="holt-panel-head"><div class="holt-eyebrow">Accounts</div><span class="holt-badge {{ 'holt-badge-available' if auth_required else 'holt-badge-missing' }}"><span class="dot"></span>{{ 'sign-in required' if auth_required else 'sign-in optional' }}</span></div>
+      <p class="holt-body" style="font-size:13.5px;margin:0 0 var(--holt-space-3)">{% if auth_required %}Every page and API call needs a signed-in account.{% else %}Anyone who isn't signed in is treated as an admin, so the desktop and Android apps keep working. Set <code>AUTH_REQUIRED=true</code> in the environment to require sign-in everywhere.{% endif %}</p>
+      <a class="holt-btn holt-btn-secondary holt-btn-sm" href="/ui/users">Manage users</a>
+    </section>
+  </div>
 {% endblock %}

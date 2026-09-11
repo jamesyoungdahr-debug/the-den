@@ -1,27 +1,35 @@
 {% extends "base.html" %}
 {% block title_suffix %} — Releases{% endblock %}
 {% block content %}
-  <h1 class="holt-page-title">Releases</h1>
-  <div class="holt-meta" style="margin-bottom: var(--holt-space-3);">for {{ heading }}</div>
-
-  <div class="holt-panel">
-    <div class="holt-row-list">
-      {% for r in candidates %}
-      <div class="holt-row {{ 'holt-row-best' if r.is_best else '' }}">
-        <div class="holt-row-main">
-          <div class="holt-row-title">{{ r.title }}</div>
-          <div class="holt-row-meta">{{ r.indexer_name }} — {{ r.quality }} — {{ r.seeders if r.seeders is not none else "-" }} seeders</div>
-        </div>
-        {% if r.is_best %}<span class="holt-pill holt-pill-healthy"><span class="dot"></span>best match</span>{% endif %}
-        <form method="post" action="{{ grab_action }}">
-          <input type="hidden" name="download_url" value="{{ r.download_url }}">
-          <input type="hidden" name="release_title" value="{{ r.title }}">
-          <button type="submit" class="holt-btn holt-btn-primary holt-btn-sm">Grab</button>
-        </form>
-      </div>
-      {% else %}
-      <div class="holt-row-empty">No releases found.</div>
-      {% endfor %}
+  <div class="holt-page-head">
+    <div>
+      <h1 class="holt-page-title">Releases</h1>
+      <div class="holt-meta">for {{ heading }} · {{ candidates|length }} found across enabled indexers · best match by quality profile, then seeders</div>
     </div>
+    <div class="holt-toolbar"><a class="holt-btn holt-btn-quiet holt-btn-sm" href="{{ back_url }}">← Back</a></div>
+  </div>
+
+  <div class="holt-row-list">
+    {% for r in candidates %}
+    <div class="holt-row {{ 'is-pending' if r.is_best else '' }}">
+      <div class="holt-row-main">
+        <div class="holt-row-title">{{ r.title }}</div>
+        <div class="holt-row-meta">{{ r.indexer_name }} · {{ r.size|filesizeformat(true) if r.size else 'size unknown' }} · {{ r.seeders if r.seeders is not none else "-" }} seeders · {{ r.peers if r.peers is not none else "-" }} peers</div>
+      </div>
+      <span class="holt-chip" style="padding:5px 10px">{{ r.quality }}</span>
+      {% if r.is_best %}<span class="holt-badge holt-badge-available"><span class="dot"></span>best match</span>{% endif %}
+      <form method="post" action="{{ grab_action }}" style="margin:0">
+        <input type="hidden" name="download_url" value="{{ r.download_url }}">
+        <input type="hidden" name="release_title" value="{{ r.title }}">
+        <button type="submit" class="holt-btn {{ 'holt-btn-primary' if r.is_best else 'holt-btn-secondary' }} holt-btn-sm">Grab</button>
+      </form>
+    </div>
+    {% else %}
+    <div class="holt-empty holt-panel">
+      <div class="holt-empty-title">No releases found</div>
+      <div class="holt-body">Nothing on your enabled indexers matched. Automation will keep looking on its schedule.</div>
+      <a class="holt-btn holt-btn-secondary holt-btn-sm" href="/ui/indexers">Check indexers</a>
+    </div>
+    {% endfor %}
   </div>
 {% endblock %}

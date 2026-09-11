@@ -1,40 +1,94 @@
 {% extends "base.html" %}
 {% block title_suffix %} — Calendar{% endblock %}
 {% block content %}
-  <h1 class="holt-page-title">Calendar</h1>
-
-  <div class="holt-panel">
-    <div class="holt-panel-head">
-      <div class="holt-eyebrow">Missing movies</div>
-      <div class="holt-meta">{{ missing_movies|length }}</div>
+  <div class="holt-page-head">
+    <div>
+      <h1 class="holt-page-title">{{ month_label }}</h1>
+      <div class="holt-meta">{{ month_counts.have }} aired and have · {{ month_counts.missing }} aired and missing · {{ month_counts.upcoming }} upcoming</div>
     </div>
-    <div class="holt-row-list">
-      {% for m in missing_movies %}
-      <div class="holt-row">
-        <div class="holt-row-main">
-          <div class="holt-row-title">{{ m.title }}</div>
-          <div class="holt-row-meta">{{ m.year or "-" }}</div>
-        </div>
-      </div>
-      {% else %}
-      <div class="holt-row-empty">Nothing missing.</div>
-      {% endfor %}
+    <div class="holt-toolbar">
+      <a class="holt-chip" href="/calendar?month={{ prev_month }}">← {{ prev_label }}</a>
+      <a class="holt-chip {{ 'is-on' if is_current_month else '' }}" href="/calendar">Today</a>
+      <a class="holt-chip" href="/calendar?month={{ next_month }}">{{ next_label }} →</a>
     </div>
   </div>
 
-  <h2 class="holt-section-title">Upcoming / missing episodes</h2>
-  <div class="holt-panel">
-    <div class="holt-row-list">
-      {% for e in missing_episodes %}
-      <div class="holt-row">
-        <div class="holt-row-main">
-          <div class="holt-row-title">{{ e.series_title }} — S{{ "%02d"|format(e.season_number) }}E{{ "%02d"|format(e.episode_number) }}{% if e.title %} — {{ e.title }}{% endif %}</div>
-        </div>
-        <div class="holt-row-meta">{{ e.air_date or "no air date" }}</div>
+  <div class="den-cal-layout">
+    <div class="den-cal holt-panel">
+      <div class="den-cal-head">
+        {% for d in ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] %}<div class="holt-eyebrow" style="color:var(--holt-ink-28)">{{ d }}</div>{% endfor %}
       </div>
-      {% else %}
-      <div class="holt-row-empty">Nothing missing.</div>
+      {% for week in weeks %}
+      <div class="den-cal-week">
+        {% for day in week %}
+        <div class="den-cal-day {{ 'is-out' if not day.in_month else '' }} {{ 'is-today' if day.is_today else '' }}">
+          <div class="den-cal-daynum">{{ day.date.day }}</div>
+          {% for item in day.episodes[:3] %}
+          <div class="den-cal-item is-{{ item.tone }}" title="{{ item.series }} S{{ '%02d'|format(item.season) }}E{{ '%02d'|format(item.episode) }}{% if item.title %} — {{ item.title }}{% endif %}">
+            <span class="dot"></span><span class="den-cal-item-text">{{ item.series }} <span class="holt-meta" style="line-height:1">S{{ '%02d'|format(item.season) }}E{{ '%02d'|format(item.episode) }}</span></span>
+          </div>
+          {% endfor %}
+          {% if day.episodes|length > 3 %}<div class="holt-meta" style="line-height:1;padding:2px 6px">+{{ day.episodes|length - 3 }} more</div>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
       {% endfor %}
+      <div class="den-cal-legend">
+        <span class="holt-badge holt-badge-available"><span class="dot"></span>have</span>
+        <span class="holt-badge holt-badge-partial"><span class="dot"></span>aired, missing</span>
+        <span class="holt-badge holt-badge-pending"><span class="dot"></span>upcoming</span>
+      </div>
     </div>
+
+    <aside class="den-cal-agenda">
+      <section class="holt-section">
+        <div class="holt-rail-head"><div class="holt-eyebrow">Missing episodes</div><div class="holt-meta">{{ agenda_missing|length }}</div></div>
+        <div class="holt-row-list">
+          {% for e in agenda_missing %}
+          <a class="holt-row" href="/ui/series/{{ e.series_id }}" style="color:inherit">
+            <div class="holt-row-main">
+              <div class="holt-row-title">{{ e.series }} <span class="holt-meta">S{{ '%02d'|format(e.season) }}E{{ '%02d'|format(e.episode) }}</span></div>
+              <div class="holt-row-meta">{{ e.title or 'Untitled' }} · aired {{ e.air_date }}</div>
+            </div>
+            <span class="holt-badge holt-badge-partial"><span class="dot"></span>missing</span>
+          </a>
+          {% else %}
+          <div class="holt-empty holt-panel" style="padding: var(--holt-space-4)"><div class="holt-empty-title">Nothing missing</div><div class="holt-body">Everything's fine.</div></div>
+          {% endfor %}
+        </div>
+      </section>
+
+      <section class="holt-section">
+        <div class="holt-rail-head"><div class="holt-eyebrow">Coming up</div><div class="holt-meta">next 14 days</div></div>
+        <div class="holt-row-list">
+          {% for e in agenda_upcoming %}
+          <a class="holt-row" href="/ui/series/{{ e.series_id }}" style="color:inherit">
+            <div class="holt-row-main">
+              <div class="holt-row-title">{{ e.series }} <span class="holt-meta">S{{ '%02d'|format(e.season) }}E{{ '%02d'|format(e.episode) }}</span></div>
+              <div class="holt-row-meta">{{ e.title or 'Untitled' }} · {{ e.air_date }}</div>
+            </div>
+            <span class="holt-badge holt-badge-pending"><span class="dot"></span>upcoming</span>
+          </a>
+          {% else %}
+          <div class="holt-row-empty">No episodes airing in the next two weeks.</div>
+          {% endfor %}
+        </div>
+      </section>
+
+      {% if missing_movies %}
+      <section class="holt-section">
+        <div class="holt-rail-head"><div class="holt-eyebrow">Missing movies</div><div class="holt-meta">{{ missing_movies|length }}</div></div>
+        <div class="holt-rail">
+          {% for m in missing_movies %}
+          <div class="holt-card">
+            <div class="holt-poster">{% if m.poster_path %}<img src="{{ m.poster_path|poster }}" alt="" loading="lazy">{% else %}<span class="holt-poster-letter">{{ m.title[:1] }}</span>{% endif %}<span class="holt-badge holt-badge-solid holt-badge-missing"><span class="dot"></span>missing</span></div>
+            <div class="holt-card-title">{{ m.title }}</div>
+            <div class="holt-card-meta">{{ m.year or '-' }}</div>
+          </div>
+          {% endfor %}
+        </div>
+      </section>
+      {% endif %}
+    </aside>
   </div>
 {% endblock %}

@@ -1,25 +1,61 @@
 {% extends "base.html" %}
 {% block title_suffix %} — {{ series.title }}{% endblock %}
+{% block search_action %}/tv{% endblock %}
+{% block search_placeholder %}Search TVmaze to add a series{% endblock %}
 {% block content %}
-  <h1 class="holt-page-title">{{ series.title }} <span style="font-family: var(--holt-font-mono); font-size: 15px; color: var(--holt-ink-42); font-weight: 400; letter-spacing: 0;">({{ series.year }})</span></h1>
-
-  <div class="holt-panel">
-    <div class="holt-row-list">
-      {% for e in episodes %}
-      {% if loop.first or e.season_number != loop.previtem.season_number %}
-      <div class="holt-eyebrow">Season {{ "%02d"|format(e.season_number) }}</div>
-      {% endif %}
-      <div class="holt-row">
-        <div class="holt-row-main">
-          <div class="holt-row-title">E{{ "%02d"|format(e.episode_number) }} — {{ e.title or "Untitled" }}</div>
-          {% if e.air_date %}<div class="holt-row-meta">{{ e.air_date }}</div>{% endif %}
-        </div>
-        <span class="holt-pill {{ 'holt-pill-healthy' if e.has_file else 'holt-pill-idle' }}"><span class="dot"></span>{{ "have" if e.has_file else "missing" }}</span>
-        {% if is_admin and not e.has_file %}<a href="/ui/episodes/{{ e.id }}/candidates" class="holt-btn holt-btn-quiet holt-btn-sm">find releases</a>{% endif %}
-      </div>
-      {% else %}
-      <div class="holt-row-empty">No episodes found.</div>
-      {% endfor %}
+  <div class="den-detail">
+    <div class="den-detail-poster holt-poster">
+      {% if series.poster_path %}<img src="{{ series.poster_path|poster }}" alt="">{% else %}<span class="holt-poster-letter">{{ series.title[:1] }}</span>{% endif %}
     </div>
+    <div class="den-detail-body">
+      <div class="holt-eyebrow">Series{% if series.year %} · {{ series.year }}{% endif %}</div>
+      <h1 class="holt-hero-title">{{ series.title }}</h1>
+      <div class="holt-meta">{{ seasons|length }} season{{ '' if seasons|length == 1 else 's' }} · {{ have }} of {{ total }} episodes</div>
+      <div class="holt-progress" style="max-width:420px"><i class="{{ 'holt-progress-fill-healthy' if total and have == total else '' }}" style="width:{{ (have / total * 100) if total else 0 }}%"></i></div>
+      {% if series.overview %}<p class="holt-body" style="font-size:14px;max-width:620px;margin:0">{{ series.overview }}</p>{% endif %}
+      <div class="holt-hero-actions">
+        {% if total and have == total %}<span class="holt-badge holt-badge-solid holt-badge-available"><span class="dot"></span>complete</span>
+        {% elif have %}<span class="holt-badge holt-badge-solid holt-badge-partial"><span class="dot"></span>{{ have }}/{{ total }}</span>
+        {% else %}<span class="holt-badge holt-badge-solid holt-badge-missing"><span class="dot"></span>missing</span>{% endif %}
+        {% if is_admin %}
+        <form method="post" action="/ui/series/{{ series.id }}/delete" onsubmit="return confirm('Remove {{ series.title|e }} from the library?')" style="margin:0">
+          <button type="submit" class="holt-btn holt-btn-quiet holt-btn-sm">Remove from library</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="holt-section">
+    {% for season in seasons %}
+    <details class="den-season holt-panel" {% if loop.last or season.have < season.total %}open{% endif %}>
+      <summary class="den-season-summary">
+        <div class="holt-row-main">
+          <div class="holt-row-title">Season {{ '%02d'|format(season.number) }}</div>
+          <div class="holt-row-meta">{{ season.have }} of {{ season.total }} episodes</div>
+        </div>
+        {% if season.have == season.total %}<span class="holt-badge holt-badge-available"><span class="dot"></span>complete</span>
+        {% elif season.have %}<span class="holt-badge holt-badge-partial"><span class="dot"></span>partial</span>
+        {% else %}<span class="holt-badge holt-badge-missing"><span class="dot"></span>missing</span>{% endif %}
+        <svg class="holt-ico den-season-chevron" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg>
+      </summary>
+      <div class="holt-row-list" style="margin-top: var(--holt-space-2)">
+        {% for e in season.episodes %}
+        <div class="holt-row">
+          <div class="holt-row-main">
+            <div class="holt-row-title"><span class="holt-meta" style="margin-right:6px">E{{ '%02d'|format(e.episode_number) }}</span>{{ e.title or "Untitled" }}</div>
+            <div class="holt-row-meta">{{ e.air_date or 'no air date' }}</div>
+          </div>
+          {% if e.has_file %}<span class="holt-badge holt-badge-available"><span class="dot"></span>have</span>
+          {% elif e.air_date and e.air_date > today %}<span class="holt-badge holt-badge-pending"><span class="dot"></span>upcoming</span>
+          {% else %}<span class="holt-badge holt-badge-missing"><span class="dot"></span>missing</span>{% endif %}
+          {% if is_admin and not e.has_file %}<a href="/ui/episodes/{{ e.id }}/candidates" class="holt-btn holt-btn-quiet holt-btn-sm">Find releases</a>{% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </details>
+    {% else %}
+    <div class="holt-empty holt-panel"><div class="holt-empty-title">No episodes found</div><div class="holt-body">TVmaze had no episode list for this series.</div></div>
+    {% endfor %}
   </div>
 {% endblock %}

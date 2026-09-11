@@ -17,6 +17,11 @@ restores torrents from resume data. See ROADMAP.md's M10 section for the details
 two loopback-swarm gotchas that cost the most debugging time.
 
 ## Currently working on
+**U2 is done** (2026-09-11): every web page is now in the HoltOS Glass design -- Downloads,
+Settings, Calendar (real month grid + agenda), Series detail (season accordion), Candidates.
+The web UI redesign (U0-U2) is complete; what's left of the redesign is the two clients
+(U4/U5) after their API changes. **Next is M11c (Plex login).**
+
 **M11b accounts are done** (2026-09-11): local users with roles, sessions, API tokens,
 `/setup`, `/login`, `/ui/users`, `/ui/profile`, page and API guards everywhere, `AUTH_REQUIRED`
 off by default (anonymous = admin) until the companion apps gain a login step. 51-check
