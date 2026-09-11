@@ -79,8 +79,8 @@ $EDITOR /etc/the-den/the-den.env
 systemctl enable --now the-den
 ```
 
-The web UI binds to `127.0.0.1:8686` only -- **there's no login/auth layer**, so put a
-reverse proxy in front of it (or accept LAN-only access via SSH tunnel/VPN) before
+The web UI binds to `127.0.0.1:8686` only. Sign-in is optional by default (see
+Accounts); set `AUTH_REQUIRED=true` and put a TLS reverse proxy in front of it before
 exposing it beyond localhost. The torrent client listens on `TORRENT_PORT` (default 6881,
 TCP+UDP) on all interfaces; forward that port on your router for better peer connectivity.
 This packaging has been run for real through `makepkg -si` + `pacman -U` +
