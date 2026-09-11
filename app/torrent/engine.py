@@ -29,6 +29,9 @@ import libtorrent as lt
 
 log = logging.getLogger(__name__)
 
+# libtorrent 2.0's bindings expose `version`; Arch's 2.1 bindings only `__version__`.
+LT_VERSION = getattr(lt, "__version__", None) or getattr(lt, "version", "unknown")
+
 _RESUME_SAVE_EVERY_SECONDS = 60
 _SEED_LIMIT_CHECK_EVERY_SECONDS = 5
 _ALERT_POLL_SECONDS = 0.5
@@ -199,7 +202,7 @@ class TorrentEngine:
             "enable_upnp": True,
             "enable_natpmp": True,
             "dht_bootstrap_nodes": _DHT_BOOTSTRAP_NODES,
-            "user_agent": f"The Den (libtorrent/{lt.version})",
+            "user_agent": f"The Den (libtorrent/{LT_VERSION})",
             "alert_mask": cat.status_notification | cat.error_notification | cat.storage_notification,
             "download_rate_limit": max(cfg.download_rate_limit_kib, 0) * 1024,
             "upload_rate_limit": max(cfg.upload_rate_limit_kib, 0) * 1024,
