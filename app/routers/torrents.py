@@ -7,12 +7,13 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app import auth
 from app import settings as settings_module
 from app.deps import get_db
 from app.models import DownloadRecord, Episode, Movie, Series
 from app.torrent import TorrentStatus, engine
 
-router = APIRouter(prefix="/torrents", tags=["torrents"])
+router = APIRouter(prefix="/torrents", tags=["torrents"], dependencies=[Depends(auth.require_admin)])
 
 
 class TorrentOut(BaseModel):

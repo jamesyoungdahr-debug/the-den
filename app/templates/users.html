@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title_suffix %} — Users{% endblock %}
+{% block primary_action %}<a class="holt-btn holt-btn-primary" href="#" data-open-dialog="add-user">Add user</a>{% endblock %}
+{% block content %}
+  <div class="holt-page-head">
+    <div>
+      <h1 class="holt-page-title">Users</h1>
+      <div class="holt-meta">{{ users|length }} accounts · {{ users|selectattr('is_admin')|list|length }} admin{% if not auth_required %} · sign-in is optional (AUTH_REQUIRED is off){% endif %}</div>
+    </div>
+  </div>
+
+  {% if error %}<div class="holt-message holt-message-warning">{{ error }}</div>{% endif %}
+
+  <div class="holt-panel">
+    <div class="holt-row-list">
+      {% for u in users %}
+      <div class="holt-row">
+        <div class="holt-avatar">{{ u.initial }}</div>
+        <div class="holt-row-main">
+          <div class="holt-row-title">{{ u.username }}{% if current_user and current_user.id == u.id %} <span class="holt-meta">(you)</span>{% endif %}</div>
+          <div class="holt-row-meta">{{ 'plex' if u.plex_id else 'local' }} · {{ 'auto-approve' if u.auto_approve else 'needs approval' }} · last sign-in {{ u.last_login_at.strftime('%Y-%m-%d %H:%M') if u.last_login_at else 'never' }}</div>
+        </div>
+        <span class="holt-badge {{ 'holt-badge-pending' if u.is_admin else 'holt-badge-missing' }}"><span class="dot"></span>{{ u.role }}</span>
+        <div class="holt-row-actions">
+          <form method="post" action="/ui/users/{{ u.id }}/role">
+            <input type="hidden" name="role" value="{{ 'user' if u.is_admin else 'admin' }}">
+            <button type="submit" class="holt-btn holt-btn-quiet holt-btn-sm">{{ 'make user' if u.is_admin else 'make admin' }}</button>
+          </form>
+          <form method="post" action="/ui/users/{{ u.id }}/auto-approve">
+            <input type="hidden" name="enabled" value="{{ '0' if u.auto_approve else '1' }}">
+            <button type="submit" class="holt-btn holt-btn-quiet holt-btn-sm">{{ 'require approval' if u.auto_approve else 'auto-approve' }}</button>
+          </form>
+          <a href="#" class="holt-btn holt-btn-quiet holt-btn-sm" data-open-dialog="reset-{{ u.id }}">reset password</a>
+          {% if not (current_user and current_user.id == u.id) %}
+          <form method="post" action="/ui/users/{{ u.id }}/delete" onsubmit="return confirm('Delete {{ u.username|e }}?')">
+            <button type="submit" class="holt-btn holt-btn-quiet holt-btn-sm">delete</button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+      <dialog id="reset-{{ u.id }}" class="holt-dialog holt-glass-float">
+        <form method="post" action="/ui/users/{{ u.id }}/password">
+          <div class="holt-eyebrow" style="margin-bottom: var(--holt-space-3)">Reset password for {{ u.username }}</div>
+          <div class="holt-field"><label>New password</label><input name="password" type="password" minlength="8" required autocomplete="new-password"></div>
+          <div style="display:flex; gap: 8px; justify-content: flex-end">
+            <button type="button" class="holt-btn holt-btn-quiet" data-close-dialog>Cancel</button>
+            <button type="submit" class="holt-btn holt-btn-primary">Reset</button>
+          </div>
+        </form>
+      </dialog>
+      {% else %}
+      <div class="holt-empty">
+        <div class="holt-empty-title">No accounts yet</div>
+        <div class="holt-body">Sign-in is optional until AUTH_REQUIRED is turned on. Create the admin account first.</div>
+        <a class="holt-btn holt-btn-primary holt-btn-sm" href="/setup">Create admin</a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <dialog id="add-user" class="holt-dialog holt-glass-float">
+    <form method="post" action="/ui/users">
+      <div class="holt-eyebrow" style="margin-bottom: var(--holt-space-3)">Add a local user</div>
+      <div class="holt-field"><label>Username</label><input name="username" minlength="2" required autocomplete="off"></div>
+      <div class="holt-field"><label>Password</label><input name="password" type="password" minlength="8" required autocomplete="new-password"></div>
+      <div class="holt-field"><label>Role</label><select name="role"><option value="user">user</option><option value="admin">admin</option></select></div>
+      <div class="holt-field"><label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0"><input type="checkbox" name="auto_approve" value="1" style="width:auto;margin:0"> Requests from this user are approved automatically</label></div>
+      <div style="display:flex; gap: 8px; justify-content: flex-end">
+        <button type="button" class="holt-btn holt-btn-quiet" data-close-dialog>Cancel</button>
+        <button type="submit" class="holt-btn holt-btn-primary">Add</button>
+      </div>
+    </form>
+  </dialog>
+{% endblock %}

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app import tvmaze
+from app import auth, tvmaze
 from app.candidates import scored_candidates
 from app.deps import get_db
 from app.grabber import grab_episode as do_grab_episode
@@ -12,17 +12,17 @@ from app.schemas import DownloadRecordOut, EpisodeOut, GrabRequest, ScoredReleas
 router = APIRouter(tags=["series"])
 
 
-@router.get("/series/search-tvmaze")
+@router.get("/series/search-tvmaze", dependencies=[Depends(auth.require_user)])
 async def search_tvmaze(q: str):
     return await tvmaze.search_tv(q)
 
 
-@router.get("/series", response_model=list[SeriesOut])
+@router.get("/series", response_model=list[SeriesOut], dependencies=[Depends(auth.require_user)])
 def list_series(db: Session = Depends(get_db)):
     return db.query(Series).all()
 
 
-@router.post("/series", response_model=SeriesOut, status_code=201)
+@router.post("/series", response_model=SeriesOut, status_code=201, dependencies=[Depends(auth.require_admin)])
 async def add_series(payload: SeriesCreate, db: Session = Depends(get_db)):
     if db.query(Series).filter(Series.tvmaze_id == payload.tvmaze_id).first():
         raise HTTPException(400, "Series already in library")
@@ -49,7 +49,7 @@ async def add_series(payload: SeriesCreate, db: Session = Depends(get_db)):
     return series
 
 
-@router.delete("/series/{series_id}", status_code=204)
+@router.delete("/series/{series_id}", status_code=204, dependencies=[Depends(auth.require_admin)])
 def delete_series(series_id: int, db: Session = Depends(get_db)):
     series = db.get(Series, series_id)
     if series:
@@ -67,12 +67,12 @@ def delete_series(series_id: int, db: Session = Depends(get_db)):
         db.commit()
 
 
-@router.get("/series/{series_id}/episodes", response_model=list[EpisodeOut])
+@router.get("/series/{series_id}/episodes", response_model=list[EpisodeOut], dependencies=[Depends(auth.require_user)])
 def list_episodes(series_id: int, db: Session = Depends(get_db)):
     return db.query(Episode).filter(Episode.series_id == series_id).order_by(Episode.season_number, Episode.episode_number).all()
 
 
-@router.get("/episodes/{episode_id}/candidates", response_model=list[ScoredReleaseOut])
+@router.get("/episodes/{episode_id}/candidates", response_model=list[ScoredReleaseOut], dependencies=[Depends(auth.require_admin)])
 async def episode_candidates(episode_id: int, db: Session = Depends(get_db)):
     episode = db.get(Episode, episode_id)
     if not episode:
@@ -86,7 +86,7 @@ async def episode_candidates(episode_id: int, db: Session = Depends(get_db)):
     return await scored_candidates(db, query, profile)
 
 
-@router.post("/episodes/{episode_id}/grab", response_model=DownloadRecordOut)
+@router.post("/episodes/{episode_id}/grab", response_model=DownloadRecordOut, dependencies=[Depends(auth.require_admin)])
 async def grab_episode(episode_id: int, payload: GrabRequest, db: Session = Depends(get_db)):
     episode = db.get(Episode, episode_id)
     if not episode:

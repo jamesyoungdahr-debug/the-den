@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>The Den{% block title_suffix %}{% endblock %}</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/holt-tokens.css?v={{ static_v }}">
+  <link rel="stylesheet" href="/static/den.css?v={{ static_v }}">
+  <style>
+    /* Sign-in ground: the wallpaper's pool rings, the purple glow, and the otter at 9%. */
+    .den-auth { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: var(--holt-space-4); position: relative; overflow: hidden; }
+    .den-auth-ground { position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background: radial-gradient(900px 600px at 30% 40%, rgba(177,77,255,.16), transparent 60%), radial-gradient(600px 400px at 85% 90%, rgba(40,224,200,.10), transparent 60%); }
+    .den-auth-ring { position: absolute; border-radius: 50%; border: 1px solid rgba(244,235,255,.06); }
+    .den-auth-otter { position: absolute; right: 4vw; bottom: -30px; width: min(520px, 45vw); opacity: .09; }
+    .den-auth-card { position: relative; z-index: 1; width: min(400px, 100%); padding: var(--holt-space-5); display: flex; flex-direction: column; gap: var(--holt-space-4); }
+    .den-auth-card .holt-btn { width: 100%; padding: 13px 22px; font-size: 13.5px; }
+    .den-auth-divider { display: flex; align-items: center; gap: 12px; }
+    .den-auth-divider span:not(.holt-meta) { flex: 1; height: 1px; background: var(--holt-hairline); }
+  </style>
+</head>
+<body>
+  <div class="den-auth-ground" aria-hidden="true">
+    <div class="den-auth-ring" style="width:1400px;height:1400px;left:-160px;top:-260px"></div>
+    <div class="den-auth-ring" style="width:1040px;height:1040px;left:20px;top:-80px"></div>
+    <div class="den-auth-ring" style="width:700px;height:700px;left:190px;top:90px;border-color:rgba(177,77,255,.10)"></div>
+    <img class="den-auth-otter" src="/static/otter-fullbody.svg" alt="">
+  </div>
+  <main class="den-auth">
+    <div class="den-auth-card holt-glass-float">
+      <div class="holt-lockup" style="padding:0">
+        <span class="holt-ringmark"></span>
+        <span class="holt-wordmark">The Den</span>
+        <span class="holt-meta" style="margin-left:auto;line-height:1">PART OF HOLTOS</span>
+      </div>
+      {% block card %}{% endblock %}
+    </div>
+  </main>
+</body>
+</html>

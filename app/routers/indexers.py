@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app import auth
 from app import torznab
 from app.deps import get_db
 from app.models import Indexer
 from app.schemas import IndexerCreate, IndexerOut
 
-router = APIRouter(prefix="/indexers", tags=["indexers"])
+router = APIRouter(prefix="/indexers", tags=["indexers"], dependencies=[Depends(auth.require_admin)])
 
 
 @router.get("", response_model=list[IndexerOut])

@@ -27,3 +27,11 @@ AUTOMATION_INTERVAL_SECONDS = int(os.environ.get("AUTOMATION_INTERVAL_SECONDS", 
 
 # A Discord "Webhook URL" from a channel's Integrations settings. Left blank, notifications are a no-op.
 DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "")
+
+# Accounts. AUTH_REQUIRED=false (the default until the companion apps gain a login step)
+# keeps every page and API open exactly as before accounts existed, while still letting
+# people sign in. Set it to true to require a login everywhere; the first run then shows
+# /setup to create the admin. SESSION_SECRET signs the session cookie; left blank, one is
+# generated once and kept under STATE_DIR.
+AUTH_REQUIRED = os.environ.get("AUTH_REQUIRED", "false").strip().lower() in ("1", "true", "yes", "on")
+SESSION_SECRET = os.environ.get("SESSION_SECRET", "")

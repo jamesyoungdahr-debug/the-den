@@ -1,11 +1,8 @@
-from pathlib import Path
-
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
-from app import config
+from app import auth, config
 from app import settings as settings_module
 from app import tmdb, torznab, tvmaze
 from app.candidates import scored_candidates
@@ -15,35 +12,14 @@ from app.grabber import grab_episode as do_grab_episode
 from app.grabber import grab_movie as do_grab_movie
 from app.models import DownloadRecord, Episode, Indexer, Movie, QualityProfile, Series
 from app.routers.api_settings import apply_runtime_changes
+from app.templating import templates
 from app.torrent import engine as torrent_engine
 
 router = APIRouter(tags=["ui"])
-templates = Jinja2Templates(directory="app/templates")
 
-TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w342"
-
-
-def poster_url(path: str | None) -> str:
-    """TMDB stores a bare path ('/abc.jpg'); TVmaze stores a full URL. Either way, a URL."""
-    if not path:
-        return ""
-    return path if path.startswith("http") else f"{TMDB_IMAGE_BASE}{path}"
-
-
-templates.env.filters["poster"] = poster_url
-
-
-def _static_version() -> str:
-    """Cache-buster for the stylesheet/script links: the newest mtime among the static
-    assets, so a deploy (or a dev restart) makes every browser fetch fresh copies."""
-    static_dir = Path(__file__).resolve().parent.parent / "static"
-    try:
-        return str(int(max(p.stat().st_mtime for p in static_dir.iterdir() if p.is_file())))
-    except (OSError, ValueError):
-        return "0"
-
-
-templates.env.globals["static_v"] = _static_version()
+# Route guards (see app/auth.py): pages anyone signed in may see vs. admin plumbing.
+USER = [Depends(auth.page_user)]
+ADMIN = [Depends(auth.page_admin)]
 
 
 def _series_rows(db: Session, series_list: list[Series]) -> list[dict]:
@@ -66,7 +42,7 @@ def _downloading_movie_ids(db: Session) -> set[int]:
     return {movie_id for (movie_id,) in rows}
 
 
-@router.get("/", response_class=HTMLResponse)
+@router.get("/", response_class=HTMLResponse, dependencies=USER)
 def discover(request: Request, db: Session = Depends(get_db)):
     """Home. Until M11's TMDB-driven Discover lands this is the library at a glance."""
     recent_movies = db.query(Movie).order_by(Movie.id.desc()).limit(12).all()
@@ -84,7 +60,7 @@ def discover(request: Request, db: Session = Depends(get_db)):
     )
 
 
-@router.get("/ui/indexers", response_class=HTMLResponse)  # GET /indexers is the JSON API
+@router.get("/ui/indexers", response_class=HTMLResponse, dependencies=ADMIN)  # GET /indexers is the JSON API
 async def indexers_page(request: Request, q: str | None = None, db: Session = Depends(get_db)):
     indexers = db.query(Indexer).all()
     results = None
@@ -104,7 +80,7 @@ async def indexers_page(request: Request, q: str | None = None, db: Session = De
     )
 
 
-@router.post("/ui/indexers")
+@router.post("/ui/indexers", dependencies=ADMIN)
 def ui_create_indexer(
     name: str = Form(...),
     url: str = Form(...),
@@ -117,7 +93,7 @@ def ui_create_indexer(
     return RedirectResponse("/ui/indexers", status_code=303)
 
 
-@router.post("/ui/indexers/{indexer_id}/delete")
+@router.post("/ui/indexers/{indexer_id}/delete", dependencies=ADMIN)
 def ui_delete_indexer(indexer_id: int, db: Session = Depends(get_db)):
     indexer = db.get(Indexer, indexer_id)
     if indexer:
@@ -128,7 +104,7 @@ def ui_delete_indexer(indexer_id: int, db: Session = Depends(get_db)):
 
 # --- Movies -----------------------------------------------------------------
 
-@router.get("/library", response_class=HTMLResponse)
+@router.get("/library", response_class=HTMLResponse, dependencies=USER)
 async def library(request: Request, q: str | None = None, filter: str = "all", db: Session = Depends(get_db)):
     all_movies = db.query(Movie).order_by(Movie.id.desc()).all()
     downloading_ids = _downloading_movie_ids(db)
@@ -160,7 +136,7 @@ async def library(request: Request, q: str | None = None, filter: str = "all", d
     )
 
 
-@router.post("/ui/movies")
+@router.post("/ui/movies", dependencies=ADMIN)
 def ui_add_movie(
     tmdb_id: int = Form(...),
     title: str = Form(...),
@@ -183,7 +159,7 @@ def ui_add_movie(
     return RedirectResponse("/library", status_code=303)
 
 
-@router.post("/ui/movies/{movie_id}/delete")
+@router.post("/ui/movies/{movie_id}/delete", dependencies=ADMIN)
 def ui_delete_movie(movie_id: int, db: Session = Depends(get_db)):
     movie = db.get(Movie, movie_id)
     if movie:
@@ -192,7 +168,7 @@ def ui_delete_movie(movie_id: int, db: Session = Depends(get_db)):
     return RedirectResponse("/library", status_code=303)
 
 
-@router.get("/ui/movies/{movie_id}/candidates", response_class=HTMLResponse)
+@router.get("/ui/movies/{movie_id}/candidates", response_class=HTMLResponse, dependencies=ADMIN)
 async def ui_movie_candidates(movie_id: int, request: Request, db: Session = Depends(get_db)):
     movie = db.get(Movie, movie_id)
     if not movie:
@@ -212,7 +188,7 @@ async def ui_movie_candidates(movie_id: int, request: Request, db: Session = Dep
     )
 
 
-@router.post("/ui/movies/{movie_id}/grab")
+@router.post("/ui/movies/{movie_id}/grab", dependencies=ADMIN)
 async def ui_grab_movie(
     movie_id: int,
     download_url: str = Form(...),
@@ -231,7 +207,7 @@ async def ui_grab_movie(
 
 # --- TV -----------------------------------------------------------------
 
-@router.get("/tv", response_class=HTMLResponse)
+@router.get("/tv", response_class=HTMLResponse, dependencies=USER)
 async def tv_library(request: Request, q: str | None = None, db: Session = Depends(get_db)):
     all_series = db.query(Series).order_by(Series.id.desc()).all()
     rows = _series_rows(db, all_series)
@@ -251,7 +227,7 @@ async def tv_library(request: Request, q: str | None = None, db: Session = Depen
     )
 
 
-@router.post("/ui/series")
+@router.post("/ui/series", dependencies=ADMIN)
 async def ui_add_series(
     tvmaze_id: int = Form(...),
     title: str = Form(...),
@@ -277,7 +253,7 @@ async def ui_add_series(
     return RedirectResponse("/tv", status_code=303)
 
 
-@router.post("/ui/series/{series_id}/delete")
+@router.post("/ui/series/{series_id}/delete", dependencies=ADMIN)
 def ui_delete_series(series_id: int, db: Session = Depends(get_db)):
     series = db.get(Series, series_id)
     if series:
@@ -287,7 +263,7 @@ def ui_delete_series(series_id: int, db: Session = Depends(get_db)):
     return RedirectResponse("/tv", status_code=303)
 
 
-@router.get("/ui/series/{series_id}", response_class=HTMLResponse)
+@router.get("/ui/series/{series_id}", response_class=HTMLResponse, dependencies=USER)
 def ui_series_detail(series_id: int, request: Request, db: Session = Depends(get_db)):
     series = db.get(Series, series_id)
     if not series:
@@ -304,7 +280,7 @@ def ui_series_detail(series_id: int, request: Request, db: Session = Depends(get
     )
 
 
-@router.get("/ui/episodes/{episode_id}/candidates", response_class=HTMLResponse)
+@router.get("/ui/episodes/{episode_id}/candidates", response_class=HTMLResponse, dependencies=ADMIN)
 async def ui_episode_candidates(episode_id: int, request: Request, db: Session = Depends(get_db)):
     episode = db.get(Episode, episode_id)
     if not episode:
@@ -325,7 +301,7 @@ async def ui_episode_candidates(episode_id: int, request: Request, db: Session =
     )
 
 
-@router.post("/ui/episodes/{episode_id}/grab")
+@router.post("/ui/episodes/{episode_id}/grab", dependencies=ADMIN)
 async def ui_grab_episode(
     episode_id: int,
     download_url: str = Form(...),
@@ -344,7 +320,7 @@ async def ui_grab_episode(
 
 # --- Downloads -----------------------------------------------------------------
 
-@router.get("/ui/downloads", response_class=HTMLResponse)
+@router.get("/ui/downloads", response_class=HTMLResponse, dependencies=ADMIN)
 def ui_downloads(request: Request, db: Session = Depends(get_db)):
     # Live torrents are fetched by the page's own JS from /torrents. What's rendered
     # here is the history: records whose torrent is gone (imported + reaped, or failed).
@@ -372,7 +348,7 @@ def ui_downloads(request: Request, db: Session = Depends(get_db)):
     )
 
 
-@router.post("/ui/downloads/{download_id}/check")
+@router.post("/ui/downloads/{download_id}/check", dependencies=ADMIN)
 async def ui_check_download(download_id: int, db: Session = Depends(get_db)):
     record = db.get(DownloadRecord, download_id)
     if not record:
@@ -386,7 +362,7 @@ async def ui_check_download(download_id: int, db: Session = Depends(get_db)):
 
 # --- Calendar -----------------------------------------------------------------
 
-@router.get("/calendar", response_class=HTMLResponse)
+@router.get("/calendar", response_class=HTMLResponse, dependencies=USER)
 def calendar(request: Request, db: Session = Depends(get_db)):
     missing_movies = db.query(Movie).filter(Movie.has_file == False).all()  # noqa: E712
 
@@ -415,7 +391,7 @@ def calendar(request: Request, db: Session = Depends(get_db)):
 
 # --- Settings -----------------------------------------------------------------
 
-@router.get("/ui/settings", response_class=HTMLResponse)
+@router.get("/ui/settings", response_class=HTMLResponse, dependencies=ADMIN)
 def ui_settings(request: Request, db: Session = Depends(get_db)):
     row = settings_module.get_row(db)
     s = settings_module.effective(db)
@@ -443,7 +419,7 @@ def _float_or_none(value: str) -> float | None:
         return None
 
 
-@router.post("/ui/settings")
+@router.post("/ui/settings", dependencies=ADMIN)
 def ui_save_settings(
     tmdb_api_key: str = Form(""),
     movies_root: str = Form(""),

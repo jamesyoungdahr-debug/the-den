@@ -15,7 +15,7 @@
           {% if e.air_date %}<div class="holt-row-meta">{{ e.air_date }}</div>{% endif %}
         </div>
         <span class="holt-pill {{ 'holt-pill-healthy' if e.has_file else 'holt-pill-idle' }}"><span class="dot"></span>{{ "have" if e.has_file else "missing" }}</span>
-        {% if not e.has_file %}<a href="/ui/episodes/{{ e.id }}/candidates" class="holt-btn holt-btn-quiet holt-btn-sm">find releases</a>{% endif %}
+        {% if is_admin and not e.has_file %}<a href="/ui/episodes/{{ e.id }}/candidates" class="holt-btn holt-btn-quiet holt-btn-sm">find releases</a>{% endif %}
       </div>
       {% else %}
       <div class="holt-row-empty">No episodes found.</div>

@@ -19,8 +19,9 @@
   {% set nav_groups = [
     ("Browse", [("discover", "/", "Discover", "compass")]),
     ("Library", [("movies", "/library", "Movies", "film"), ("tv", "/tv", "TV", "tv"), ("calendar", "/calendar", "Calendar", "calendar")]),
-    ("Admin", [("downloads", "/ui/downloads", "Downloads", "download"), ("indexers", "/ui/indexers", "Indexers", "db"), ("settings", "/ui/settings", "Settings", "sliders")]),
+    ("Admin", [("downloads", "/ui/downloads", "Downloads", "download"), ("indexers", "/ui/indexers", "Indexers", "db"), ("users", "/ui/users", "Users", "users"), ("settings", "/ui/settings", "Settings", "sliders")]),
   ] %}
+  {%- set visible_groups = nav_groups if is_admin else nav_groups[:2] -%}
   {% macro icon(name) -%}
     <svg class="holt-ico" viewBox="0 0 24 24" aria-hidden="true">
     {%- if name == "compass" -%}<circle cx="12" cy="12" r="9"></circle><path d="M15 9l-2 6-4 2 2-6z"></path>
@@ -43,7 +44,7 @@
   <div class="holt-app">
     <aside class="holt-sidebar holt-glass">
       <a class="holt-lockup" href="/"><span class="holt-ringmark"></span><span class="holt-wordmark">The Den</span></a>
-      {% for group_name, items in nav_groups %}
+      {% for group_name, items in visible_groups %}
       <nav class="holt-nav" {% if group_name == "Admin" %}data-admin{% endif %}>
         <div class="holt-nav-eyebrow">{{ group_name }}</div>
         {% for key, href, label, ico in items %}
@@ -53,8 +54,18 @@
       {% endfor %}
       <div class="holt-sidebar-spacer"></div>
       <div class="holt-sidebar-foot">
+        {% if current_user %}
+        <a class="holt-avatar" href="/ui/profile" title="Profile">{{ current_user.initial }}</a>
+        <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+          <a href="/ui/profile" style="font-size:12.5px;font-weight:700;color:var(--holt-ink)">{{ current_user.username }}</a>
+          <form method="post" action="/logout" style="margin:0"><button type="submit" class="holt-meta" style="background:none;border:0;padding:0;cursor:pointer;line-height:1">{{ current_user.role }} · sign out</button></form>
+        </div>
+        {% elif auth_required %}
+        <a class="holt-btn holt-btn-secondary holt-btn-sm" href="/login">Sign in</a>
+        {% else %}
         <span class="holt-ringmark" style="width:22px;height:22px;border-width:5px"></span>
-        <span class="holt-meta" style="line-height:1">part of HoltOS</span>
+        <a class="holt-meta" href="/login" style="line-height:1;color:var(--holt-ink-42)">sign in</a>
+        {% endif %}
         <button class="holt-sidebar-toggle" type="button" title="Collapse sidebar" aria-label="Collapse sidebar">{{ icon("chevron") }}</button>
       </div>
     </aside>
@@ -78,12 +89,15 @@
     <a class="holt-tab {{ 'active' if active_nav == 'discover' else '' }}" href="/">{{ icon("compass") }}Discover</a>
     <a class="holt-tab {{ 'active' if active_nav == 'movies' else '' }}" href="/library">{{ icon("film") }}Movies</a>
     <a class="holt-tab {{ 'active' if active_nav == 'tv' else '' }}" href="/tv">{{ icon("tv") }}TV</a>
-    <button class="holt-tab {{ 'active' if active_nav in ('calendar', 'downloads', 'indexers', 'settings') else '' }}" type="button" data-more>{{ icon("more") }}More</button>
+    <button class="holt-tab {{ 'active' if active_nav in ('calendar', 'downloads', 'indexers', 'users', 'settings', 'profile') else '' }}" type="button" data-more>{{ icon("more") }}More</button>
   </nav>
   <div class="holt-sheet holt-glass-float">
-    {% for group_name, items in nav_groups %}{% for key, href, label, ico in items %}{% if key not in ('discover', 'movies', 'tv') %}
+    {% for group_name, items in visible_groups %}{% for key, href, label, ico in items %}{% if key not in ('discover', 'movies', 'tv') %}
     <a href="{{ href }}" class="{{ 'active' if active_nav == key else '' }}">{{ icon(ico) }}{{ label }}</a>
     {% endif %}{% endfor %}{% endfor %}
+    {% if current_user %}<a href="/ui/profile" class="{{ 'active' if active_nav == 'profile' else '' }}"><span class="holt-avatar" style="width:22px;height:22px;font-size:9px">{{ current_user.initial }}</span>{{ current_user.username }}</a>
+    <form method="post" action="/logout" style="margin:0"><button type="submit" class="holt-btn holt-btn-quiet" style="width:100%;justify-content:flex-start">Sign out</button></form>
+    {% else %}<a href="/login">{{ icon("users") }}Sign in</a>{% endif %}
   </div>
 
   <script src="/static/den.js?v={{ static_v }}"></script>

@@ -102,3 +102,34 @@ class DownloadRecord(Base):
     info_hash = Column(String, nullable=True, index=True)
     status = Column(String, nullable=False, default="queued")  # queued|downloading|completed|imported|failed
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class User(Base):
+    """An account. Local users have a password_hash; Plex-linked users (M11c) have a
+    plex_id and may have no password at all. role is 'admin' or 'user'."""
+
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True)
+    username = Column(String, nullable=False, unique=True)
+    email = Column(String, nullable=True)
+    avatar_url = Column(String, nullable=True)
+    password_hash = Column(String, nullable=True)
+    plex_id = Column(Integer, nullable=True, unique=True)
+    plex_username = Column(String, nullable=True)
+    role = Column(String, nullable=False, default="user")  # admin | user
+    auto_approve = Column(Boolean, nullable=False, default=False)
+    movie_limit = Column(Integer, nullable=True)
+    series_limit = Column(Integer, nullable=True)
+    limit_days = Column(Integer, nullable=True)
+    api_token = Column(String, nullable=True, unique=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    last_login_at = Column(DateTime, nullable=True)
+
+    @property
+    def is_admin(self) -> bool:
+        return self.role == "admin"
+
+    @property
+    def initial(self) -> str:
+        return (self.username or "?")[:1].upper()

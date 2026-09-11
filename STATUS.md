@@ -17,6 +17,11 @@ restores torrents from resume data. See ROADMAP.md's M10 section for the details
 two loopback-swarm gotchas that cost the most debugging time.
 
 ## Currently working on
+**M11b accounts are done** (2026-09-11): local users with roles, sessions, API tokens,
+`/setup`, `/login`, `/ui/users`, `/ui/profile`, page and API guards everywhere, `AUTH_REQUIRED`
+off by default (anonymous = admin) until the companion apps gain a login step. 51-check
+end-to-end run in both modes passed. **Next is M11c (Plex login) or U2.**
+
 **UI redesign U0 + U1 are done**: tokens as a single source (`design/tokens.json` +
 `build_tokens.py`), the Glass shell (`base.html`: sidebar/rail, top bar, mobile tab bar), the
 v2 component layer (`den.css`/`den.js`), poster-grid Movies/TV with real art, Discover home,

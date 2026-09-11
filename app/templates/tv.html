@@ -16,7 +16,7 @@
         <div class="holt-poster">
           {% if c.poster_path %}<img src="{{ c.poster_path|poster }}" alt="" loading="lazy">{% else %}<span class="holt-poster-letter">{{ c.title[:1] }}</span>{% endif %}
           {% if c.tvmaze_id in library_tvmaze_ids %}<span class="holt-badge holt-badge-solid holt-badge-available"><span class="dot"></span>in library</span>{% endif %}
-          {% if c.tvmaze_id not in library_tvmaze_ids %}
+          {% if is_admin and c.tvmaze_id not in library_tvmaze_ids %}
           <div class="holt-poster-actions">
             <form method="post" action="/ui/series">
               <input type="hidden" name="tvmaze_id" value="{{ c.tvmaze_id }}">
@@ -58,9 +58,11 @@
         {% else %}<span class="holt-badge holt-badge-solid holt-badge-missing"><span class="dot"></span>missing</span>{% endif %}
         <div class="holt-poster-actions">
           <span class="holt-btn holt-btn-primary holt-btn-sm">Episodes</span>
+          {% if is_admin %}
           <form method="post" action="/ui/series/{{ s.series.id }}/delete" onsubmit="return confirm('Remove {{ s.series.title|e }} from the library?')">
             <button type="submit" class="holt-btn holt-btn-quiet holt-btn-sm">Remove</button>
           </form>
+          {% endif %}
         </div>
       </a>
       <div class="holt-card-title" title="{{ s.series.title }}">{{ s.series.title }}</div>

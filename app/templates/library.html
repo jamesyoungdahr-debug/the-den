@@ -15,7 +15,7 @@
         <div class="holt-poster">
           {% if c.poster_path %}<img src="{{ c.poster_path|poster }}" alt="" loading="lazy">{% else %}<span class="holt-poster-letter">{{ c.title[:1] }}</span>{% endif %}
           {% if c.tmdb_id in library_tmdb_ids %}<span class="holt-badge holt-badge-solid holt-badge-available"><span class="dot"></span>in library</span>{% endif %}
-          {% if c.tmdb_id not in library_tmdb_ids %}
+          {% if is_admin and c.tmdb_id not in library_tmdb_ids %}
           <div class="holt-poster-actions">
             <form method="post" action="/ui/movies">
               <input type="hidden" name="tmdb_id" value="{{ c.tmdb_id }}">
@@ -60,12 +60,14 @@
         {% if m.id in downloading_ids %}<span class="holt-badge holt-badge-solid holt-badge-processing"><span class="dot"></span>downloading</span>
         {% elif m.has_file %}<span class="holt-badge holt-badge-solid holt-badge-available"><span class="dot"></span>have</span>
         {% else %}<span class="holt-badge holt-badge-solid holt-badge-missing"><span class="dot"></span>missing</span>{% endif %}
+        {% if is_admin %}
         <div class="holt-poster-actions">
           {% if not m.has_file %}<a href="/ui/movies/{{ m.id }}/candidates" class="holt-btn holt-btn-primary holt-btn-sm">Find releases</a>{% endif %}
           <form method="post" action="/ui/movies/{{ m.id }}/delete" onsubmit="return confirm('Remove {{ m.title|e }} from the library?')">
             <button type="submit" class="holt-btn holt-btn-quiet holt-btn-sm">Remove</button>
           </form>
         </div>
+        {% endif %}
       </div>
       <div class="holt-card-title" title="{{ m.title }}">{{ m.title }}</div>
       <div class="holt-card-meta">{{ m.year or "-" }}{% if m.id in downloading_ids %} · downloading{% endif %}</div>

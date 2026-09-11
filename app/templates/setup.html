@@ -1,0 +1,15 @@
+{% extends "auth_base.html" %}
+{% block title_suffix %} — Set up{% endblock %}
+{% block card %}
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <div class="holt-eyebrow">First run</div>
+    <div class="holt-page-title" style="font-size:24px">Create the admin account</div>
+    <div class="holt-body" style="font-size:14px">This account manages indexers, downloads, settings, and other users. You can add everyone else from Users afterwards.</div>
+  </div>
+  {% if error %}<div class="holt-message holt-message-warning">{{ error }}</div>{% endif %}
+  <form method="post" action="/setup" style="display:flex;flex-direction:column;gap:var(--holt-space-3)">
+    <div class="holt-field" style="margin:0"><label for="username">Username</label><input id="username" name="username" autocomplete="username" required autofocus minlength="2"></div>
+    <div class="holt-field" style="margin:0"><label for="password">Password</label><input id="password" name="password" type="password" autocomplete="new-password" required minlength="8"><div class="holt-meta">8 characters or more.</div></div>
+    <button type="submit" class="holt-btn holt-btn-primary">Create admin and sign in</button>
+  </form>
+{% endblock %}

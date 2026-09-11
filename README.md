@@ -36,6 +36,19 @@ webhook from **Settings** in the app itself -- or copy `.env.example` to `.env` 
 the same variables) if you'd rather manage config as files; the in-app settings win if both
 are set. Without either, the app still runs, just against nothing real.
 
+### Accounts
+
+The Den has local accounts with two roles. **Admins** see everything (Indexers, Downloads,
+Users, Settings, add/remove/grab actions); **users** can browse the library, and in M11
+will request titles. Sign-in is **optional by default** (`AUTH_REQUIRED=false`): anyone who
+isn't signed in is treated as an admin, exactly as before accounts existed, so the desktop
+and Android apps keep working until they gain a login step. Set `AUTH_REQUIRED=true` to
+require sign-in everywhere; the first visit then shows `/setup` to create the admin.
+
+Companion apps authenticate with a per-user **API token** (generate one on `/ui/profile`,
+send it as `X-Api-Key`) or a session from `POST /api/auth/login`. `GET /api/auth/me` tells a
+client who it is and whether it's an admin. Plex sign-in is the next milestone.
+
 ### Testing without the internet
 
 `tests/` has stand-ins for every external service, including a private BitTorrent swarm:

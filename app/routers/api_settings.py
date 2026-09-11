@@ -2,12 +2,13 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from app import auth
 from app import config, scheduler
 from app import settings as settings_module
 from app.deps import get_db
 from app.torrent import engine
 
-router = APIRouter(prefix="/api", tags=["settings"])
+router = APIRouter(prefix="/api", tags=["settings"], dependencies=[Depends(auth.require_admin)])
 
 
 class SettingsUpdate(BaseModel):

@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app import auth
 from app import settings as settings_module
 from app import tmdb
 from app.candidates import scored_candidates
@@ -13,18 +14,18 @@ from app.schemas import DownloadRecordOut, GrabRequest, MovieCreate, MovieOut, S
 router = APIRouter(prefix="/movies", tags=["movies"])
 
 
-@router.get("/search-tmdb")
+@router.get("/search-tmdb", dependencies=[Depends(auth.require_user)])
 async def search_tmdb(q: str, db: Session = Depends(get_db)):
     api_key = settings_module.effective(db).tmdb_api_key
     return await tmdb.search_movie(q, api_key)
 
 
-@router.get("", response_model=list[MovieOut])
+@router.get("", response_model=list[MovieOut], dependencies=[Depends(auth.require_user)])
 def list_movies(db: Session = Depends(get_db)):
     return db.query(Movie).all()
 
 
-@router.post("", response_model=MovieOut, status_code=201)
+@router.post("", response_model=MovieOut, status_code=201, dependencies=[Depends(auth.require_admin)])
 def add_movie(payload: MovieCreate, db: Session = Depends(get_db)):
     if db.query(Movie).filter(Movie.tmdb_id == payload.tmdb_id).first():
         raise HTTPException(400, "Movie already in library")
@@ -41,7 +42,7 @@ def add_movie(payload: MovieCreate, db: Session = Depends(get_db)):
     return movie
 
 
-@router.delete("/{movie_id}", status_code=204)
+@router.delete("/{movie_id}", status_code=204, dependencies=[Depends(auth.require_admin)])
 def delete_movie(movie_id: int, db: Session = Depends(get_db)):
     movie = db.get(Movie, movie_id)
     if movie:
@@ -56,7 +57,7 @@ def delete_movie(movie_id: int, db: Session = Depends(get_db)):
         db.commit()
 
 
-@router.get("/{movie_id}/candidates", response_model=list[ScoredReleaseOut])
+@router.get("/{movie_id}/candidates", response_model=list[ScoredReleaseOut], dependencies=[Depends(auth.require_admin)])
 async def movie_candidates(movie_id: int, db: Session = Depends(get_db)):
     movie = db.get(Movie, movie_id)
     if not movie:
@@ -67,7 +68,7 @@ async def movie_candidates(movie_id: int, db: Session = Depends(get_db)):
     return await scored_candidates(db, query, profile)
 
 
-@router.post("/{movie_id}/grab", response_model=DownloadRecordOut)
+@router.post("/{movie_id}/grab", response_model=DownloadRecordOut, dependencies=[Depends(auth.require_admin)])
 async def grab_movie(movie_id: int, payload: GrabRequest, db: Session = Depends(get_db)):
     movie = db.get(Movie, movie_id)
     if not movie:

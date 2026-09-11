@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app import auth
 from app.deps import get_db
 from app.download_check import check_and_import
 from app.models import DownloadRecord
 from app.schemas import DownloadRecordOut
 
-router = APIRouter(prefix="/downloads", tags=["downloads"])
+router = APIRouter(prefix="/downloads", tags=["downloads"], dependencies=[Depends(auth.require_admin)])
 
 
 @router.get("", response_model=list[DownloadRecordOut])

@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title_suffix %} — Profile{% endblock %}
+{% block content %}
+  <div class="holt-page-head">
+    <div>
+      <h1 class="holt-page-title">{{ user.username }}</h1>
+      <div class="holt-meta">{{ user.role }} · {{ 'linked to Plex' if user.plex_id else 'local account' }}</div>
+    </div>
+  </div>
+
+  {% if error %}<div class="holt-message holt-message-warning">{{ error }}</div>{% endif %}
+  {% if notice %}<div class="holt-message holt-message-positive">{{ notice }}</div>{% endif %}
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:var(--holt-space-3)">
+    <div class="holt-panel">
+      <div class="holt-panel-head"><div class="holt-eyebrow">API token</div><div class="holt-meta">{{ 'set' if user.api_token else 'not set' }}</div></div>
+      <p class="holt-body" style="font-size:13.5px;margin:0 0 var(--holt-space-3)">For the desktop and Android apps. Send it as the <code>X-Api-Key</code> header. Generating a new one replaces the old one everywhere.</p>
+      {% if new_token %}
+      <div class="holt-message holt-message-positive" style="font-family:var(--holt-font-mono);font-size:12px;word-break:break-all;margin-bottom:var(--holt-space-3)">{{ new_token }}</div>
+      <div class="holt-meta" style="margin-bottom:var(--holt-space-3)">Copy it now. It won't be shown again.</div>
+      {% endif %}
+      <form method="post" action="/ui/profile/token"><button type="submit" class="holt-btn holt-btn-secondary">{{ 'Generate a new token' if user.api_token else 'Generate token' }}</button></form>
+    </div>
+
+    <div class="holt-panel">
+      <div class="holt-panel-head"><div class="holt-eyebrow">Password</div></div>
+      <form method="post" action="/ui/profile/password">
+        {% if user.password_hash %}<div class="holt-field"><label>Current password</label><input name="current_password" type="password" autocomplete="current-password" required></div>{% endif %}
+        <div class="holt-field"><label>New password</label><input name="new_password" type="password" minlength="8" autocomplete="new-password" required></div>
+        <button type="submit" class="holt-btn holt-btn-secondary">Change password</button>
+      </form>
+    </div>
+  </div>
+{% endblock %}

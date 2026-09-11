@@ -3,12 +3,13 @@ import asyncio
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from app import auth
 from app import torznab
 from app.deps import get_db
 from app.models import Indexer
 from app.schemas import ReleaseOut
 
-router = APIRouter(tags=["search"])
+router = APIRouter(tags=["search"], dependencies=[Depends(auth.require_admin)])
 
 
 @router.get("/search", response_model=list[ReleaseOut])

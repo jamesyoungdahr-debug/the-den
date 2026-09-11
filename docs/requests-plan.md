@@ -251,7 +251,7 @@ are out of scope for M11.
 | Step | Scope | Size |
 |---|---|---|
 | M11a | **Done 2026-09-11 (with U1).** Indexers + manual release search live at `/ui/indexers`; `/` is a library-at-a-glance Discover until M11d | S |
-| M11b | Users + auth: table, migration, setup page, local login/logout, session middleware, **admin-only gating on every admin page and API route**, `AUTH_REQUIRED` escape hatch, Users admin page | M |
+| M11b | **Done 2026-09-11.** `users` table (migration `c3d4e5f6a7b8`), scrypt passwords, signed session cookie (`SessionMiddleware`, secret auto-generated under `STATE_DIR`), `/setup` first-run page, `/login`/`/logout`, `/ui/profile` (API token + password), `/ui/users` admin page + `/api/users`, `/api/auth/*` for the clients, `X-Api-Key` header auth, page + API guards on every route (`app/auth.py`), `AUTH_REQUIRED` (default off: anonymous = admin) | M |
 | M11c | **Plex login**: client identifier, PIN flow, callback, owner linking, shared-user check, "allow any Plex account" toggle; Plex panel in Settings (server + sections picker) | M |
 | M11d | TMDB discovery client + cache; Discover, search, and detail pages with real posters; library pages get poster art too | M |
 | M11e | **Plex library scan**: `plex_media` table, scanner, timer, "scan now"; availability merged into Discover badges and detail pages | M |

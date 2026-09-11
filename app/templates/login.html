@@ -1,0 +1,16 @@
+{% extends "auth_base.html" %}
+{% block title_suffix %} — Sign in{% endblock %}
+{% block card %}
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <div class="holt-page-title" style="font-size:24px">Sign in</div>
+    <div class="holt-body" style="font-size:14px">Use your Den account. Plex sign-in arrives with the next milestone.</div>
+  </div>
+  {% if error %}<div class="holt-message holt-message-warning">{{ error }}</div>{% endif %}
+  <form method="post" action="/login" style="display:flex;flex-direction:column;gap:var(--holt-space-3)">
+    <input type="hidden" name="next" value="{{ next }}">
+    <div class="holt-field" style="margin:0"><label for="username">Username</label><input id="username" name="username" autocomplete="username" required autofocus></div>
+    <div class="holt-field" style="margin:0"><label for="password">Password</label><input id="password" name="password" type="password" autocomplete="current-password" required></div>
+    <button type="submit" class="holt-btn holt-btn-primary">Sign in</button>
+  </form>
+  <div class="holt-meta" style="text-align:center;line-height:1.5">Forgot your password? An admin can reset it from Users.</div>
+{% endblock %}
