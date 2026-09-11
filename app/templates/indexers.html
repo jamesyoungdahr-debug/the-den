@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title_suffix %} — Indexers{% endblock %}
+{% block search_action %}/ui/indexers{% endblock %}
+{% block search_placeholder %}Manual release search across indexers{% endblock %}
+{% block primary_action %}<a class="holt-btn holt-btn-primary" href="#" data-open-dialog="add-indexer">Add indexer</a>{% endblock %}
+{% block content %}
+  <div class="holt-page-head">
+    <div>
+      <h1 class="holt-page-title">Indexers</h1>
+      <div class="holt-meta">{{ indexers|length }} configured · {{ indexers|selectattr('enabled')|list|length }} enabled</div>
+    </div>
+  </div>
+
+  <div class="holt-panel">
+    <div class="holt-row-list">
+      {% for i in indexers %}
+      <div class="holt-row">
+        <div class="holt-row-main">
+          <div class="holt-row-title">{{ i.name }}</div>
+          <div class="holt-row-meta">{{ i.protocol }} — {{ i.url }}</div>
+        </div>
+        <span class="holt-badge {{ 'holt-badge-available' if i.enabled else 'holt-badge-missing' }}"><span class="dot"></span>{{ "enabled" if i.enabled else "disabled" }}</span>
+        <div class="holt-row-actions">
+          <a href="#" class="holt-btn holt-btn-quiet holt-btn-sm" onclick="testIndexer({{ i.id }}); return false;">test</a>
+          <form method="post" action="/ui/indexers/{{ i.id }}/delete">
+            <button type="submit" class="holt-btn holt-btn-quiet holt-btn-sm">delete</button>
+          </form>
+        </div>
+      </div>
+      {% else %}
+      <div class="holt-empty">
+        <div class="holt-empty-title">No indexers yet</div>
+        <div class="holt-body">Add a Torznab or Newznab indexer to start finding releases.</div>
+        <a class="holt-btn holt-btn-primary holt-btn-sm" href="#" data-open-dialog="add-indexer">Add indexer</a>
+      </div>
+      {% endfor %}
+    </div>
+    <div id="test-result" class="holt-message" style="display:none; margin-top: var(--holt-space-3);"></div>
+  </div>
+
+  {% if results is not none %}
+  <section class="holt-section">
+    <div class="holt-rail-head">
+      <div class="holt-eyebrow">Releases for "{{ query }}"</div>
+      <div class="holt-meta">{{ results|length }} found</div>
+    </div>
+    <div class="holt-panel">
+      <div class="holt-row-list">
+        {% for r in results %}
+        <div class="holt-row">
+          <div class="holt-row-main">
+            <div class="holt-row-title">{{ r.title }}</div>
+            <div class="holt-row-meta">{{ r.indexer_name }} — {{ r.seeders if r.seeders is not none else "-" }} seeders — {{ r.peers if r.peers is not none else "-" }} peers — {{ r.size if r.size is not none else "-" }} bytes</div>
+          </div>
+          <a href="{{ r.download_url }}" class="holt-btn holt-btn-secondary holt-btn-sm">download</a>
+        </div>
+        {% else %}
+        <div class="holt-row-empty">No results.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  <dialog id="add-indexer" class="holt-dialog holt-glass-float">
+    <form method="post" action="/ui/indexers">
+      <div class="holt-eyebrow" style="margin-bottom: var(--holt-space-3)">Add indexer</div>
+      <div class="holt-field"><label>Name</label><input name="name" placeholder="e.g. My Tracker" required></div>
+      <div class="holt-field"><label>URL</label><input name="url" placeholder="https://indexer.example/api" required></div>
+      <div class="holt-field"><label>API key</label><input name="api_key" placeholder="optional"></div>
+      <div class="holt-field"><label>Protocol</label><select name="protocol"><option value="torznab">torznab</option><option value="newznab">newznab</option></select></div>
+      <div style="display:flex; gap: 8px; justify-content: flex-end">
+        <button type="button" class="holt-btn holt-btn-quiet" data-close-dialog>Cancel</button>
+        <button type="submit" class="holt-btn holt-btn-primary">Add</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script>
+    async function testIndexer(id) {
+      const el = document.getElementById("test-result");
+      el.style.display = "block";
+      el.className = "holt-message";
+      el.textContent = "testing...";
+      try {
+        const resp = await fetch(`/indexers/${id}/test`);
+        const data = await resp.json();
+        el.className = "holt-message " + (resp.ok ? "holt-message-positive" : "holt-message-warning");
+        el.textContent = (resp.ok ? "OK: " : "FAILED: ") + JSON.stringify(data);
+      } catch (e) {
+        el.className = "holt-message holt-message-warning";
+        el.textContent = `FAILED: ${e}`;
+      }
+    }
+  </script>
+{% endblock %}

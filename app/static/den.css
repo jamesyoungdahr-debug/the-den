@@ -1,82 +1,288 @@
-/* The Den's own component layer, built on HoltOS's design tokens (holt-tokens.css).
-   Translated by hand from the HoltOS design system's React components into plain
-   CSS classes -- this app has no JS framework by design (offline/distro-friendly),
-   so there's no way to use the .jsx source directly. Class names mirror the
-   component names in design/components/ for anyone cross-referencing later. */
+/* The Den's component layer, v2 ("HoltOS Glass"), built on the tokens in holt-tokens.css
+   (generated from design/tokens.json). Class names follow design/docs/glass-components.md
+   so the KDE and Android clients can mirror them 1:1. v1 class names (.holt-panel,
+   .holt-row, .holt-pill, .holt-btn, .holt-field, .holt-tile, ...) keep working.
+   No JS framework by design; den.js holds the few behaviours (sidebar, dialog, toast). */
 
 * { box-sizing: border-box; }
 
-body {
-  font-family: var(--holt-font-core);
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 0 var(--holt-space-4) var(--holt-space-6);
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+/* ---------- Surface levels ---------- */
+
+.holt-glass {
+  background: var(--holt-glass-surface);
+  -webkit-backdrop-filter: blur(var(--holt-glass-blur)) saturate(var(--holt-glass-saturate));
+  backdrop-filter: blur(var(--holt-glass-blur)) saturate(var(--holt-glass-saturate));
+  border: 1px solid var(--holt-glass-border);
+  box-shadow: inset 0 1px 0 var(--holt-glass-highlight), var(--holt-shadow-1);
 }
 
-/* ---------- Header / nav (Lockup + nav, HoltOS Principle 05: one shout per screen) ---------- */
+.holt-glass-float {
+  background: var(--holt-glass-surface-strong);
+  -webkit-backdrop-filter: blur(var(--holt-glass-blur-strong)) saturate(var(--holt-glass-saturate));
+  backdrop-filter: blur(var(--holt-glass-blur-strong)) saturate(var(--holt-glass-saturate));
+  border: 1px solid var(--holt-glass-border-strong);
+  box-shadow: inset 0 1px 0 var(--holt-glass-highlight-strong), var(--holt-shadow-3);
+  border-radius: var(--holt-radius-lg);
+}
 
-.den-header {
+/* Ground: ambient glow + the wallpaper's pool rings, fixed behind everything. */
+.holt-ground {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(700px 420px at 72% -8%, var(--holt-ambient-glow-current), transparent 62%),
+    radial-gradient(520px 320px at 8% 104%, var(--holt-ambient-glow-healthy), transparent 60%);
+}
+.holt-ground::before, .holt-ground::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid var(--holt-ambient-ring);
+}
+.holt-ground::before { width: 760px; height: 760px; right: -180px; top: -220px; }
+.holt-ground::after { width: 520px; height: 520px; right: -60px; top: -100px; }
+
+/* ---------- App shell ---------- */
+
+.holt-app { display: flex; min-height: 100vh; position: relative; z-index: 1; }
+
+.holt-sidebar {
+  width: var(--holt-size-sidebar);
+  flex: none;
+  position: sticky;
+  top: 0;
+  height: 100vh;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
   gap: var(--holt-space-4);
-  padding: var(--holt-space-4) 0;
-  margin-bottom: var(--holt-space-4);
-  border-bottom: 1px solid var(--holt-hairline);
-  flex-wrap: wrap;
+  padding: var(--holt-space-4) var(--holt-space-3);
+  border-top: 0; border-bottom: 0; border-left: 0;
+  z-index: 4;
+  transition: width var(--holt-dur-base) var(--holt-ease-out);
+  overflow: hidden;
 }
 
-.den-wordmark { white-space: nowrap; }
-
-.den-lockup {
+.holt-lockup {
   display: flex;
   align-items: center;
   gap: 13px;
+  padding: 0 8px;
   text-decoration: none;
+  color: var(--holt-ink);
+  white-space: nowrap;
 }
+.holt-lockup:hover { color: var(--holt-ink); }
 
-.den-lockup:hover { color: var(--holt-ink); }
-
-.den-ringmark {
-  width: 30px;
-  height: 30px;
-  flex: none;
+.holt-ringmark {
+  width: 30px; height: 30px; flex: none;
   border-radius: 50%;
   border: 7px solid var(--holt-current);
-  box-sizing: border-box;
 }
 
-.den-wordmark {
+.holt-wordmark {
   font-family: var(--holt-font-core);
   font-weight: 900;
   font-size: 20px;
   letter-spacing: -0.6px;
-  color: var(--holt-ink);
   line-height: 1;
 }
 
-.den-nav {
+.holt-nav { display: flex; flex-direction: column; gap: 4px; }
+
+.holt-nav-eyebrow {
+  font-family: var(--holt-font-mono);
+  font-size: 10.5px;
+  letter-spacing: 2.2px;
+  text-transform: uppercase;
+  color: var(--holt-ink-28);
+  padding: 0 12px 6px;
+  white-space: nowrap;
+}
+
+.holt-nav a {
+  position: relative;
   display: flex;
   align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: var(--holt-radius-sm);
+  font-family: var(--holt-font-core);
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--holt-ink-55);
+  white-space: nowrap;
+  transition: color var(--holt-dur-fast), background var(--holt-dur-fast);
+}
+.holt-nav a:hover { color: var(--holt-ink); background: rgba(255,255,255,.04); }
+.holt-nav a.active { color: var(--holt-current); background: var(--holt-current-tint); }
+.holt-nav a.active::before {
+  content: "";
+  position: absolute;
+  left: -16px; top: 8px; bottom: 8px;
+  width: 2px;
+  background: var(--holt-current);
+  border-radius: 2px;
+}
+.holt-nav a .holt-badge { margin-left: auto; }
+
+.holt-ico {
+  width: 18px; height: 18px; flex: none;
+  stroke: currentColor; fill: none;
+  stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+}
+
+.holt-sidebar-spacer { flex: 1; }
+
+.holt-sidebar-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--holt-radius-md);
+  background: rgba(13,11,18,.45);
+  border: 1px solid var(--holt-hairline);
+  white-space: nowrap;
+}
+
+.holt-sidebar-toggle {
+  margin-left: auto;
+  width: 28px; height: 28px; flex: none;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--holt-radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--holt-ink-42);
+  cursor: pointer;
+}
+.holt-sidebar-toggle:hover { color: var(--holt-ink); border-color: var(--holt-hairline-strong); }
+
+/* Rail (collapsed) state: icons only. */
+body.is-rail .holt-sidebar { width: var(--holt-size-sidebar-rail); padding-left: 12px; padding-right: 12px; }
+body.is-rail .holt-wordmark, body.is-rail .holt-nav-eyebrow, body.is-rail .holt-nav a span,
+body.is-rail .holt-sidebar-foot > :not(.holt-sidebar-toggle) { display: none; }
+body.is-rail .holt-nav a { justify-content: center; padding: 11px 0; }
+body.is-rail .holt-nav a.active::before { left: -12px; }
+body.is-rail .holt-nav a .holt-badge { position: absolute; top: 4px; right: 6px; margin: 0; padding: 3px 5px; }
+body.is-rail .holt-sidebar-foot { padding: 6px; justify-content: center; }
+body.is-rail .holt-sidebar-toggle { margin: 0; transform: rotate(180deg); }
+body.is-rail .holt-lockup { justify-content: center; padding: 0; }
+
+.holt-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
+.holt-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  height: var(--holt-size-top-bar);
+  display: flex;
+  align-items: center;
+  gap: var(--holt-space-3);
+  padding: 0 var(--holt-space-4);
+  border-top: 0; border-left: 0; border-right: 0;
+}
+
+.holt-search {
+  flex: 1;
+  max-width: 520px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--holt-glass-input-surface);
+  border: 1px solid var(--holt-hairline-strong);
+  border-radius: var(--holt-radius-md);
+  padding: 0 12px;
+  height: 38px;
+  color: var(--holt-ink-42);
+}
+.holt-search:focus-within { border-color: var(--holt-current); color: var(--holt-ink); }
+.holt-search input {
+  flex: 1; min-width: 0;
+  background: transparent; border: 0; outline: none;
+  font-family: var(--holt-font-core);
+  font-size: 13px;
+  color: var(--holt-ink);
+}
+.holt-search input::placeholder { color: var(--holt-ink-42); }
+
+.holt-topbar-spacer { flex: 1; }
+
+.holt-content {
+  flex: 1;
+  width: 100%;
+  max-width: var(--holt-size-content-max);
+  padding: var(--holt-space-4) var(--holt-space-5) var(--holt-space-6);
+  display: flex;
+  flex-direction: column;
   gap: var(--holt-space-4);
+}
+
+/* Mobile: sidebar hides, bottom tab bar appears. */
+.holt-tabbar { display: none; }
+
+@media (max-width: 899px) {
+  .holt-sidebar { display: none; }
+  .holt-content { padding: var(--holt-space-3) var(--holt-space-3) calc(var(--holt-size-tab-bar) + var(--holt-space-4)); }
+  .holt-topbar { padding: 0 var(--holt-space-3); }
+  .holt-tabbar {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 5;
+    height: var(--holt-size-tab-bar);
+    display: flex;
+    align-items: stretch;
+    padding: 0 8px 8px;
+    border-bottom: 0; border-left: 0; border-right: 0;
+  }
+  .holt-tab {
+    flex: 1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 4px;
+    min-height: var(--holt-size-hit-target);
+    color: var(--holt-ink-42);
+    font-size: 10.5px; font-weight: 700;
+    text-decoration: none;
+    background: transparent; border: 0; font-family: var(--holt-font-core);
+  }
+  .holt-tab .holt-ico { width: 22px; height: 22px; }
+  .holt-tab.active { color: var(--holt-current); }
+  .holt-tab.active .holt-ico { background: var(--holt-current-tint); border-radius: 12px; padding: 3px 10px; width: 42px; }
+  .holt-glass { -webkit-backdrop-filter: blur(calc(var(--holt-glass-blur) / 2)); backdrop-filter: blur(calc(var(--holt-glass-blur) / 2)); }
+}
+
+/* "More" sheet on mobile: the links that don't fit the tab bar. */
+.holt-sheet {
+  display: none;
+  position: fixed;
+  left: 8px; right: 8px; bottom: calc(var(--holt-size-tab-bar) + 8px);
+  z-index: 6;
+  padding: var(--holt-space-2);
+  flex-direction: column;
+  gap: 2px;
+}
+.holt-sheet.is-open { display: flex; }
+.holt-sheet a {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; min-height: var(--holt-size-hit-target);
+  border-radius: var(--holt-radius-sm);
+  color: var(--holt-ink-70); font-size: 14px; font-weight: 700;
+}
+.holt-sheet a.active { color: var(--holt-current); background: var(--holt-current-tint); }
+
+/* ---------- Page header ---------- */
+
+.holt-page-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--holt-space-3);
   flex-wrap: wrap;
 }
-
-.den-nav a {
-  font-family: var(--holt-font-core);
-  font-weight: 700;
-  font-size: 13.5px;
-  color: var(--holt-ink-55);
-  padding: 6px 0;
-  border-bottom: 2px solid transparent;
-}
-
-.den-nav a:hover { color: var(--holt-ink); }
-
-.den-nav a.active {
-  color: var(--holt-current);
-  border-bottom-color: var(--holt-current);
-}
+.holt-page-head > div:first-child { display: flex; flex-direction: column; gap: 6px; }
 
 .holt-page-title {
   font-family: var(--holt-font-core);
@@ -85,7 +291,7 @@ body {
   line-height: 1.05;
   font-size: 26px;
   color: var(--holt-ink);
-  margin: 0 0 var(--holt-space-3);
+  margin: 0;
 }
 
 h2.holt-section-title {
@@ -94,8 +300,11 @@ h2.holt-section-title {
   font-size: 16px;
   letter-spacing: -0.4px;
   color: var(--holt-ink);
-  margin: var(--holt-space-5) 0 var(--holt-space-2);
+  margin: 0;
 }
+
+.holt-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.holt-toolbar-sep { width: 1px; height: 22px; background: var(--holt-hairline-strong); margin: 0 6px; }
 
 /* ---------- Button ---------- */
 
@@ -110,26 +319,62 @@ h2.holt-section-title {
   border-radius: var(--holt-radius-sm);
   border: 1px solid transparent;
   cursor: pointer;
-  transition: filter .12s ease, background .12s ease;
+  transition: filter var(--holt-dur-fast) var(--holt-ease-out), background var(--holt-dur-fast) var(--holt-ease-out), transform var(--holt-dur-fast) var(--holt-ease-out);
   padding: 10px 20px;
   font-size: 12.5px;
   text-decoration: none;
+  white-space: nowrap;
 }
-
 .holt-btn:hover { filter: brightness(1.08); }
+.holt-btn:active { transform: translateY(1px); }
 .holt-btn:disabled { opacity: .4; cursor: default; }
+.holt-btn .holt-ico { width: 16px; height: 16px; }
 
 .holt-btn-sm { padding: 8px 14px; font-size: 12px; }
 .holt-btn-lg { padding: 13px 26px; font-size: 15px; }
 
 .holt-btn-primary { background: var(--holt-current); color: var(--holt-deep); font-weight: 800; }
-.holt-btn-secondary { background: transparent; color: var(--holt-ink-70); font-weight: 700; border-color: var(--holt-hairline-strong); }
+.holt-btn-primary .holt-ico { stroke: var(--holt-deep); }
+.holt-btn-secondary { background: rgba(255,255,255,.04); color: var(--holt-ink-70); font-weight: 700; border-color: var(--holt-hairline-strong); }
 .holt-btn-quiet { background: transparent; color: var(--holt-ink-55); font-weight: 700; border-color: transparent; }
 .holt-btn-quiet:hover { color: var(--holt-ink); }
 
-/* ---------- StatusPill ---------- */
+.holt-ibtn {
+  width: 32px; height: 32px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: var(--holt-radius-sm);
+  color: var(--holt-ink-55);
+  border: 1px solid var(--holt-hairline-strong);
+  background: rgba(255,255,255,.03);
+  cursor: pointer;
+}
+.holt-ibtn:hover { color: var(--holt-ink); }
+.holt-ibtn .holt-ico { width: 14px; height: 14px; }
 
-.holt-pill {
+/* ---------- Chip (filters / tabs) ---------- */
+
+.holt-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: var(--holt-radius-pill);
+  font-family: var(--holt-font-core);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--holt-ink-55);
+  border: 1px solid var(--holt-hairline-strong);
+  background: rgba(255,255,255,.03);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color var(--holt-dur-fast), background var(--holt-dur-fast);
+}
+.holt-chip:hover { color: var(--holt-ink); }
+.holt-chip.is-on { color: var(--holt-deep); background: var(--holt-current); border-color: var(--holt-current); }
+
+/* ---------- Badge (evolves StatusPill; .holt-pill kept as an alias) ---------- */
+
+.holt-badge, .holt-pill {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -137,32 +382,34 @@ h2.holt-section-title {
   font-size: 10.5px;
   line-height: 1;
   border-radius: var(--holt-radius-pill);
+  white-space: nowrap;
+}
+.holt-badge .dot, .holt-pill .dot { width: 6px; height: 6px; border-radius: 50%; flex: none; background: currentColor; }
+
+.holt-badge-solid, .holt-pill-solid {
+  padding: 6px 11px;
+  background: var(--holt-glass-badge-surface);
+  border: 1px solid var(--holt-hairline);
+  -webkit-backdrop-filter: blur(var(--holt-glass-blur-badge));
+  backdrop-filter: blur(var(--holt-glass-blur-badge));
 }
 
-.holt-pill-solid { padding: 6px 11px; background: var(--holt-surface); }
+.holt-badge-available, .holt-pill-healthy { color: var(--holt-badge-available); }
+.holt-badge-pending, .holt-badge-processing, .holt-pill-working { color: var(--holt-badge-pending); }
+.holt-badge-partial, .holt-badge-error, .holt-pill-warning { color: var(--holt-badge-partial); }
+.holt-badge-missing, .holt-pill-idle { color: var(--holt-badge-missing); }
+.holt-badge-missing .dot, .holt-pill-idle .dot { background: var(--holt-badge-missing-dot); }
 
-.holt-pill .dot { width: 6px; height: 6px; border-radius: 50%; flex: none; }
-
-.holt-pill-healthy { color: var(--holt-healthy); }
-.holt-pill-healthy .dot { background: var(--holt-healthy); }
-.holt-pill-working { color: var(--holt-current); }
-.holt-pill-working .dot { background: var(--holt-current); }
-.holt-pill-warning { color: var(--holt-warning); }
-.holt-pill-warning .dot { background: var(--holt-warning); }
-.holt-pill-idle { color: var(--holt-ink-42); }
-.holt-pill-idle .dot { background: var(--holt-ink-28); }
-
-/* ---------- Panel ---------- */
+/* ---------- Panel (opaque; for content with nothing behind it) ---------- */
 
 .holt-panel {
   background: var(--holt-surface);
   border: 1px solid var(--holt-hairline);
   border-radius: var(--holt-radius-lg);
   padding: 17px;
-  margin-bottom: var(--holt-space-4);
 }
-
 .holt-panel-raised { background: var(--holt-raised); }
+.holt-panel.holt-glass { background: var(--holt-glass-surface); }
 
 .holt-panel-head {
   display: flex;
@@ -172,22 +419,22 @@ h2.holt-section-title {
   margin-bottom: 14px;
 }
 
-.holt-panel-head .eyebrow { margin: 0; }
-.holt-panel-head .meta { margin: 0; }
-
-/* ---------- Row (SelectRow, minus the checkbox -- used for every list in the app) ---------- */
+/* ---------- Row (lists: requests, downloads, indexers, episodes) ---------- */
 
 .holt-row-list { display: flex; flex-direction: column; gap: var(--holt-space-2); }
 
 .holt-row {
   background: var(--holt-raised);
   border: 1.5px solid var(--holt-hairline);
-  border-radius: 9px;
+  border-radius: calc(var(--holt-radius-md) + 2px);
   padding: 12px 14px;
   display: flex;
   align-items: center;
   gap: 12px;
+  transition: border-color var(--holt-dur-fast);
 }
+.holt-row:hover { border-color: var(--holt-hairline-strong); }
+.holt-row.is-pending, .holt-row-best { border-color: var(--holt-current); }
 
 .holt-row-main { flex: 1; min-width: 0; }
 
@@ -195,9 +442,7 @@ h2.holt-section-title {
   font-size: 13px;
   font-weight: 700;
   color: var(--holt-ink);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 
 .holt-row-meta {
@@ -205,14 +450,20 @@ h2.holt-section-title {
   font-size: 10px;
   color: var(--holt-ink-42);
   margin-top: 2px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 
-.holt-row-actions { display: flex; align-items: center; gap: var(--holt-space-2); flex: none; }
+.holt-row-actions { display: flex; align-items: center; gap: var(--holt-space-2); flex: none; flex-wrap: wrap; justify-content: flex-end; }
 
-.holt-row-best { border-color: var(--holt-current); }
+/* Torrent rows (Downloads page): progress block on top, badge + actions on their own line. */
+.den-torrent { align-items: flex-start; }
+.den-torrent .holt-row-main { flex-basis: 100%; }
+.den-torrent .holt-row-actions { max-width: 320px; }
+@media (max-width: 899px) {
+  .holt-row { flex-wrap: wrap; }
+  .holt-row-main { flex-basis: 100%; }
+  .holt-row-actions { width: 100%; justify-content: flex-start; }
+}
 
 .holt-row-empty {
   font-family: var(--holt-font-mono);
@@ -222,68 +473,159 @@ h2.holt-section-title {
   text-align: center;
 }
 
-/* ---------- ProgressRow ---------- */
+.holt-thumb {
+  width: 44px; height: 66px; flex: none;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--holt-hairline);
+  background: var(--holt-raised) repeating-linear-gradient(135deg, var(--holt-ambient-stripe) 0 4px, transparent 4px 9px);
+}
+.holt-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* ---------- Progress (drawn, never spun) ---------- */
 
 .holt-progress-row { display: flex; flex-direction: column; gap: 7px; }
-
-.holt-progress-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.holt-progress-label {
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--holt-ink);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
+.holt-progress-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.holt-progress-label { flex: 1; min-width: 0; font-size: 12.5px; font-weight: 700; color: var(--holt-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .holt-progress-meta { font-family: var(--holt-font-mono); font-size: 10px; color: var(--holt-ink-42); flex: none; }
 
-.holt-progress-track { height: 5px; border-radius: 3px; background: rgba(255,255,255,.09); overflow: hidden; }
-
-.holt-progress-fill { height: 100%; border-radius: 3px; background: var(--holt-current); }
+.holt-progress, .holt-progress-track { height: 5px; border-radius: 3px; background: rgba(255,255,255,.09); overflow: hidden; }
+.holt-progress > i, .holt-progress-fill {
+  display: block; height: 100%; border-radius: 3px;
+  background: var(--holt-current);
+  transition: width var(--holt-dur-base) var(--holt-ease-out);
+}
 .holt-progress-fill-healthy { background: var(--holt-healthy); }
 .holt-progress-fill-warning { background: var(--holt-warning); }
 
-/* ---------- MediaTile ---------- */
+/* ---------- Stat tile ---------- */
 
+.holt-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+.holt-stat {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 16px 18px;
+  border-radius: var(--holt-radius-md);
+  background: rgba(13,11,18,.4);
+  border: 1px solid var(--holt-hairline);
+}
+.holt-stat-eyebrow { font-family: var(--holt-font-mono); font-size: 10.5px; letter-spacing: 2.2px; text-transform: uppercase; color: var(--holt-ink-28); }
+.holt-stat-value { font-size: 22px; font-weight: 800; letter-spacing: -0.8px; line-height: 1; color: var(--holt-ink); }
+.holt-stat-value small { font-family: var(--holt-font-mono); font-size: 11px; font-weight: 400; color: var(--holt-ink-42); letter-spacing: 0; }
+
+/* ---------- PosterCard (evolves MediaTile; .holt-tile kept as alias) ---------- */
+
+.holt-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--holt-size-poster-lg), 1fr));
+  gap: 18px;
+}
 .holt-tile-grid { display: flex; flex-wrap: wrap; gap: var(--holt-space-3); }
 
-.holt-tile { width: 120px; flex: none; }
+.holt-card, .holt-tile { display: flex; flex-direction: column; gap: 8px; min-width: 0; position: relative; }
+.holt-tile { width: var(--holt-size-poster-md); flex: none; }
 
-.holt-tile-poster {
+.holt-poster, .holt-tile-poster {
+  position: relative;
   width: 100%;
-  height: 178px; /* ratio ~1.48 */
-  border-radius: 6px;
+  aspect-ratio: 2 / 3;
+  border-radius: var(--holt-radius-md);
+  overflow: hidden;
+  border: 1px solid var(--holt-hairline);
+  box-shadow: var(--holt-shadow-2);
   background: var(--holt-raised);
-  background-image: repeating-linear-gradient(135deg, rgba(177,77,255,.24) 0 6px, transparent 6px 13px);
-  display: flex;
-  align-items: flex-end;
-  padding: 8px;
+  background-image: repeating-linear-gradient(135deg, var(--holt-ambient-stripe) 0 6px, transparent 6px 13px);
+  transition: transform var(--holt-dur-fast) var(--holt-ease-out), border-color var(--holt-dur-fast), box-shadow var(--holt-dur-fast);
 }
-
+.holt-tile-poster { height: 178px; aspect-ratio: auto; display: flex; align-items: flex-end; padding: 8px; }
 .holt-tile-poster.healthy { background-image: repeating-linear-gradient(135deg, rgba(40,224,200,.24) 0 6px, transparent 6px 13px); }
-
 .holt-tile-poster-label { font-family: var(--holt-font-mono); font-size: 9px; color: var(--holt-ink-42); }
 
-.holt-tile-title {
-  font-size: 11.5px;
-  font-weight: 700;
-  color: var(--holt-ink);
-  margin-top: 8px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.holt-poster img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.holt-poster .holt-badge { position: absolute; top: 8px; left: 8px; z-index: 2; }
+.holt-poster-letter {
+  position: absolute; right: 8px; bottom: -8px;
+  font-size: 84px; font-weight: 900; letter-spacing: -4px;
+  color: rgba(255,255,255,.13);
+  line-height: 1;
 }
 
-.holt-tile-meta { font-family: var(--holt-font-mono); font-size: 9.5px; color: var(--holt-ink-42); margin-top: 3px; }
+.holt-card:hover .holt-poster { transform: translateY(-2px); border-color: var(--holt-current); box-shadow: 0 12px 32px rgba(177,77,255,.25); }
 
-/* ---------- Forms (not in the exported system -- extended to match its language) ---------- */
+.holt-poster-actions {
+  position: absolute; inset: 0; z-index: 3;
+  display: flex; flex-direction: column; justify-content: flex-end; gap: 8px;
+  padding: 12px;
+  background: linear-gradient(0deg, var(--holt-ambient-scrim-strong), rgba(13,11,18,.35) 60%, transparent);
+  opacity: 0;
+  transition: opacity var(--holt-dur-fast) var(--holt-ease-out);
+}
+.holt-card:hover .holt-poster-actions, .holt-card:focus-within .holt-poster-actions { opacity: 1; }
+.holt-poster-actions .holt-btn, .holt-poster-actions form { width: 100%; }
+.holt-poster-actions form .holt-btn { width: 100%; }
+@media (hover: none) { .holt-poster-actions { opacity: 1; background: linear-gradient(0deg, var(--holt-ambient-scrim-strong), transparent 55%); } }
+
+.holt-card-title, .holt-tile-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--holt-ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.holt-card-meta, .holt-tile-meta { font-family: var(--holt-font-mono); font-size: 9.5px; color: var(--holt-ink-42); }
+
+/* ---------- Rail ---------- */
+
+.holt-rail-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.holt-rail {
+  display: flex;
+  gap: var(--holt-space-3);
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  padding-bottom: 6px;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(90deg, #000 94%, transparent);
+  mask-image: linear-gradient(90deg, #000 94%, transparent);
+}
+.holt-rail::-webkit-scrollbar { display: none; }
+.holt-rail > .holt-card { width: var(--holt-size-poster-md); flex: none; scroll-snap-align: start; }
+.holt-section { display: flex; flex-direction: column; gap: 14px; }
+
+/* ---------- Hero ---------- */
+
+.holt-hero {
+  position: relative;
+  min-height: 240px;
+  border-radius: var(--holt-radius-lg);
+  overflow: hidden;
+  border: 1px solid var(--holt-hairline);
+  background: linear-gradient(110deg, #2b1257 0%, #0f2740 55%, #3a1230 100%);
+  display: flex;
+  align-items: flex-end;
+}
+.holt-hero::before {
+  content: "";
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(420px 260px at 78% 30%, rgba(177,77,255,.35), transparent 70%),
+    radial-gradient(360px 240px at 60% 90%, rgba(40,224,200,.18), transparent 70%),
+    repeating-linear-gradient(135deg, rgba(255,255,255,.035) 0 6px, transparent 6px 13px);
+}
+.holt-hero::after {
+  content: "";
+  position: absolute; inset: 0;
+  background:
+    linear-gradient(90deg, var(--holt-ambient-scrim-strong) 0%, var(--holt-ambient-scrim-mid) 52%, var(--holt-ambient-scrim-weak) 100%),
+    linear-gradient(0deg, rgba(13,11,18,.85) 0%, transparent 55%);
+}
+.holt-hero-body {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column; gap: 12px;
+  padding: 34px 36px;
+  max-width: 620px;
+}
+.holt-hero-title { font-size: 34px; font-weight: 900; letter-spacing: -1.4px; line-height: .98; color: var(--holt-ink); margin: 0; }
+.holt-hero-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+
+/* ---------- Forms ---------- */
 
 .holt-field { display: flex; flex-direction: column; gap: 6px; margin-bottom: var(--holt-space-3); }
 
@@ -295,8 +637,7 @@ h2.holt-section-title {
   text-transform: uppercase;
 }
 
-.holt-field input,
-.holt-field select {
+.holt-field input, .holt-field select, .holt-field textarea {
   font-family: var(--holt-font-core);
   font-size: 13px;
   color: var(--holt-ink);
@@ -305,38 +646,86 @@ h2.holt-section-title {
   border-radius: var(--holt-radius-sm);
   padding: 9px 12px;
 }
-
-.holt-field input:focus,
-.holt-field select:focus {
-  outline: none;
-  border-color: var(--holt-current);
-}
-
+.holt-field input:focus, .holt-field select:focus, .holt-field textarea:focus { outline: none; border-color: var(--holt-current); }
 .holt-field input::placeholder { color: var(--holt-ink-28); }
+.holt-field .holt-meta { line-height: 1.5; }
 
 .holt-form-row { display: flex; gap: var(--holt-space-3); flex-wrap: wrap; align-items: flex-end; }
 .holt-form-row .holt-field { flex: 1; min-width: 160px; margin-bottom: 0; }
 
-/* ---------- Inline message ---------- */
+.holt-checkbox {
+  width: 16px; height: 16px; flex: none;
+  border-radius: 4px;
+  border: 1.5px solid var(--holt-hairline-strong);
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.holt-checkbox.is-on { background: var(--holt-current); border-color: var(--holt-current); }
+
+/* ---------- Avatar ---------- */
+
+.holt-avatar {
+  width: var(--holt-size-avatar); height: var(--holt-size-avatar); flex: none;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--holt-current), var(--holt-healthy));
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 900; color: var(--holt-deep);
+}
+
+/* ---------- Message / Toast ---------- */
 
 .holt-message {
   border-radius: var(--holt-radius-sm);
   padding: 10px 14px;
   font-size: 12.5px;
-  margin-bottom: var(--holt-space-3);
   border: 1px solid var(--holt-hairline);
   background: var(--holt-raised);
   color: var(--holt-ink-70);
 }
-
 .holt-message-positive { border-color: rgba(40,224,200,.35); color: var(--holt-healthy); }
 .holt-message-warning { border-color: rgba(255,184,77,.35); color: var(--holt-warning); }
 
-/* ---------- Downloads page: live torrent rows (ProgressRow inside a Row) ---------- */
+.holt-toasts { position: fixed; right: var(--holt-space-4); bottom: var(--holt-space-4); z-index: 20; display: flex; flex-direction: column; gap: 8px; }
+.holt-toast {
+  padding: 12px 16px;
+  font-size: 13px;
+  color: var(--holt-ink-70);
+  min-width: 240px;
+  animation: holt-toast-in var(--holt-dur-base) var(--holt-ease-out);
+}
+.holt-toast.is-positive { color: var(--holt-healthy); }
+.holt-toast.is-warning { color: var(--holt-warning); }
+@keyframes holt-toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (max-width: 899px) { .holt-toasts { left: var(--holt-space-3); right: var(--holt-space-3); bottom: calc(var(--holt-size-tab-bar) + var(--holt-space-3)); } }
 
-.den-torrent { align-items: flex-start; }
-.den-torrent .holt-row-main { padding-right: var(--holt-space-2); }
-.den-torrent .holt-pill { margin-top: 3px; }
-.den-torrent .holt-row-actions { flex-wrap: wrap; justify-content: flex-end; max-width: 260px; }
-.den-engine-line code { font-family: var(--holt-font-mono); }
-.holt-field .holt-meta { line-height: 1.5; }
+/* ---------- Dialog ---------- */
+
+dialog.holt-dialog {
+  padding: var(--holt-space-5);
+  width: min(480px, calc(100vw - 32px));
+  color: var(--holt-ink);
+  animation: holt-dialog-in var(--holt-dur-base) var(--holt-ease-out);
+}
+dialog.holt-dialog::backdrop { background: var(--holt-ambient-scrim-mid); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+@keyframes holt-dialog-in { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: none; } }
+
+/* ---------- Skeleton / Empty state ---------- */
+
+.holt-skeleton {
+  background: var(--holt-raised);
+  border-radius: var(--holt-radius-md);
+  position: relative; overflow: hidden;
+}
+.holt-skeleton::after {
+  content: "";
+  position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, var(--holt-glass-highlight), transparent);
+  animation: holt-shimmer var(--holt-dur-draw) linear infinite;
+}
+@keyframes holt-shimmer { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+
+.holt-empty {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: var(--holt-space-6) var(--holt-space-4);
+  text-align: center;
+}
+.holt-empty-title { font-size: 16px; font-weight: 800; letter-spacing: -0.4px; color: var(--holt-ink); }

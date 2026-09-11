@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -18,9 +20,72 @@ from app.torrent import engine as torrent_engine
 router = APIRouter(tags=["ui"])
 templates = Jinja2Templates(directory="app/templates")
 
+TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w342"
+
+
+def poster_url(path: str | None) -> str:
+    """TMDB stores a bare path ('/abc.jpg'); TVmaze stores a full URL. Either way, a URL."""
+    if not path:
+        return ""
+    return path if path.startswith("http") else f"{TMDB_IMAGE_BASE}{path}"
+
+
+templates.env.filters["poster"] = poster_url
+
+
+def _static_version() -> str:
+    """Cache-buster for the stylesheet/script links: the newest mtime among the static
+    assets, so a deploy (or a dev restart) makes every browser fetch fresh copies."""
+    static_dir = Path(__file__).resolve().parent.parent / "static"
+    try:
+        return str(int(max(p.stat().st_mtime for p in static_dir.iterdir() if p.is_file())))
+    except (OSError, ValueError):
+        return "0"
+
+
+templates.env.globals["static_v"] = _static_version()
+
+
+def _series_rows(db: Session, series_list: list[Series]) -> list[dict]:
+    """Series with have/total episode counts, in one query instead of one per series."""
+    ids = [s.id for s in series_list]
+    totals: dict[int, int] = {}
+    haves: dict[int, int] = {}
+    if ids:
+        for series_id, has_file in db.query(Episode.series_id, Episode.has_file).filter(Episode.series_id.in_(ids)):
+            totals[series_id] = totals.get(series_id, 0) + 1
+            if has_file:
+                haves[series_id] = haves.get(series_id, 0) + 1
+    return [{"series": s, "total": totals.get(s.id, 0), "have": haves.get(s.id, 0)} for s in series_list]
+
+
+def _downloading_movie_ids(db: Session) -> set[int]:
+    rows = db.query(DownloadRecord.movie_id).filter(
+        DownloadRecord.movie_id.isnot(None), DownloadRecord.status.notin_(["imported", "failed"])
+    )
+    return {movie_id for (movie_id,) in rows}
+
 
 @router.get("/", response_class=HTMLResponse)
-async def index(request: Request, q: str | None = None, db: Session = Depends(get_db)):
+def discover(request: Request, db: Session = Depends(get_db)):
+    """Home. Until M11's TMDB-driven Discover lands this is the library at a glance."""
+    recent_movies = db.query(Movie).order_by(Movie.id.desc()).limit(12).all()
+    recent_series = _series_rows(db, db.query(Series).order_by(Series.id.desc()).limit(12).all())
+    stats = {
+        "movies": db.query(Movie).count(),
+        "series": db.query(Series).count(),
+        "missing_movies": db.query(Movie).filter(Movie.has_file == False).count(),  # noqa: E712
+        "missing_episodes": db.query(Episode).filter(Episode.has_file == False).count(),  # noqa: E712
+        "downloading": db.query(DownloadRecord).filter(DownloadRecord.status.notin_(["imported", "failed"])).count(),
+    }
+    return templates.TemplateResponse(
+        "index.html",
+        {"request": request, "stats": stats, "recent_movies": recent_movies, "recent_series": recent_series, "active_nav": "discover"},
+    )
+
+
+@router.get("/ui/indexers", response_class=HTMLResponse)  # GET /indexers is the JSON API
+async def indexers_page(request: Request, q: str | None = None, db: Session = Depends(get_db)):
     indexers = db.query(Indexer).all()
     results = None
     if q:
@@ -34,8 +99,8 @@ async def index(request: Request, q: str | None = None, db: Session = Depends(ge
         gathered.sort(key=lambda r: r.seeders or 0, reverse=True)
         results = gathered
     return templates.TemplateResponse(
-        "index.html",
-        {"request": request, "indexers": indexers, "query": q, "results": results, "active_nav": "search"},
+        "indexers.html",
+        {"request": request, "indexers": indexers, "query": q, "results": results, "active_nav": "indexers"},
     )
 
 
@@ -49,7 +114,7 @@ def ui_create_indexer(
 ):
     db.add(Indexer(name=name, url=url, api_key=api_key or None, protocol=protocol, enabled=True))
     db.commit()
-    return RedirectResponse("/", status_code=303)
+    return RedirectResponse("/ui/indexers", status_code=303)
 
 
 @router.post("/ui/indexers/{indexer_id}/delete")
@@ -58,18 +123,40 @@ def ui_delete_indexer(indexer_id: int, db: Session = Depends(get_db)):
     if indexer:
         db.delete(indexer)
         db.commit()
-    return RedirectResponse("/", status_code=303)
+    return RedirectResponse("/ui/indexers", status_code=303)
 
 
 # --- Movies -----------------------------------------------------------------
 
 @router.get("/library", response_class=HTMLResponse)
-async def library(request: Request, q: str | None = None, db: Session = Depends(get_db)):
-    movies = db.query(Movie).all()
-    candidates = await tmdb.search_movie(q, settings_module.effective(db).tmdb_api_key) if q else None
+async def library(request: Request, q: str | None = None, filter: str = "all", db: Session = Depends(get_db)):
+    all_movies = db.query(Movie).order_by(Movie.id.desc()).all()
+    downloading_ids = _downloading_movie_ids(db)
+    counts = {
+        "total": len(all_movies),
+        "have": sum(1 for m in all_movies if m.has_file),
+        "missing": sum(1 for m in all_movies if not m.has_file),
+        "downloading": len(downloading_ids),
+    }
+    if filter == "missing":
+        movies = [m for m in all_movies if not m.has_file]
+    elif filter == "have":
+        movies = [m for m in all_movies if m.has_file]
+    else:
+        filter, movies = "all", all_movies
+    candidates = None
+    if q:
+        try:
+            candidates = await tmdb.search_movie(q, settings_module.effective(db).tmdb_api_key)
+        except Exception:
+            candidates = []  # unconfigured/invalid TMDB key: show "nothing matched", not a 500
     return templates.TemplateResponse(
         "library.html",
-        {"request": request, "movies": movies, "query": q, "candidates": candidates, "active_nav": "movies"},
+        {
+            "request": request, "movies": movies, "counts": counts, "filter": filter,
+            "downloading_ids": downloading_ids, "library_tmdb_ids": {m.tmdb_id for m in all_movies},
+            "query": q, "candidates": candidates, "active_nav": "movies",
+        },
     )
 
 
@@ -146,15 +233,21 @@ async def ui_grab_movie(
 
 @router.get("/tv", response_class=HTMLResponse)
 async def tv_library(request: Request, q: str | None = None, db: Session = Depends(get_db)):
-    all_series = db.query(Series).all()
-    rows = []
-    for s in all_series:
-        episodes = db.query(Episode).filter(Episode.series_id == s.id).all()
-        rows.append({"series": s, "total": len(episodes), "have": sum(1 for e in episodes if e.has_file)})
-    candidates = await tvmaze.search_tv(q) if q else None
+    all_series = db.query(Series).order_by(Series.id.desc()).all()
+    rows = _series_rows(db, all_series)
+    candidates = None
+    if q:
+        try:
+            candidates = await tvmaze.search_tv(q)
+        except Exception:
+            candidates = []
     return templates.TemplateResponse(
         "tv.html",
-        {"request": request, "series": rows, "query": q, "candidates": candidates, "active_nav": "tv"},
+        {
+            "request": request, "series": rows, "query": q, "candidates": candidates,
+            "episodes_total": sum(r["total"] for r in rows), "episodes_have": sum(r["have"] for r in rows),
+            "library_tvmaze_ids": {s.tvmaze_id for s in all_series}, "active_nav": "tv",
+        },
     )
 
 

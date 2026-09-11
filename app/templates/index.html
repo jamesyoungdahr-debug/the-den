@@ -1,112 +1,63 @@
 {% extends "base.html" %}
 {% block content %}
-  <h1 class="holt-page-title">Indexers &amp; Search</h1>
-
-  <div class="holt-panel">
-    <div class="holt-panel-head">
-      <div class="holt-eyebrow">Indexers</div>
-      <div class="holt-meta">{{ indexers|length }} configured</div>
-    </div>
-    <div class="holt-row-list">
-      {% for i in indexers %}
-      <div class="holt-row">
-        <div class="holt-row-main">
-          <div class="holt-row-title">{{ i.name }}</div>
-          <div class="holt-row-meta">{{ i.protocol }} — {{ i.url }}</div>
-        </div>
-        <span class="holt-pill {{ 'holt-pill-healthy' if i.enabled else 'holt-pill-idle' }}"><span class="dot"></span>{{ "enabled" if i.enabled else "disabled" }}</span>
-        <div class="holt-row-actions">
-          <a href="#" class="holt-btn holt-btn-quiet holt-btn-sm" onclick="testIndexer({{ i.id }}); return false;">test</a>
-          <form method="post" action="/ui/indexers/{{ i.id }}/delete">
-            <button type="submit" class="holt-btn holt-btn-quiet holt-btn-sm">delete</button>
-          </form>
-        </div>
+  <section class="holt-hero">
+    <div class="holt-hero-body">
+      <div class="holt-eyebrow">Your library</div>
+      <h1 class="holt-hero-title">{{ stats.movies }} movies, {{ stats.series }} series</h1>
+      <div class="holt-meta">{{ stats.missing_movies }} movies and {{ stats.missing_episodes }} episodes still missing · {{ stats.downloading }} downloading now</div>
+      <div class="holt-hero-actions">
+        <a class="holt-btn holt-btn-primary" href="/library">Add a movie</a>
+        <a class="holt-btn holt-btn-secondary" href="/tv">Add a series</a>
+        {% if stats.downloading %}<a class="holt-badge holt-badge-solid holt-badge-processing" href="/ui/downloads"><span class="dot"></span>{{ stats.downloading }} downloading</a>{% endif %}
       </div>
-      {% else %}
-      <div class="holt-row-empty">No indexers yet — add one below.</div>
+    </div>
+  </section>
+
+  <section class="holt-section">
+    <div class="holt-rail-head">
+      <div class="holt-eyebrow">Recently added movies</div>
+      <a class="holt-meta" href="/library">all movies →</a>
+    </div>
+    {% if recent_movies %}
+    <div class="holt-rail">
+      {% for m in recent_movies %}
+      <div class="holt-card">
+        <div class="holt-poster">
+          {% if m.poster_path %}<img src="{{ m.poster_path|poster }}" alt="" loading="lazy">{% else %}<span class="holt-poster-letter">{{ m.title[:1] }}</span>{% endif %}
+          <span class="holt-badge holt-badge-solid {{ 'holt-badge-available' if m.has_file else 'holt-badge-missing' }}"><span class="dot"></span>{{ 'have' if m.has_file else 'missing' }}</span>
+        </div>
+        <div class="holt-card-title">{{ m.title }}</div>
+        <div class="holt-card-meta">{{ m.year or '-' }} · Movie</div>
+      </div>
       {% endfor %}
     </div>
-    <div id="test-result" class="holt-message" style="display:none; margin-top: var(--holt-space-3);"></div>
-  </div>
+    {% else %}
+    <div class="holt-empty holt-panel"><div class="holt-empty-title">No movies yet</div><div class="holt-body">Search above to add the first one.</div></div>
+    {% endif %}
+  </section>
 
-  <h2 class="holt-section-title">Add indexer</h2>
-  <div class="holt-panel">
-    <form method="post" action="/ui/indexers">
-      <div class="holt-form-row">
-        <div class="holt-field">
-          <label>Name</label>
-          <input name="name" placeholder="e.g. My Tracker" required>
-        </div>
-        <div class="holt-field">
-          <label>URL</label>
-          <input name="url" placeholder="https://indexer.example/api" required>
-        </div>
-        <div class="holt-field">
-          <label>API key</label>
-          <input name="api_key" placeholder="optional">
-        </div>
-        <div class="holt-field">
-          <label>Protocol</label>
-          <select name="protocol">
-            <option value="torznab">torznab</option>
-            <option value="newznab">newznab</option>
-          </select>
-        </div>
-        <button type="submit" class="holt-btn holt-btn-primary">Add</button>
-      </div>
-    </form>
-  </div>
-
-  <h2 class="holt-section-title">Search</h2>
-  <div class="holt-panel">
-    <form method="get" action="/">
-      <div class="holt-form-row">
-        <div class="holt-field">
-          <label>Query</label>
-          <input name="q" placeholder="Search across enabled indexers" value="{{ query or '' }}">
-        </div>
-        <button type="submit" class="holt-btn holt-btn-primary">Search</button>
-      </div>
-    </form>
-  </div>
-
-  {% if results is not none %}
-  <div class="holt-panel">
-    <div class="holt-panel-head">
-      <div class="holt-eyebrow">Results for "{{ query }}"</div>
-      <div class="holt-meta">{{ results|length }} found</div>
+  <section class="holt-section">
+    <div class="holt-rail-head">
+      <div class="holt-eyebrow">Recently added series</div>
+      <a class="holt-meta" href="/tv">all series →</a>
     </div>
-    <div class="holt-row-list">
-      {% for r in results %}
-      <div class="holt-row">
-        <div class="holt-row-main">
-          <div class="holt-row-title">{{ r.title }}</div>
-          <div class="holt-row-meta">{{ r.indexer_name }} — {{ r.seeders if r.seeders is not none else "-" }} seeders — {{ r.peers if r.peers is not none else "-" }} peers — {{ r.size if r.size is not none else "-" }} bytes</div>
+    {% if recent_series %}
+    <div class="holt-rail">
+      {% for s in recent_series %}
+      <a class="holt-card" href="/ui/series/{{ s.series.id }}" style="color:inherit">
+        <div class="holt-poster">
+          {% if s.series.poster_path %}<img src="{{ s.series.poster_path|poster }}" alt="" loading="lazy">{% else %}<span class="holt-poster-letter">{{ s.series.title[:1] }}</span>{% endif %}
+          {% if s.total and s.have == s.total %}<span class="holt-badge holt-badge-solid holt-badge-available"><span class="dot"></span>complete</span>
+          {% elif s.have %}<span class="holt-badge holt-badge-solid holt-badge-partial"><span class="dot"></span>{{ s.have }}/{{ s.total }}</span>
+          {% else %}<span class="holt-badge holt-badge-solid holt-badge-missing"><span class="dot"></span>missing</span>{% endif %}
         </div>
-        <a href="{{ r.download_url }}" class="holt-btn holt-btn-secondary holt-btn-sm">download</a>
-      </div>
-      {% else %}
-      <div class="holt-row-empty">No results.</div>
+        <div class="holt-card-title">{{ s.series.title }}</div>
+        <div class="holt-card-meta">{{ s.series.year or '-' }} · Series</div>
+      </a>
       {% endfor %}
     </div>
-  </div>
-  {% endif %}
-
-  <script>
-    async function testIndexer(id) {
-      const el = document.getElementById("test-result");
-      el.style.display = "block";
-      el.className = "holt-message";
-      el.textContent = "testing...";
-      try {
-        const resp = await fetch(`/indexers/${id}/test`);
-        const data = await resp.json();
-        el.className = "holt-message " + (resp.ok ? "holt-message-positive" : "holt-message-warning");
-        el.textContent = (resp.ok ? "OK: " : "FAILED: ") + JSON.stringify(data);
-      } catch (e) {
-        el.className = "holt-message holt-message-warning";
-        el.textContent = `FAILED: ${e}`;
-      }
-    }
-  </script>
+    {% else %}
+    <div class="holt-empty holt-panel"><div class="holt-empty-title">No series yet</div><div class="holt-body">Add one from the TV page.</div></div>
+    {% endif %}
+  </section>
 {% endblock %}

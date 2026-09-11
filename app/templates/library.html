@@ -1,73 +1,81 @@
 {% extends "base.html" %}
+{% block title_suffix %} — Movies{% endblock %}
+{% block search_placeholder %}Search TMDB to add a movie{% endblock %}
 {% block content %}
-  <h1 class="holt-page-title">Movie Library</h1>
-
-  <div class="holt-panel">
-    <div class="holt-panel-head">
-      <div class="holt-eyebrow">Library</div>
-      <div class="holt-meta">{{ movies|length }} movies</div>
+  {% if candidates is not none %}
+  <section class="holt-section">
+    <div class="holt-rail-head">
+      <div class="holt-eyebrow">Results for "{{ query }}"</div>
+      <div class="holt-meta">{{ candidates|length }} found · already in your library are marked</div>
     </div>
-    <div class="holt-tile-grid">
-      {% for m in movies %}
-      <div class="holt-tile">
-        <div class="holt-tile-poster {{ 'healthy' if m.has_file else '' }}">
-          <div class="holt-tile-poster-label">poster art</div>
+    {% if candidates %}
+    <div class="holt-grid">
+      {% for c in candidates %}
+      <div class="holt-card">
+        <div class="holt-poster">
+          {% if c.poster_path %}<img src="{{ c.poster_path|poster }}" alt="" loading="lazy">{% else %}<span class="holt-poster-letter">{{ c.title[:1] }}</span>{% endif %}
+          {% if c.tmdb_id in library_tmdb_ids %}<span class="holt-badge holt-badge-solid holt-badge-available"><span class="dot"></span>in library</span>{% endif %}
+          {% if c.tmdb_id not in library_tmdb_ids %}
+          <div class="holt-poster-actions">
+            <form method="post" action="/ui/movies">
+              <input type="hidden" name="tmdb_id" value="{{ c.tmdb_id }}">
+              <input type="hidden" name="title" value="{{ c.title }}">
+              <input type="hidden" name="year" value="{{ c.year or '' }}">
+              <input type="hidden" name="overview" value="{{ c.overview or '' }}">
+              <input type="hidden" name="poster_path" value="{{ c.poster_path or '' }}">
+              <button type="submit" class="holt-btn holt-btn-primary holt-btn-sm">Add to library</button>
+            </form>
+          </div>
+          {% endif %}
         </div>
-        <div class="holt-tile-title">{{ m.title }}</div>
-        <div class="holt-tile-meta">{{ m.year or "-" }}</div>
-        <div style="margin-top:8px;"><span class="holt-pill {{ 'holt-pill-healthy' if m.has_file else 'holt-pill-idle' }}"><span class="dot"></span>{{ "have" if m.has_file else "missing" }}</span></div>
-        <div style="margin-top:8px; display:flex; gap:6px; flex-wrap:wrap;">
-          {% if not m.has_file %}<a href="/ui/movies/{{ m.id }}/candidates" class="holt-btn holt-btn-quiet holt-btn-sm">find releases</a>{% endif %}
-          <form method="post" action="/ui/movies/{{ m.id }}/delete">
-            <button type="submit" class="holt-btn holt-btn-quiet holt-btn-sm">remove</button>
+        <div class="holt-card-title" title="{{ c.title }}">{{ c.title }}</div>
+        <div class="holt-card-meta">{{ c.year or "-" }} · Movie</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="holt-empty holt-panel"><div class="holt-empty-title">Nothing matched</div><div class="holt-body">Try a different title, or check the TMDB key in Settings.</div></div>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  <div class="holt-page-head">
+    <div>
+      <h1 class="holt-page-title">Movies</h1>
+      <div class="holt-meta">{{ counts.total }} movies · {{ counts.have }} have · {{ counts.missing }} missing{% if counts.downloading %} · {{ counts.downloading }} downloading{% endif %}</div>
+    </div>
+    <div class="holt-toolbar">
+      <a class="holt-chip {{ 'is-on' if filter == 'all' else '' }}" href="/library">All</a>
+      <a class="holt-chip {{ 'is-on' if filter == 'missing' else '' }}" href="/library?filter=missing">Missing</a>
+      <a class="holt-chip {{ 'is-on' if filter == 'have' else '' }}" href="/library?filter=have">Have</a>
+    </div>
+  </div>
+
+  {% if movies %}
+  <div class="holt-grid">
+    {% for m in movies %}
+    <div class="holt-card">
+      <div class="holt-poster">
+        {% if m.poster_path %}<img src="{{ m.poster_path|poster }}" alt="" loading="lazy">{% else %}<span class="holt-poster-letter">{{ m.title[:1] }}</span>{% endif %}
+        {% if m.id in downloading_ids %}<span class="holt-badge holt-badge-solid holt-badge-processing"><span class="dot"></span>downloading</span>
+        {% elif m.has_file %}<span class="holt-badge holt-badge-solid holt-badge-available"><span class="dot"></span>have</span>
+        {% else %}<span class="holt-badge holt-badge-solid holt-badge-missing"><span class="dot"></span>missing</span>{% endif %}
+        <div class="holt-poster-actions">
+          {% if not m.has_file %}<a href="/ui/movies/{{ m.id }}/candidates" class="holt-btn holt-btn-primary holt-btn-sm">Find releases</a>{% endif %}
+          <form method="post" action="/ui/movies/{{ m.id }}/delete" onsubmit="return confirm('Remove {{ m.title|e }} from the library?')">
+            <button type="submit" class="holt-btn holt-btn-quiet holt-btn-sm">Remove</button>
           </form>
         </div>
       </div>
-      {% else %}
-      <div class="holt-row-empty">No movies yet — search below to add one.</div>
-      {% endfor %}
+      <div class="holt-card-title" title="{{ m.title }}">{{ m.title }}</div>
+      <div class="holt-card-meta">{{ m.year or "-" }}{% if m.id in downloading_ids %} · downloading{% endif %}</div>
     </div>
+    {% endfor %}
   </div>
-
-  <h2 class="holt-section-title">Add a movie</h2>
-  <div class="holt-panel">
-    <form method="get" action="/library">
-      <div class="holt-form-row">
-        <div class="holt-field">
-          <label>Search TMDB</label>
-          <input name="q" placeholder="Movie title" value="{{ query or '' }}">
-        </div>
-        <button type="submit" class="holt-btn holt-btn-primary">Search</button>
-      </div>
-    </form>
-  </div>
-
-  {% if candidates is not none %}
-  <div class="holt-panel">
-    <div class="holt-panel-head">
-      <div class="holt-eyebrow">Results</div>
-      <div class="holt-meta">{{ candidates|length }} found</div>
-    </div>
-    <div class="holt-row-list">
-      {% for c in candidates %}
-      <div class="holt-row">
-        <div class="holt-row-main">
-          <div class="holt-row-title">{{ c.title }}</div>
-          <div class="holt-row-meta">{{ c.year or "-" }}</div>
-        </div>
-        <form method="post" action="/ui/movies">
-          <input type="hidden" name="tmdb_id" value="{{ c.tmdb_id }}">
-          <input type="hidden" name="title" value="{{ c.title }}">
-          <input type="hidden" name="year" value="{{ c.year or '' }}">
-          <input type="hidden" name="overview" value="{{ c.overview or '' }}">
-          <input type="hidden" name="poster_path" value="{{ c.poster_path or '' }}">
-          <button type="submit" class="holt-btn holt-btn-primary holt-btn-sm">Add</button>
-        </form>
-      </div>
-      {% else %}
-      <div class="holt-row-empty">No results.</div>
-      {% endfor %}
-    </div>
+  {% else %}
+  <div class="holt-empty holt-panel">
+    <div class="holt-empty-title">{% if filter == 'all' %}No movies yet{% else %}Nothing {{ filter }}{% endif %}</div>
+    <div class="holt-body">{% if filter == 'all' %}Search above to add the first one.{% else %}Everything's fine.{% endif %}</div>
   </div>
   {% endif %}
 {% endblock %}

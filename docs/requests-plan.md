@@ -250,7 +250,7 @@ are out of scope for M11.
 
 | Step | Scope | Size |
 |---|---|---|
-| M11a | Nav split: `/indexers` page, home becomes a placeholder Discover; no behaviour change otherwise | S |
+| M11a | **Done 2026-09-11 (with U1).** Indexers + manual release search live at `/ui/indexers`; `/` is a library-at-a-glance Discover until M11d | S |
 | M11b | Users + auth: table, migration, setup page, local login/logout, session middleware, **admin-only gating on every admin page and API route**, `AUTH_REQUIRED` escape hatch, Users admin page | M |
 | M11c | **Plex login**: client identifier, PIN flow, callback, owner linking, shared-user check, "allow any Plex account" toggle; Plex panel in Settings (server + sections picker) | M |
 | M11d | TMDB discovery client + cache; Discover, search, and detail pages with real posters; library pages get poster art too | M |
