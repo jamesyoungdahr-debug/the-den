@@ -1,10 +1,11 @@
 """The background cycle that makes this a PVR instead of a manual tool:
-advance in-flight downloads, then search+grab anything still missing."""
+advance in-flight downloads, retire torrents that have finished seeding,
+then search+grab anything still missing."""
 
 from sqlalchemy.orm import Session
 
 from app.candidates import scored_candidates
-from app.download_check import check_and_import
+from app.download_check import check_and_import, reap_seeded
 from app.grabber import grab_episode, grab_movie
 from app.models import DownloadRecord, Episode, Movie, QualityProfile, Series
 
@@ -19,12 +20,16 @@ def _has_active_download(db: Session, *, movie_id: int | None = None, episode_id
 
 
 async def _advance_downloads(db: Session) -> None:
-    active = db.query(DownloadRecord).filter(DownloadRecord.status != "imported").all()
+    active = db.query(DownloadRecord).filter(DownloadRecord.status.notin_(["imported", "failed"])).all()
     for record in active:
         try:
             await check_and_import(db, record)
         except Exception:
-            pass  # download client hiccup shouldn't stop the rest of the cycle
+            pass  # one bad download shouldn't stop the rest of the cycle
+    try:
+        reap_seeded(db)
+    except Exception:
+        pass
 
 
 async def _grab_missing_movies(db: Session) -> None:
@@ -39,7 +44,10 @@ async def _grab_missing_movies(db: Session) -> None:
         candidates = await scored_candidates(db, query, profile)
         best = next((c for c in candidates if c["is_best"]), None)
         if best:
-            await grab_movie(db, movie, best["download_url"], best["title"])
+            try:
+                await grab_movie(db, movie, best["download_url"], best["title"])
+            except Exception:
+                pass  # a dead download link shouldn't stop the cycle; next run retries
 
 
 async def _grab_missing_episodes(db: Session) -> None:
@@ -55,7 +63,10 @@ async def _grab_missing_episodes(db: Session) -> None:
         candidates = await scored_candidates(db, query, profile)
         best = next((c for c in candidates if c["is_best"]), None)
         if best:
-            await grab_episode(db, episode, best["download_url"], best["title"])
+            try:
+                await grab_episode(db, episode, best["download_url"], best["title"])
+            except Exception:
+                pass
 
 
 async def run_cycle(db: Session) -> None:

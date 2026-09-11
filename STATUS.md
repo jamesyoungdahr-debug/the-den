@@ -1,34 +1,42 @@
 # Status
 
 ## Last completed
-Fixed 8 correctness bugs found by a full-codebase review (commit `c2a6da4`):
-orphaned `DownloadRecord`s after a movie/series delete crashing automation forever,
-`/ui/settings` crashing on `scheduler.reschedule()` under conditions `/api/settings`
-already guarded against, a race on duplicate `tmdb_id`/`tvmaze_id` inserts producing
-a 500 instead of 400, `torznab` crashing on a valueless `<attr>` tag, series creation
-partial-committing before the TVMaze episode fetch (leaving an unrecoverable stuck
-row on failure), qBittorrent login failures going undetected (its API returns 200
-even on bad credentials), `episode_candidates` crashing on a series deleted
-mid-request, and an explicit `automation_interval_seconds=0` being silently
-discarded instead of rejected. All 8 verified live against the running WSL
-instance — see the session transcript for the exact repro/verification per bug.
-Before that: added `GET`/`POST /api/settings` (JSON) — needed by the-den-client's
-future M7.
+**M10 -- built-in torrent client.** The external qBittorrent dependency is gone; The Den
+now embeds libtorrent-rasterbar (`app/torrent/engine.py`) and downloads releases itself.
+Grabs go straight into the in-process session, the importer hard-links finished files into
+the library so torrents keep seeding, seed ratio/time limits stop them, and the automation
+cycle reaps stopped+imported torrents with their data. New `/torrents` JSON API and a live
+Downloads page (progress, rates, peers, ETA, pause/resume/remove, add-by-hand). Settings
+gained a "Torrent client" section (downloads folder, port, rate limits, seed limits);
+`qbit_*` settings and `DownloadRecord.category` were removed by migration `b7e2f1c4d9a0`.
+
+Verified end to end against `tests/local_swarm.py` (a private seeder + tracker on
+localhost): grab → real download → import (same inode as the seeding copy) → `has_file`
+→ seed-time limit → reaped; manual magnet add via 302 redirect; pause/resume; restart
+restores torrents from resume data. See ROADMAP.md's M10 section for the details and the
+two loopback-swarm gotchas that cost the most debugging time.
 
 ## Currently working on
-Nothing in progress. The review-fix pass is committed and pushed.
+Nothing in progress. **Next milestone is planned:** M11 Discover + Requests -- design,
+milestones and open decisions are in `docs/requests-plan.md`. Not started.
 
 ## Next steps
-- **Real-world shakedown** (the one thing never actually done): a real TMDB API key,
-  a real indexer account, real qBittorrent running — add a real movie and watch it
-  really download. Everything so far has only been tested against mocks or the
-  packaging shakedown.
-- The review that produced the fixes above also surfaced a well-corroborated set of
-  **cleanup/duplication findings**, deliberately left unfixed (correctness came
-  first): the same query-building + quality-profile-fallback logic duplicated 6x
-  across `movies.py`/`series.py`/`ui.py`/`automation.py`; the same grab-error-wrapping
-  duplicated 6x; `grab_movie`/`grab_episode` and `import_movie`/`import_episode`
-  near-identical pairs; N+1 queries in `ui.py`'s `calendar()` and `tv_library()`;
-  `scheduler.py`'s module-level global instead of DI. Worth a dedicated pass later.
+- **Real-world shakedown** (still the one thing never done): a real TMDB key, a real
+  indexer. The engine itself HAS now been run against a public swarm: the Ubuntu 24.04.4
+  ISO torrent pulled 60+ peers via tracker+DHT and peaked at 45 MiB/s, with the rate
+  limiter and live settings reload both confirmed. Still untested: a real indexer grab.
+- **the-den-client / the-den-android need updating** (reviewed; see `docs/requests-plan.md`
+  "Companion apps" -- the Android Settings screen is actually broken by this): `GET/POST /api/settings` no longer
+  has `qbit_url` / `qbit_username` / `qbit_password` / `has_qbit_password`; it has
+  `downloads_root`, `state_dir` (read-only), `torrent_port`, `download_rate_limit_kib`,
+  `upload_rate_limit_kib`, `seed_ratio_limit`, `seed_time_limit_minutes` instead. They can
+  also now use `/torrents` for live download progress.
+- Torrent client polish worth doing once real use shows the need: per-torrent file
+  selection, sequential download, IP filter, proxy support, a session-wide stats line
+  (libtorrent exposes all of these; none are wired yet).
+- Cleanup findings from the earlier code review still stand: the same query-building +
+  quality-profile-fallback logic duplicated across `movies.py`/`series.py`/`ui.py`/
+  `automation.py`; N+1 queries in `ui.py`'s `calendar()` and `tv_library()`;
+  `scheduler.py` (and now `app/torrent/engine.py`) using a module-level global instead of DI.
 - Optional: wire up real poster art (tiles currently show the intentional striped
-  placeholder — TMDB/TVmaze poster URLs aren't fetched/displayed yet).
+  placeholder -- TMDB/TVmaze poster URLs aren't fetched/displayed yet).

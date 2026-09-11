@@ -59,6 +59,7 @@ class DownloadRecordOut(BaseModel):
     movie_id: int | None = None
     episode_id: int | None = None
     release_title: str
+    info_hash: str | None = None  # key into /torrents for live progress
     status: str
 
     class Config:

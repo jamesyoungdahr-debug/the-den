@@ -4,11 +4,14 @@ post_install() {
     cd /opt/the-den && DATABASE_URL="sqlite:////var/lib/the-den/den.db" \
         runuser -u the-den -- /opt/the-den/.venv/bin/python -m alembic upgrade head
 
-    echo "==> Edit /etc/the-den/the-den.env (at least TMDB_API_KEY, QBIT_USERNAME/PASSWORD,"
-    echo "    MOVIES_ROOT/TV_ROOT), then: systemctl enable --now the-den"
-    echo "==> The app listens on 127.0.0.1:8686 only. Put a reverse proxy in front of it"
-    echo "    (or change --host in the-den.service) before exposing it beyond localhost —"
+    echo "==> Edit /etc/the-den/the-den.env (at least TMDB_API_KEY and MOVIES_ROOT/TV_ROOT,"
+    echo "    DOWNLOADS_ROOT if the defaults under /var/lib/the-den aren't where you want them),"
+    echo "    then: systemctl enable --now the-den"
+    echo "==> The web UI listens on 127.0.0.1:8686 only. Put a reverse proxy in front of it"
+    echo "    (or change --host in the-den.service) before exposing it beyond localhost --"
     echo "    there is no login/auth layer yet."
+    echo "==> The built-in torrent client listens on TORRENT_PORT (default 6881, TCP+UDP) on"
+    echo "    all interfaces; forward it on your router for better peer connectivity."
 }
 
 post_upgrade() {

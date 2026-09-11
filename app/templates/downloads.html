@@ -2,25 +2,150 @@
 {% block title_suffix %} — Downloads{% endblock %}
 {% block content %}
   <h1 class="holt-page-title">Downloads</h1>
+  <div class="holt-meta den-engine-line" id="engine-line" style="margin-bottom: var(--holt-space-3);">torrent engine —</div>
 
+  <div class="holt-panel">
+    <div class="holt-panel-head">
+      <div class="holt-eyebrow">Torrents</div>
+      <div class="holt-meta" id="torrent-count">—</div>
+    </div>
+    <div class="holt-row-list" id="torrent-list">
+      <div class="holt-row-empty">Loading…</div>
+    </div>
+  </div>
+
+  <h2 class="holt-section-title">Add a torrent</h2>
+  <div class="holt-panel">
+    <form id="add-form" onsubmit="addTorrent(event)">
+      <div class="holt-form-row">
+        <div class="holt-field">
+          <label>Magnet link or .torrent URL</label>
+          <input name="source" id="add-source" placeholder="magnet:?xt=urn:btih:… or https://…/file.torrent" required>
+        </div>
+        <button type="submit" class="holt-btn holt-btn-primary">Add</button>
+      </div>
+    </form>
+    <div id="add-result" class="holt-message" style="display:none; margin-top: var(--holt-space-3); margin-bottom: 0;"></div>
+  </div>
+
+  {% if history %}
+  <h2 class="holt-section-title">History</h2>
   <div class="holt-panel">
     <div class="holt-row-list">
       {% set tone_map = {"queued": "working", "downloading": "working", "completed": "idle", "imported": "healthy", "failed": "warning"} %}
-      {% for d in downloads %}
+      {% for d in history %}
       <div class="holt-row">
         <div class="holt-row-main">
           <div class="holt-row-title">{{ d.release_title }}</div>
+          <div class="holt-row-meta">{{ d.label or "" }}</div>
         </div>
         <span class="holt-pill holt-pill-{{ tone_map.get(d.status, 'idle') }}"><span class="dot"></span>{{ d.status }}</span>
-        {% if d.status != "imported" %}
-        <form method="post" action="/ui/downloads/{{ d.id }}/check">
-          <button type="submit" class="holt-btn holt-btn-quiet holt-btn-sm">check status</button>
-        </form>
-        {% endif %}
       </div>
-      {% else %}
-      <div class="holt-row-empty">No downloads yet.</div>
       {% endfor %}
     </div>
   </div>
+  {% endif %}
+
+  <script>
+    const TONE = { downloading: "working", metadata: "working", checking: "working", queued: "working",
+                   seeding: "healthy", done: "idle", paused: "idle", error: "warning" };
+
+    function bytes(n) {
+      if (n == null) return "-";
+      const u = ["B", "KiB", "MiB", "GiB", "TiB"]; let i = 0;
+      while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
+      return (i === 0 ? n : n.toFixed(1)) + " " + u[i];
+    }
+    function rate(n) { return bytes(n) + "/s"; }
+    function eta(s) {
+      if (s == null) return "";
+      if (s < 60) return s + "s";
+      if (s < 3600) return Math.round(s / 60) + "m";
+      if (s < 86400) return (s / 3600).toFixed(1) + "h";
+      return Math.round(s / 86400) + "d";
+    }
+    function esc(s) { return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+    function row(t) {
+      const pct = (t.progress * 100).toFixed(1);
+      const fill = t.state === "error" ? "holt-progress-fill-warning" : (t.is_finished ? "holt-progress-fill-healthy" : "");
+      const parts = [];
+      if (t.label) parts.push(esc(t.label));
+      if (!t.is_finished) parts.push("↓ " + rate(t.download_rate));
+      parts.push("↑ " + rate(t.upload_rate));
+      parts.push(t.num_peers + " peers (" + t.num_seeds + " seeds)");
+      if (t.eta_seconds != null) parts.push("ETA " + eta(t.eta_seconds));
+      parts.push("ratio " + t.ratio.toFixed(2));
+      if (t.error) parts.push(esc(t.error));
+      const canPause = ["downloading", "metadata", "checking", "queued", "seeding"].includes(t.state);
+      const canResume = ["paused", "done", "error"].includes(t.state);
+      return `
+        <div class="holt-row den-torrent" data-hash="${t.info_hash}">
+          <div class="holt-row-main">
+            <div class="holt-progress-row">
+              <div class="holt-progress-head">
+                <div class="holt-progress-label" title="${esc(t.name)}">${esc(t.name)}</div>
+                <div class="holt-progress-meta">${pct}% · ${bytes(t.downloaded)} / ${bytes(t.total_size)}</div>
+              </div>
+              <div class="holt-progress-track"><div class="holt-progress-fill ${fill}" style="width:${pct}%"></div></div>
+              <div class="holt-row-meta">${parts.join(" · ")}</div>
+            </div>
+          </div>
+          <span class="holt-pill holt-pill-${TONE[t.state] || "idle"}"><span class="dot"></span>${t.state}</span>
+          <div class="holt-row-actions">
+            ${canPause ? `<button class="holt-btn holt-btn-quiet holt-btn-sm" onclick="act('${t.info_hash}','pause')">pause</button>` : ""}
+            ${canResume ? `<button class="holt-btn holt-btn-quiet holt-btn-sm" onclick="act('${t.info_hash}','resume')">resume</button>` : ""}
+            <button class="holt-btn holt-btn-quiet holt-btn-sm" onclick="remove('${t.info_hash}', false)">remove</button>
+            <button class="holt-btn holt-btn-quiet holt-btn-sm" onclick="remove('${t.info_hash}', true)">remove + files</button>
+          </div>
+        </div>`;
+    }
+
+    async function refresh() {
+      try {
+        const [tResp, eResp] = await Promise.all([fetch("/torrents"), fetch("/torrents/engine")]);
+        const torrents = await tResp.json();
+        const info = await eResp.json();
+        const list = document.getElementById("torrent-list");
+        list.innerHTML = torrents.length ? torrents.map(row).join("") : `<div class="holt-row-empty">No torrents. Grab a release from Movies or TV, or add one below.</div>`;
+        const dl = torrents.reduce((a, t) => a + t.download_rate, 0);
+        const ul = torrents.reduce((a, t) => a + t.upload_rate, 0);
+        document.getElementById("torrent-count").textContent = torrents.length + " active · ↓ " + rate(dl) + " · ↑ " + rate(ul);
+        document.getElementById("engine-line").textContent = info.running
+          ? `torrent engine running · port ${info.listen_port} · DHT ${info.dht_running ? "connected" : "starting"}`
+          : "torrent engine not running";
+      } catch (e) {
+        document.getElementById("engine-line").textContent = "torrent engine unreachable: " + e;
+      }
+    }
+
+    async function act(hash, what) {
+      await fetch(`/torrents/${hash}/${what}`, { method: "POST" });
+      refresh();
+    }
+    async function remove(hash, deleteFiles) {
+      if (deleteFiles && !confirm("Remove this torrent AND delete its downloaded files?")) return;
+      await fetch(`/torrents/${hash}?delete_files=${deleteFiles}`, { method: "DELETE" });
+      refresh();
+    }
+    async function addTorrent(ev) {
+      ev.preventDefault();
+      const el = document.getElementById("add-result");
+      const source = document.getElementById("add-source").value.trim();
+      el.style.display = "block"; el.className = "holt-message"; el.textContent = "adding…";
+      try {
+        const resp = await fetch("/torrents", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ source }) });
+        const data = await resp.json();
+        el.className = "holt-message " + (resp.ok ? "holt-message-positive" : "holt-message-warning");
+        el.textContent = resp.ok ? "Added: " + data.name : "FAILED: " + (data.detail || JSON.stringify(data));
+        if (resp.ok) document.getElementById("add-source").value = "";
+      } catch (e) {
+        el.className = "holt-message holt-message-warning"; el.textContent = "FAILED: " + e;
+      }
+      refresh();
+    }
+
+    refresh();
+    setInterval(refresh, 2000);
+  </script>
 {% endblock %}

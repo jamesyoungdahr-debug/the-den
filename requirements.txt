@@ -6,3 +6,7 @@ httpx==0.27.2
 jinja2==3.1.4
 python-multipart==0.0.12
 apscheduler==3.10.4
+# libtorrent (the built-in torrent client) is NOT listed here on purpose: its PyPI wheels
+# stop at CPython 3.13, so it comes from the OS package (python3-libtorrent on Debian/
+# Ubuntu, libtorrent-rasterbar on Arch) and the venv is created with
+# --system-site-packages to see it. On Python <= 3.13, `pip install libtorrent` also works.

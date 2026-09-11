@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String
 
 from app.db import Base
 
@@ -68,19 +68,23 @@ class Episode(Base):
 
 class Settings(Base):
     """Single-row table (id is always 1) of user-editable overrides for app/config.py's
-    env-var defaults. A blank/null field here means "use the env-var default"."""
+    env-var defaults. A null field here means "use the env-var default"."""
 
     __tablename__ = "settings"
 
     id = Column(Integer, primary_key=True)
     tmdb_api_key = Column(String, nullable=True)
-    qbit_url = Column(String, nullable=True)
-    qbit_username = Column(String, nullable=True)
-    qbit_password = Column(String, nullable=True)
     movies_root = Column(String, nullable=True)
     tv_root = Column(String, nullable=True)
     automation_interval_seconds = Column(Integer, nullable=True)
     discord_webhook_url = Column(String, nullable=True)
+    # Built-in torrent client
+    downloads_root = Column(String, nullable=True)
+    torrent_port = Column(Integer, nullable=True)
+    download_rate_limit_kib = Column(Integer, nullable=True)
+    upload_rate_limit_kib = Column(Integer, nullable=True)
+    seed_ratio_limit = Column(Float, nullable=True)
+    seed_time_limit_minutes = Column(Integer, nullable=True)
 
 
 class DownloadRecord(Base):
@@ -92,6 +96,9 @@ class DownloadRecord(Base):
     episode_id = Column(Integer, ForeignKey("episodes.id"), nullable=True)
     release_title = Column(String, nullable=False)
     download_url = Column(String, nullable=False)
-    category = Column(String, nullable=False)
+    # Key into the built-in torrent engine (app/torrent). Null only for records that
+    # predate it (they were tracked in an external qBittorrent) -- those can't be
+    # advanced any more and get marked failed on their next check.
+    info_hash = Column(String, nullable=True, index=True)
     status = Column(String, nullable=False, default="queued")  # queued|downloading|completed|imported|failed
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
