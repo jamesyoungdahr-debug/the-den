@@ -1,6 +1,10 @@
 # Plan: UI redesign across web, KDE, and Android -- "HoltOS Glass"
 
-Status: **planned, not started.** Written 2026-09-11. Companion to
+Status: **planned, not started.** Written 2026-09-11. Mockups of the eight key frames (web
+Discover, series detail, Requests, Movies library, Downloads, Sign in; KDE and Android
+Discover) are on the design canvas:
+https://claude.ai/code/artifact/ea042508-1ad1-4d27-b098-6f35a520f81b -- they are the
+reference for U0/U1 below. Companion to
 [requests-plan.md](requests-plan.md) (M11): the Discover/Requests work should be built
 *in* this design, not retrofitted to it, so this plan's shell and component work is
 sequenced ahead of M11's pages.
