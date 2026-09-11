@@ -5,7 +5,7 @@ DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./den.db")
 # A key shipped with the build, used when neither Settings nor TMDB_API_KEY provides one
 # (the approach Overseerr takes). Non-commercial use only; TMDB requires the attribution the
 # Settings page and README carry. Paste the key between the quotes to bake it in.
-BUILTIN_TMDB_API_KEY = ""
+BUILTIN_TMDB_API_KEY = "9d4ba852db15c627e0803cea1b14dab1"
 TMDB_API_KEY = os.environ.get("TMDB_API_KEY", "") or BUILTIN_TMDB_API_KEY
 TMDB_BASE_URL = os.environ.get("TMDB_BASE_URL", "https://api.themoviedb.org/3")
 
