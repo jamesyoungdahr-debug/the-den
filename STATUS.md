@@ -17,6 +17,11 @@ restores torrents from resume data. See ROADMAP.md's M10 section for the details
 two loopback-swarm gotchas that cost the most debugging time.
 
 ## Currently working on
+**The KDE client now lives in this repo** (2026-09-12): `client/` is the old
+`the-den-client` repo merged with `git subtree` (history kept). Its `PKGBUILD` still
+builds from `client/`; the server package ignores the directory. U4 happens here from now
+on; the Android app stays in `the-den-android` (Gradle wants its own repo root).
+
 **M11g is done (2026-09-12), which closes M11.** Request quotas (defaults in Settings →
 Requests, per-user overrides on Users, admins exempt), "now available" detection with a
 one-time Discord post when an approved request lands via import or Plex scan, and a

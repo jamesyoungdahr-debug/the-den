@@ -4,10 +4,14 @@
 <h1 align="center">The Den Client</h1>
 <p align="center"><code>PART OF HOLTOS</code></p>
 
-A native KDE desktop app (Qt6 + QML + Kirigami) for [The Den](
-https://github.com/jamesyoungdahr-debug/the-den) — talks to its JSON API instead of
-using a browser. See [ROADMAP.md](ROADMAP.md) for how it's being built and
-[STATUS.md](STATUS.md) for what's done/next right now.
+A native KDE desktop app (Qt6 + QML + Kirigami) for [The Den](../README.md) — talks to
+its JSON API instead of using a browser. See [ROADMAP.md](ROADMAP.md) for how it's being
+built and [STATUS.md](STATUS.md) for what's done/next right now.
+
+Since 2026-09-12 the client lives in the main repo under `client/` (merged from the old
+`the-den-client` repo with its history), so server and client ship from one release tag
+and share the HoltOS design tokens in [`../design/`](../design/). Commands below are run
+from this `client/` directory.
 
 ## Running it for development
 

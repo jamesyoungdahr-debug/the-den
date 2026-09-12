@@ -8,8 +8,9 @@ One self-hosted app in place of the usual four. What Sonarr, Radarr, Prowlarr an
 qBittorrent each do separately, The Den does in a single process: indexer search, a
 movie + TV library, quality-based release picking, a **built-in BitTorrent client**, and a
 background loop that finds, downloads and imports what's missing on its own. No download
-client to install, configure, or keep in sync. See the companion native desktop app:
-[the-den-client](https://github.com/jamesyoungdahr-debug/the-den-client).
+client to install, configure, or keep in sync. The native KDE desktop app lives in this
+repo under [`client/`](client/README.md); the Android app is
+[the-den-android](https://github.com/jamesyoungdahr-debug/the-den-android).
 
 See [ROADMAP.md](ROADMAP.md) for how it was built, milestone by milestone, and
 [STATUS.md](STATUS.md) for what's done/next right now.
@@ -86,6 +87,13 @@ TCP+UDP) on all interfaces; forward that port on your router for better peer con
 This packaging has been run for real through `makepkg -si` + `pacman -U` +
 `systemctl enable --now` on genuine Arch Linux (WSL2, not literally CachyOS -- see
 ROADMAP.md for details) and came up cleanly.
+
+## Repository layout
+
+- `app/`, `migrations/`, `tests/` -- the server (FastAPI + SQLite + libtorrent) and its offline mocks.
+- `client/` -- the KDE desktop client (PySide6 + Kirigami), with its own `PKGBUILD`; run `makepkg -si` from inside `client/`. Merged in from the former `the-den-client` repo on 2026-09-12 with its history.
+- `design/` -- the HoltOS Glass tokens (`tokens.json`) and their generated exports for the web UI, the KDE client and the Android app.
+- `docs/` -- the Requests and UI redesign plans.
 
 ## Discover
 
