@@ -12,7 +12,6 @@ post_install() {
     echo "    there is no login/auth layer yet."
     echo "==> The built-in torrent client listens on TORRENT_PORT (default 6881, TCP+UDP) on"
     echo "    all interfaces; forward it on your router for better peer connectivity."
-    echo "==> The desktop client is installed too: 'The Den' in the app menu, or the-den-client."
 }
 
 post_upgrade() {

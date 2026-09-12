@@ -8,9 +8,10 @@ One self-hosted app in place of the usual four. What Sonarr, Radarr, Prowlarr an
 qBittorrent each do separately, The Den does in a single process: indexer search, a
 movie + TV library, quality-based release picking, a **built-in BitTorrent client**, and a
 background loop that finds, downloads and imports what's missing on its own. No download
-client to install, configure, or keep in sync. The native KDE desktop app lives in this
-repo under [`client/`](client/README.md); the Android app is
-[the-den-android](https://github.com/jamesyoungdahr-debug/the-den-android).
+client to install, configure, or keep in sync. Companion apps: the native KDE desktop
+app [the-den-client](https://github.com/jamesyoungdahr-debug/the-den-client) and the
+Android app [the-den-android](https://github.com/jamesyoungdahr-debug/the-den-android),
+each in its own repo with its own package.
 
 See [ROADMAP.md](ROADMAP.md) for how it was built, milestone by milestone, and
 [STATUS.md](STATUS.md) for what's done/next right now.
@@ -91,7 +92,7 @@ ROADMAP.md for details) and came up cleanly.
 ## Repository layout
 
 - `app/`, `migrations/`, `tests/` -- the server (FastAPI + SQLite + libtorrent) and its offline mocks.
-- `client/` -- the KDE desktop client (PySide6 + Kirigami) in the same HoltOS Glass design as the web UI, with Plex/local sign-in, Discover, Requests, the library, and the built-in torrent client's Downloads. It ships inside the `the-den` package (installed to `/opt/the-den/client`, launched as `the-den-client` or "The Den" in the app menu), so the HoltOS updater only tracks one package. Merged in from the former `the-den-client` repo on 2026-09-12 with its history.
+- The KDE desktop client lives in its own repo, [the-den-client](https://github.com/jamesyoungdahr-debug/the-den-client), with its own package; it carries a copy of the generated tokens from `design/exports/`.
 - `design/` -- the HoltOS Glass tokens (`tokens.json`) and their generated exports for the web UI, the KDE client and the Android app.
 - `docs/` -- the Requests and UI redesign plans.
 

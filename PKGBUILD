@@ -6,22 +6,16 @@
 # is not how packages meant for the official Arch repos or AUR are expected
 # to behave (they must not reach the network during build()).
 pkgname=the-den
-pkgver=0.4.1
+pkgver=0.4.2
 pkgrel=1
-pkgdesc="Unified movie/TV library manager with a built-in torrent client, plus the KDE desktop client (Sonarr+Radarr+Prowlarr+qBittorrent+Overseerr replacement)"
+pkgdesc="Unified movie/TV library manager with a built-in torrent client (Sonarr+Radarr+Prowlarr+qBittorrent replacement)"
 arch=('any')
 url="https://github.com/jamesyoungdahr-debug/the-den"
 license=('unknown')
 # libtorrent-rasterbar ships the Python bindings the built-in torrent client is made of;
-# the venv is created with --system-site-packages so it can import them. The rest are
-# for the desktop client (client/), which ships in this same package so the HoltOS
-# updater only has to track one thing.
-depends=('python' 'libtorrent-rasterbar'
-         'pyside6' 'kirigami' 'qqc2-desktop-style' 'qt6-declarative' 'ttf-nunito' 'ttf-jetbrains-mono')
+# the venv is created with --system-site-packages so it can import them.
+depends=('python' 'libtorrent-rasterbar')
 makedepends=('python-virtualenv')
-# The client used to be its own package (the-den-client, from its own repo).
-conflicts=('the-den-client')
-replaces=('the-den-client')
 backup=('etc/the-den/the-den.env')
 install=the-den.install
 # No compiled binaries of our own here -- the bundled interpreter's debug symbols
@@ -44,14 +38,4 @@ package() {
     install -Dm644 "$startdir/deploy/the-den-sysusers.conf" "$pkgdir/usr/lib/sysusers.d/the-den.conf"
     install -Dm644 "$startdir/deploy/the-den-tmpfiles.conf" "$pkgdir/usr/lib/tmpfiles.d/the-den.conf"
     install -Dm640 "$startdir/deploy/the-den.env.example" "$pkgdir/etc/the-den/the-den.env"
-
-    # The KDE desktop client. Runs on the system Python + PySide6 (not the server's venv,
-    # which has no Qt); the design tokens it reads are generated once for the whole repo.
-    local client_dir="$app_dir/client"
-    install -dm755 "$client_dir"
-    cp -r "$startdir/client/src" "$client_dir/"
-    install -Dm644 "$startdir/design/exports/holt_tokens.py" "$client_dir/src/holt_tokens.py"
-    install -Dm755 "$startdir/client/deploy/the-den-client" "$pkgdir/usr/bin/the-den-client"
-    install -Dm644 "$startdir/client/deploy/the-den-client.desktop" "$pkgdir/usr/share/applications/the-den-client.desktop"
-    install -Dm644 "$startdir/client/assets/logo.svg" "$pkgdir/usr/share/icons/hicolor/scalable/apps/the-den-client.svg"
 }

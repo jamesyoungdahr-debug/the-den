@@ -17,7 +17,7 @@ restores torrents from resume data. See ROADMAP.md's M10 section for the details
 two loopback-swarm gotchas that cost the most debugging time.
 
 ## Currently working on
-**U4 -- the KDE client redesign -- is done** (2026-09-12, `client/`): Plex/local sign-in
+**U4 -- the KDE client redesign -- is done** (2026-09-12, in the `the-den-client` repo): Plex/local sign-in
 with a personal API token, the HoltOS Glass shell, Discover / Search / Detail / Requests
 pages, poster-grid libraries, Downloads on the built-in torrent client, and a Settings
 page that works against the current API again. Verified offscreen (13 pages, zero QML
@@ -25,12 +25,12 @@ warnings, full-app screenshot walk); still to be looked at on a real HoltOS desk
 **Next: U5, the Android app** (`the-den-android`): login + API token, the changed
 settings fields, then Discover and Requests first.
 
-**The KDE client now lives in this repo** (2026-09-12): `client/` is the old
-`the-den-client` repo merged with `git subtree` (history kept). Since v0.4.1 the root
-`PKGBUILD` packages it inside `the-den` (`/opt/the-den/client`, `/usr/bin/the-den-client`,
-desktop entry; `replaces=the-den-client`), because the HoltOS updater only tracks the
-`the-den` package. The Qt/Kirigami/font dependencies are therefore hard deps of `the-den`. U4 happens here from now
-on; the Android app stays in `the-den-android` (Gradle wants its own repo root).
+**Repo layout, settled 2026-09-12:** the KDE client was briefly merged into this repo
+(v0.4.0) and even packaged inside `the-den` (v0.4.1), then split back out: the HoltOS
+updater follows both repos, so `the-den-client` is its own repo and its own package
+again (history kept via `git subtree split`; its U4 work is in there). `the-den` v0.4.2
+is server-only once more. The client carries a copy of `design/exports/holt_tokens.py`;
+regenerate here and copy across when tokens change.
 
 **M11g is done (2026-09-12), which closes M11.** Request quotas (defaults in Settings →
 Requests, per-user overrides on Users, admins exempt), "now available" detection with a

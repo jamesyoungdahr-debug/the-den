@@ -1,5 +1,0 @@
-#!/bin/bash
-# Launcher installed to /usr/bin/the-den-client by the repo-root PKGBUILD (the client
-# ships inside the the-den package). Uses the system Python + PySide6, not the server's
-# venv, which has no Qt.
-exec env QT_QUICK_CONTROLS_STYLE=org.kde.desktop python3 /opt/the-den/client/src/main.py "$@"
