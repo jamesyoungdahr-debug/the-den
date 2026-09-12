@@ -1,0 +1,92 @@
+THE DEN - WORKING CONTEXT
+=========================
+Kept up to date by Claude at every milestone so a fresh session can resume without
+the chat history. Newest entries at the top of each section. Last updated: 2026-09-12.
+
+REPOS AND VERSIONS
+------------------
+- the-den            C:\projects\The den            github.com/jamesyoungdahr-debug/the-den        v0.4.3 (commit e5b67f7)
+- the-den-client     C:\projects\the-den-client     (KDE, PySide6/Kirigami)                         v0.4.3 (commit ea54296)
+- the-den-android    C:\projects\the-den-android    (Kotlin/Compose)                                 master 0bc47b5 + uncommitted U5 work
+- Rule: the-den and the-den-client stay SEPARATE repos and SEPARATE packages; the HoltOS updater tracks both.
+- Git identity for commits: user.name Liam, user.email jamesyoungdahr@gmail.com (set locally in all three repos).
+
+WHAT THE DEN IS
+---------------
+FastAPI + SQLAlchemy/Alembic (SQLite) + Jinja2 + APScheduler media manager with a built-in
+libtorrent client, Discover (TMDB), Plex login + library scan, Requests with quotas, and the
+HoltOS Glass UI. Companion apps: KDE client (the-den-client) and Android app (the-den-android).
+
+LAST TASK: U5 - ANDROID REDESIGN (COMPLETE 2026-09-12, v0.5.0). No task in progress.
+------------------------------------------------
+Plan: the-den/docs/ui-redesign-plan.md (U5 row). Target version 0.5.0 (versionCode 5).
+Done so far (all uncommitted in the-den-android):
+- app/build.gradle.kts: versionCode 5 / versionName 0.5.0; deps added: material-icons-extended,
+  material3-window-size-class, io.coil-kt:coil-compose:2.7.0.
+- network/: ApiClient (singleton, SharedPreferences "the-den", session StateFlow), ApiClientFactory
+  (OkHttp, X-Api-Key interceptor, in-memory cookie jar), TheDenApi (Retrofit + kotlinx-serialization,
+  incl. libraryMovies()/librarySeries() returning JsonObject lists), ErrorSupport.
+- ui/theme/: HoltTokens.kt (generated from the-den design/exports), Theme.kt (TheDenTheme, Nunito,
+  JetBrainsMono bundled in res/font).
+- ui/holt/: Components.kt (Ground, GlassPanel, Badge, Eyebrow, Meta, PageTitle, HoltButton, Chip,
+  HoltTextField, HoltRow, StatusBanner, EmptyState, RingMark, Skeleton, ProgressBar, Avatar), Poster.kt
+  (posterUrl with ?api_key= for the Plex thumb proxy, PosterCard, Rail).
+- vm/: Common.kt (ListViewModel<T> base, seq guard), SessionViewModel, DiscoverViewModels,
+  RequestsViewModel, LibraryViewModels, AdminViewModels.
+- ui/screens/: LoginScreen, DiscoverScreen (+SearchScreen), DetailScreen (season bottom sheet),
+  RequestsScreen, LibraryScreens (Library tabs / Episodes / Candidates / Calendar), AdminScreens
+  (Downloads / Indexers / Settings / More).
+- MainActivity.kt: NavigationBar on phones, NavigationRail >= 600dp, tabs Discover/Requests/Library/More,
+  admin pages behind More, NavHost routes, login gating.
+- app/src/test/.../LiveBackendTest.kt: view models against a live backend (DEN_URL, DEN_API_TOKEN).
+NOT yet done:
+- (DONE 2026-09-12) First compile: assembleDebug BUILD SUCCESSFUL, APK at app/build/outputs/apk/debug/app-debug.apk.
+- (DONE 2026-09-12) testDebugUnitTest: LiveBackendTest 5/5 pass against the dev backend (owner token).
+- (DONE 2026-09-12) Emulator walk (AVD den_u5, Pixel 7, API 35, headless; script scratchpad/u5/walk.sh): 12 screens, no crashes.
+  Found and fixed 3 layout defects (Requests action row -> FlowRow, Detail header aligned to backdrop bottom, TopBar
+  double status-bar padding removed); re-verified on the emulator, still no crashes.
+  Note: emulator must be launched with setsid/nohup from WSL or it dies with the shell; app reaches the backend at http://10.0.2.2:8686;
+  seed prefs via adb run-as com.holtos.theden shared_prefs/the-den.xml (baseUrl, apiToken).
+- (DONE 2026-09-12) Android README/STATUS/ROADMAP/HANDOFF updated; U5 row in the-den docs/ui-redesign-plan.md marked done.
+- (DONE 2026-09-12) git identity set in the Android repo (Liam / jamesyoungdahr@gmail.com).
+- Emulator + system-images;android-35;google_apis;x86_64 installed in /root/android-sdk (WSL).
+- (DONE 2026-09-12) Committed 62134f4, tagged v0.5.0, pushed to GitHub. U5 COMPLETE.
+
+BUILD / DEV ENVIRONMENT
+-----------------------
+- Everything runs in WSL Ubuntu (root). No Python on Windows.
+- the-den venv: ~/.venvs/the-den (apt libtorrent). Dev backend: 127.0.0.1:8686 with AUTH_REQUIRED=true.
+  Mock Plex on 8084 via the scratchpad script m11c/start_dev_plex.sh (never put the word "uvicorn" in
+  the outer wsl command line). Owner token: ~/the-den-dev/owner-token.txt; owner cookies
+  ~/the-den-dev/v-owner.txt. E2E: scratchpad/m11g/full.sh (72 checks; kills the dev stack, restart after).
+- KDE client: system PySide6 6.10.2 + Kirigami 6.24; offscreen harness + screenshot walk in the client repo.
+- Android: JDK 17 at /usr/lib/jvm/java-17-openjdk-amd64, SDK at /root/android-sdk (platform 35,
+  build-tools 35.0.0). Build from /mnt/c/projects/the-den-android:
+    export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 ANDROID_HOME=/root/android-sdk
+    ./gradlew --no-daemon -q assembleDebug -Dorg.gradle.vfs.watch=false
+    ./gradlew --no-daemon -q testDebugUnitTest -Dorg.gradle.vfs.watch=false
+  local.properties (sdk.dir=/root/android-sdk) is gitignored. gradlew must be LF (sed -i 's/\r$//').
+
+RECENTLY COMPLETED MILESTONES
+-----------------------------
+- 0.4.3 (both repos): library pages on web + KDE client now show Plex-only titles (library_service
+  merged_movies/merged_series, /api/library/movies|series, /api/plex/thumb/{rating_key} proxy, PlexMedia.thumb
+  column + migration b8c9d0e1f2a3). Web sidebar scrolls on short windows. Verified e2e 72/72.
+- 0.4.2: repos split back apart after a brief merge; separate PKGBUILDs.
+- U4: HoltOS Glass redesign of the KDE client (13 pages, offscreen screenshot walk).
+- M11g: request quotas, "available" detection, sign-in toggle.
+
+RULES AND DECISIONS TO REMEMBER
+-------------------------------
+- Claude never types API keys/tokens into fields or files. The user pasted the TMDB key into
+  app/config.py themselves and approved committing it (non-commercial use).
+- Plex owner token stays server-side. The thumb proxy accepts ?api_key= on purpose because <img>
+  and QML Image cannot send headers.
+- Push to GitHub and tag a release when a milestone lands; the user says "push and tag".
+- Keep this file (CONTEXT.txt) updated after EVERY completed to-do item, and before context compaction.
+
+STILL OPEN / LATER
+------------------
+- Real-desktop pass of the KDE client on HoltOS.
+- Nothing has been tested against real plex.tv (only the mock).
+- Reset the in-app Browser pane viewport to the desktop preset when next used.
