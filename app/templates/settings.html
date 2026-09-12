@@ -10,6 +10,8 @@
   </div>
 
   {% if saved %}<div class="holt-message holt-message-positive">Saved. Changes to the torrent client and automation interval are live already.</div>{% endif %}
+  {% if notice %}<div class="holt-message holt-message-positive">{{ notice }}</div>{% endif %}
+  {% if error %}<div class="holt-message holt-message-warning">{{ error }}</div>{% endif %}
 
   <div class="den-settings">
     <nav class="den-settings-index holt-glass">
@@ -99,11 +101,18 @@
         <div class="holt-field">
           <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-family:var(--holt-font-core);font-size:13px;color:var(--holt-ink-70)"><input type="checkbox" name="allow_any" value="1" {% if s.plex_allow_any_account %}checked{% endif %} style="width:auto;margin:0"> Allow any Plex account to sign in (not just the people this server is shared with)</label>
         </div>
-        <div style="display:flex;gap:8px;align-items:center">
+        <div class="holt-field">
+          <label>Library scan every (minutes)</label>
+          <input type="number" name="scan_interval" value="{{ s.plex_scan_interval_minutes }}" min="5" style="max-width:160px">
+          <div class="holt-meta">Last scan: {% if plex_last_scan_at %}{{ plex_last_scan_at.strftime('%Y-%m-%d %H:%M') }} UTC · {{ plex_last_scan_result }}{% else %}never{% endif %}. Discover and Requests use the scan to know what's already on Plex.</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <button type="submit" class="holt-btn holt-btn-secondary">Save Plex settings</button>
+          <button type="submit" form="plex-scan" class="holt-btn holt-btn-secondary">Scan now</button>
           <button type="submit" form="plex-disconnect" class="holt-btn holt-btn-quiet" onclick="return confirm('Disconnect the Plex owner account? Shared users will no longer be able to sign in until it is reconnected.')">Disconnect</button>
         </div>
       </form>
+      <form method="post" action="/ui/settings/plex/scan" id="plex-scan"></form>
       <form method="post" action="/ui/settings/plex/disconnect" id="plex-disconnect"></form>
       <script>
         (async function () {

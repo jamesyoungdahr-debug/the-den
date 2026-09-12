@@ -4,6 +4,8 @@
 {% block content %}
   {% if notice %}<div class="holt-message holt-message-positive">{{ notice }}</div>{% endif %}
   {% if error %}<div class="holt-message holt-message-warning">{{ error }}</div>{% endif %}
+  {% set av = item.availability %}
+  {% set my_request = (item.requests | selectattr('mine') | list | first) %}
 
   <section class="den-detail-hero" {% if item.backdrop_path %}style="background-image:url('https://image.tmdb.org/t/p/w1280{{ item.backdrop_path }}')"{% endif %}>
     <div class="den-detail-hero-inner">
@@ -22,13 +24,42 @@
         {% if item.genres %}<div style="display:flex;gap:8px;flex-wrap:wrap">{% for g in item.genres %}<span class="holt-chip" style="padding:5px 10px;font-size:11.5px">{{ g }}</span>{% endfor %}</div>{% endif %}
         <div class="holt-hero-actions">
           {{ badge(item.status) }}
-          {% if item.library %}
-            <a class="holt-btn holt-btn-secondary" href="{{ item.library_href }}">View in library</a>
-          {% elif is_admin %}
-            <form method="post" action="/ui/discover/{{ kind }}/{{ item.tmdb_id }}/add" style="margin:0"><button type="submit" class="holt-btn holt-btn-primary">Add to library</button></form>
+          {% if item.status == 'available' and item.on_plex and not item.library %}<span class="holt-badge holt-badge-solid holt-badge-available"><span class="dot"></span>on Plex</span>{% endif %}
+
+          {% if kind == 'movie' %}
+            {% if item.library %}
+              <a class="holt-btn holt-btn-secondary" href="/library">View in library</a>
+            {% elif av.available %}
+              <span class="holt-btn holt-btn-secondary" style="cursor:default">Already on Plex</span>
+            {% elif my_request %}
+              <span class="holt-btn holt-btn-secondary" style="cursor:default">Requested · {{ my_request.status }}</span>
+            {% elif item.requests %}
+              <span class="holt-btn holt-btn-secondary" style="cursor:default">Requested by {{ item.requests[0].by }}</span>
+            {% elif is_admin %}
+              <form method="post" action="/ui/discover/movie/{{ item.tmdb_id }}/add" style="margin:0"><button type="submit" class="holt-btn holt-btn-primary">Add to library</button></form>
+            {% elif current_user %}
+              <form method="post" action="/ui/requests" style="margin:0"><input type="hidden" name="media_type" value="movie"><input type="hidden" name="tmdb_id" value="{{ item.tmdb_id }}"><button type="submit" class="holt-btn holt-btn-primary">Request</button></form>
+            {% else %}
+              <a class="holt-btn holt-btn-primary" href="/login?next=/discover/movie/{{ item.tmdb_id }}">Sign in to request</a>
+            {% endif %}
           {% else %}
-            <button class="holt-btn holt-btn-primary" disabled title="Requests arrive in the next update">Request</button>
+            {% if item.requestable_seasons %}
+              {% if is_admin and not item.library %}
+                <form method="post" action="/ui/discover/tv/{{ item.tmdb_id }}/add" style="margin:0"><button type="submit" class="holt-btn holt-btn-primary">Add whole series</button></form>
+                <a class="holt-btn holt-btn-secondary" href="#" data-open-dialog="request-seasons">Pick seasons</a>
+              {% elif current_user %}
+                <a class="holt-btn holt-btn-primary" href="#" data-open-dialog="request-seasons">{{ 'Add seasons' if is_admin else 'Request' }}</a>
+              {% else %}
+                <a class="holt-btn holt-btn-primary" href="/login?next=/discover/tv/{{ item.tmdb_id }}">Sign in to request</a>
+              {% endif %}
+            {% elif my_request %}
+              <span class="holt-btn holt-btn-secondary" style="cursor:default">Requested · {{ my_request.status }}</span>
+            {% else %}
+              <span class="holt-btn holt-btn-secondary" style="cursor:default">{{ 'Every season is available or on its way' if item.library or av.plex else 'Nothing to request' }}</span>
+            {% endif %}
+            {% if item.library %}<a class="holt-btn holt-btn-secondary" href="/ui/series/{{ item.library.id }}">Episodes</a>{% endif %}
           {% endif %}
+
           {% if item.trailer_key %}<a class="holt-btn holt-btn-quiet" href="https://www.youtube.com/watch?v={{ item.trailer_key }}" target="_blank" rel="noopener">Trailer ↗</a>{% endif %}
           {% if item.imdb_id %}<a class="holt-btn holt-btn-quiet" href="https://www.imdb.com/title/{{ item.imdb_id }}/" target="_blank" rel="noopener">IMDb ↗</a>{% endif %}
         </div>
@@ -61,17 +92,19 @@
         <div class="holt-row-list">
           {% for s in item.seasons if s.season_number > 0 %}
           {% set lib = item.library.seasons.get(s.season_number) if item.library else None %}
+          {% set on_plex = av.plex and av.plex.seasons.get(s.season_number) %}
           <div class="holt-row">
             <div class="holt-thumb" style="width:36px;height:54px">{% if s.poster_path %}<img src="https://image.tmdb.org/t/p/w92{{ s.poster_path }}" alt="" loading="lazy">{% endif %}</div>
             <div class="holt-row-main">
               <div class="holt-row-title">{{ s.name or 'Season ' ~ s.season_number }}</div>
-              <div class="holt-row-meta">{{ s.episode_count }} episodes{% if s.air_date %} · from {{ s.air_date }}{% endif %}</div>
+              <div class="holt-row-meta">{{ s.episode_count }} episodes{% if s.air_date %} · from {{ s.air_date }}{% endif %}{% if on_plex %} · {{ on_plex }} on Plex{% endif %}</div>
             </div>
-            {% if lib %}
-              {% if lib.total and lib.have == lib.total %}<span class="holt-badge holt-badge-available"><span class="dot"></span>complete</span>
-              {% elif lib.have %}<span class="holt-badge holt-badge-partial"><span class="dot"></span>{{ lib.have }}/{{ lib.total }}</span>
-              {% else %}<span class="holt-badge holt-badge-pending"><span class="dot"></span>wanted</span>{% endif %}
-            {% else %}<span class="holt-badge holt-badge-missing"><span class="dot"></span>not in library</span>{% endif %}
+            {% if lib and lib.total and lib.have == lib.total %}<span class="holt-badge holt-badge-available"><span class="dot"></span>complete</span>
+            {% elif on_plex %}<span class="holt-badge holt-badge-available"><span class="dot"></span>on Plex</span>
+            {% elif lib and lib.have %}<span class="holt-badge holt-badge-partial"><span class="dot"></span>{{ lib.have }}/{{ lib.total }}</span>
+            {% elif lib and lib.monitored %}<span class="holt-badge holt-badge-pending"><span class="dot"></span>wanted</span>
+            {% elif s.season_number in item.requestable_seasons %}<span class="holt-badge holt-badge-missing"><span class="dot"></span>not in library</span>
+            {% else %}<span class="holt-badge holt-badge-pending"><span class="dot"></span>requested</span>{% endif %}
           </div>
           {% endfor %}
         </div>
@@ -83,18 +116,53 @@
       <div class="holt-panel-head"><div class="holt-eyebrow">Availability</div></div>
       <div style="display:flex;flex-direction:column;gap:10px;font-size:12.5px">
         <div style="display:flex;justify-content:space-between;align-items:center"><span style="color:var(--holt-ink-70)">The Den library</span>
-          {% if item.status == 'available' %}<span class="holt-badge holt-badge-available"><span class="dot"></span>{{ 'have' if kind == 'movie' else 'complete' }}</span>
-          {% elif item.status == 'partial' %}<span class="holt-badge holt-badge-partial"><span class="dot"></span>{{ item.library.have }}/{{ item.library.total }}</span>
-          {% elif item.status == 'wanted' %}<span class="holt-badge holt-badge-pending"><span class="dot"></span>wanted</span>
-          {% else %}<span class="holt-badge holt-badge-missing"><span class="dot"></span>not added</span>{% endif %}
+          {% if kind == 'movie' %}
+            {% if av.den and av.den.has_file %}<span class="holt-badge holt-badge-available"><span class="dot"></span>have</span>
+            {% elif av.den %}<span class="holt-badge holt-badge-pending"><span class="dot"></span>wanted</span>
+            {% else %}<span class="holt-badge holt-badge-missing"><span class="dot"></span>not added</span>{% endif %}
+          {% else %}
+            {% if av.den and av.den.total and av.den.have == av.den.total %}<span class="holt-badge holt-badge-available"><span class="dot"></span>complete</span>
+            {% elif av.den and av.den.have %}<span class="holt-badge holt-badge-partial"><span class="dot"></span>{{ av.den.have }}/{{ av.den.total }}</span>
+            {% elif av.den %}<span class="holt-badge holt-badge-pending"><span class="dot"></span>wanted</span>
+            {% else %}<span class="holt-badge holt-badge-missing"><span class="dot"></span>not added</span>{% endif %}
+          {% endif %}
         </div>
-        <div style="display:flex;justify-content:space-between;align-items:center"><span style="color:var(--holt-ink-70)">Plex</span><span class="holt-meta" style="line-height:1">scan arrives in M11e</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center"><span style="color:var(--holt-ink-70)">Plex</span>
+          {% if av.plex %}<span class="holt-badge holt-badge-available"><span class="dot"></span>{% if kind == 'tv' and av.plex.seasons %}{{ av.plex.seasons|length }} season{{ '' if av.plex.seasons|length == 1 else 's' }}{% else %}on Plex{% endif %}</span>
+          {% else %}<span class="holt-badge holt-badge-missing"><span class="dot"></span>not on Plex</span>{% endif %}
+        </div>
+        {% for r in item.requests %}
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span style="color:var(--holt-ink-70)">Request by {{ 'you' if r.mine else r.by }}{% if r.seasons %} <span class="holt-meta">{% for n in r.seasons %}S{{ '%02d'|format(n) }} {% endfor %}</span>{% endif %}</span><span class="holt-badge holt-badge-{{ 'pending' if r.status == 'pending' else 'processing' }}"><span class="dot"></span>{{ r.status }}</span></div>
+        {% endfor %}
       </div>
-      {% if item.status == 'wanted' and is_admin %}
-      <div class="holt-meta" style="margin-top:var(--holt-space-3);line-height:1.5">Automation searches your indexers for wanted titles every cycle.</div>
-      {% endif %}
+      {% if is_admin and item.requests %}<a class="holt-btn holt-btn-quiet holt-btn-sm" href="/requests" style="margin-top:var(--holt-space-3)">Open requests →</a>{% endif %}
+      {% if item.status == 'wanted' %}<div class="holt-meta" style="margin-top:var(--holt-space-3);line-height:1.5">Automation searches your indexers for wanted titles every cycle.</div>{% endif %}
     </aside>
   </div>
+
+  {% if kind == 'tv' and item.requestable_seasons and current_user %}
+  <dialog id="request-seasons" class="holt-dialog holt-glass-float">
+    <form method="post" action="/ui/requests">
+      <input type="hidden" name="media_type" value="tv"><input type="hidden" name="tmdb_id" value="{{ item.tmdb_id }}">
+      <div class="holt-eyebrow" style="margin-bottom: var(--holt-space-3)">{{ 'Add seasons of' if is_admin else 'Request seasons of' }} {{ item.title }}</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom: var(--holt-space-3)">
+        {% for s in item.seasons if s.season_number > 0 %}
+        {% set can = s.season_number in item.requestable_seasons %}
+        <label class="holt-row" style="cursor:{{ 'pointer' if can else 'default' }};opacity:{{ '1' if can else '.5' }};padding:10px 12px">
+          <input type="checkbox" name="seasons" value="{{ s.season_number }}" {% if can %}checked{% else %}disabled{% endif %} style="width:16px;height:16px;margin:0;accent-color:var(--holt-current)">
+          <div class="holt-row-main"><div class="holt-row-title">{{ s.name or 'Season ' ~ s.season_number }}</div><div class="holt-row-meta">{{ s.episode_count }} episodes{% if s.air_date %} · {{ s.air_date }}{% endif %}</div></div>
+          {% if not can %}<span class="holt-badge holt-badge-available"><span class="dot"></span>{{ 'have it' if s.season_number in av.available_seasons else 'on its way' }}</span>{% endif %}
+        </label>
+        {% endfor %}
+      </div>
+      <div class="holt-meta" style="margin-bottom: var(--holt-space-3)">{% if is_admin %}Added straight to the library; only these seasons will be searched for.{% else %}An admin approves requests; you'll see the status here and on Requests.{% endif %}</div>
+      <div style="display:flex; gap: 8px; justify-content: flex-end">
+        <button type="button" class="holt-btn holt-btn-quiet" data-close-dialog>Cancel</button>
+        <button type="submit" class="holt-btn holt-btn-primary">{{ 'Add selected' if is_admin else 'Request selected' }}</button>
+      </div>
+    </form>
+  </dialog>
+  {% endif %}
 
   {{ rail("Recommended", item.recommendations, "because you looked at " ~ item.title) }}
 {% endblock %}

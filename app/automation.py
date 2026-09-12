@@ -52,7 +52,7 @@ async def _grab_missing_movies(db: Session) -> None:
 
 async def _grab_missing_episodes(db: Session) -> None:
     default_profile = db.query(QualityProfile).first()
-    for episode in db.query(Episode).filter(Episode.has_file == False).all():  # noqa: E712
+    for episode in db.query(Episode).filter(Episode.has_file == False, Episode.monitored == True).all():  # noqa: E712
         if _has_active_download(db, episode_id=episode.id):
             continue
         series = db.get(Series, episode.series_id)

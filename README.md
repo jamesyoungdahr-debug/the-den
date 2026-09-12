@@ -95,8 +95,21 @@ have), then trending, popular and upcoming movies, popular series and what's on 
 Every card carries your library's status, search covers movies and series together, and
 the detail pages show cast, trailer, seasons and recommendations with an availability
 card. Admins add a title to the library from there; series are matched to TVmaze (by TVDB
-id, IMDb id, then exact title) for their episode lists. Users get a Request button once
-M11f lands. `tests/mock_tmdb.py` stands in for TMDB offline (`TMDB_BASE_URL`).
+id, IMDb id, then exact title) for their episode lists. `tests/mock_tmdb.py` stands in for
+TMDB offline (`TMDB_BASE_URL`).
+
+## Plex and Requests
+
+Connect the Plex account that owns your server in Settings → Plex, pick the server and the
+movie/show libraries, and The Den scans them on a timer (default every 30 minutes, or
+**Scan now**). Anything already on Plex shows as *available* on Discover, and the detail
+page lists which seasons Plex has. Shared users of that server can sign in with Plex and
+**request** a movie or particular seasons of a series from the detail page; The Den refuses
+requests for what is already on Plex or in the library. Admins get a pending badge in the
+sidebar and approve or decline (with a note) on **Requests**; an approval adds the title to
+the library with only the requested seasons monitored, so automation searches for just those.
+Admins and users marked *auto-approve* skip the queue. JSON twins live at `/api/requests`
+and `/api/plex/scan`.
 
 ## How the built-in torrent client works
 

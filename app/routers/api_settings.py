@@ -38,6 +38,7 @@ class SettingsUpdate(BaseModel):
     plex_url: str | None = None
     plex_sections: list[str] | None = None
     plex_allow_any_account: bool | None = None
+    plex_scan_interval_minutes: int | None = Field(default=None, ge=5)
 
 
 @router.get("/settings")
@@ -72,6 +73,9 @@ def get_settings(db: Session = Depends(get_db)):
         "plex_url": s.plex_url,
         "plex_sections": s.plex_sections,
         "plex_allow_any_account": s.plex_allow_any_account,
+        "plex_scan_interval_minutes": s.plex_scan_interval_minutes,
+        "plex_last_scan_at": row.plex_last_scan_at.isoformat() if row.plex_last_scan_at else None,
+        "plex_last_scan_result": row.plex_last_scan_result,
     }
 
 
@@ -87,6 +91,11 @@ def apply_runtime_changes(old: settings_module.EffectiveSettings, new: settings_
             pass
     if new.engine_config() != old.engine_config():
         engine.apply_config(new.engine_config())
+    if new.plex_scan_interval_minutes != old.plex_scan_interval_minutes:
+        try:
+            scheduler.reschedule_plex(new.plex_scan_interval_minutes)
+        except Exception:
+            pass
 
 
 @router.post("/settings")
@@ -122,6 +131,8 @@ def save_settings(payload: SettingsUpdate, db: Session = Depends(get_db)):
         row.plex_sections = json.dumps(payload.plex_sections) if payload.plex_sections else None
     if payload.plex_allow_any_account is not None:
         row.plex_allow_any_account = payload.plex_allow_any_account
+    if payload.plex_scan_interval_minutes is not None:
+        row.plex_scan_interval_minutes = payload.plex_scan_interval_minutes
 
     db.commit()
     apply_runtime_changes(old, settings_module.effective(db))

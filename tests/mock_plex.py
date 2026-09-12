@@ -144,6 +144,41 @@ def library_sections(x_plex_token: str | None = Header(default=None)):
     ]}}
 
 
+# The library: real TMDB ids so the scan lines up with live Discover pages.
+#   Dune: Part Two (tmdb 693134) and Inception (27205, legacy agent guid) in Movies;
+#   Severance (tmdb 95396, tvdb 371980) with season 1 complete in TV Shows.
+LIBRARY = {
+    "1": [
+        {"ratingKey": "101", "type": "movie", "title": "Dune: Part Two", "year": 2024,
+         "Guid": [{"id": "tmdb://693134"}, {"id": "imdb://tt15239678"}]},
+        {"ratingKey": "102", "type": "movie", "title": "Inception", "year": 2010,
+         "guid": "com.plexapp.agents.themoviedb://27205?lang=en"},
+    ],
+    "2": [
+        {"ratingKey": "201", "type": "show", "title": "Severance", "year": 2022,
+         "Guid": [{"id": "tmdb://95396"}, {"id": "tvdb://371980"}, {"id": "imdb://tt11280740"}]},
+    ],
+}
+SEASONS = {"201": [{"type": "season", "index": 1, "leafCount": 9}]}
+
+
+@app.get("/library/sections/{key}/all")
+def section_items(key: str, x_plex_token: str | None = Header(default=None), x_plex_container_start: int = Header(default=0),
+                  x_plex_container_size: int = Header(default=100)):
+    if _account_for_token(x_plex_token) is None:
+        return Response(status_code=401)
+    items = LIBRARY.get(key, [])
+    page = items[x_plex_container_start:x_plex_container_start + x_plex_container_size]
+    return {"MediaContainer": {"totalSize": len(items), "size": len(page), "Metadata": page}}
+
+
+@app.get("/library/metadata/{rating_key}/children")
+def children(rating_key: str, x_plex_token: str | None = Header(default=None)):
+    if _account_for_token(x_plex_token) is None:
+        return Response(status_code=401)
+    return {"MediaContainer": {"Metadata": SEASONS.get(rating_key, [])}}
+
+
 @app.get("/")
 def root():
     return RedirectResponse("/auth")

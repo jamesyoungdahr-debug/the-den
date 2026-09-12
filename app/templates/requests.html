@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title_suffix %} — Requests{% endblock %}
+{% block content %}
+  <div class="holt-page-head">
+    <div>
+      <h1 class="holt-page-title">Requests</h1>
+      <div class="holt-meta">{% if is_admin %}{{ pending_total }} waiting on you · {{ items|length }} shown{% else %}Your requests · {{ items|length }}{% endif %}</div>
+    </div>
+    <div class="holt-toolbar">
+      <a class="holt-chip {{ 'is-on' if status == 'all' else '' }}" href="/requests">All</a>
+      <a class="holt-chip {{ 'is-on' if status == 'pending' else '' }}" href="/requests?status=pending">Pending{% if is_admin and pending_total %}<span class="holt-badge" style="color:inherit">{{ pending_total }}</span>{% endif %}</a>
+      <a class="holt-chip {{ 'is-on' if status == 'approved' else '' }}" href="/requests?status=approved">Approved</a>
+      <a class="holt-chip {{ 'is-on' if status == 'declined' else '' }}" href="/requests?status=declined">Declined</a>
+      <a class="holt-chip {{ 'is-on' if status == 'available' else '' }}" href="/requests?status=available">Available</a>
+    </div>
+  </div>
+
+  {% if notice %}<div class="holt-message holt-message-positive">{{ notice }}</div>{% endif %}
+  {% if error %}<div class="holt-message holt-message-warning">{{ error }}</div>{% endif %}
+
+  {% set tone = {"pending": "pending", "approved": "processing", "declined": "error", "available": "available"} %}
+  <div class="holt-row-list">
+    {% for r in items %}
+    <div class="holt-row {{ 'is-pending' if r.status == 'pending' else '' }}" style="{{ 'opacity:.75' if r.status == 'declined' else '' }}">
+      <a class="holt-thumb" href="{{ r.href }}">{% if r.poster_path %}<img src="{{ r.poster_path|poster }}" alt="" loading="lazy">{% endif %}</a>
+      <div class="holt-row-main">
+        <div class="holt-row-title"><a href="{{ r.href }}" style="color:inherit">{{ r.title }}</a> <span class="holt-meta">{{ r.year or '' }}</span></div>
+        <div class="holt-row-meta">
+          {{ 'Movie' if r.media_type == 'movie' else 'Series' }}
+          {% if r.status == 'pending' %} · requested {{ r.created_at[:10] if r.created_at else '' }}
+          {% elif r.status == 'approved' %} · approved by {{ r.decided_by or 'admin' }}{% if r.display_status != 'available' %} · being looked for{% endif %}
+          {% elif r.status == 'declined' %} · declined by {{ r.decided_by or 'admin' }}{% if r.note %} · “{{ r.note }}”{% endif %}{% endif %}
+        </div>
+      </div>
+      {% if is_admin and r.requested_by %}
+      <div style="display:flex;align-items:center;gap:8px;width:150px"><span class="holt-avatar" style="width:24px;height:24px;font-size:10px">{{ r.requested_by.initial }}</span><span style="font-size:12.5px;font-weight:700">{{ r.requested_by.username }}</span></div>
+      {% endif %}
+      <div style="width:120px;display:flex;gap:4px;flex-wrap:wrap">{% for n in r.seasons %}<span class="holt-chip" style="padding:4px 8px;font-family:var(--holt-font-mono);font-size:10px">S{{ '%02d'|format(n) }}</span>{% endfor %}</div>
+      <span class="holt-badge holt-badge-{{ tone.get(r.display_status, 'missing') }}" style="width:110px"><span class="dot"></span>{{ r.display_status }}</span>
+      <div class="holt-row-actions">
+        {% if is_admin and r.status == 'pending' %}
+        <form method="post" action="/ui/requests/{{ r.id }}/approve" style="margin:0"><button type="submit" class="holt-btn holt-btn-primary holt-btn-sm">Approve</button></form>
+        <a href="#" class="holt-btn holt-btn-quiet holt-btn-sm" data-open-dialog="decline-{{ r.id }}">Decline</a>
+        {% elif r.status == 'pending' and current_user and r.requested_by and r.requested_by.id == current_user.id %}
+        <form method="post" action="/ui/requests/{{ r.id }}/delete" style="margin:0"><button type="submit" class="holt-btn holt-btn-quiet holt-btn-sm">Withdraw</button></form>
+        {% elif r.series_id %}
+        <a class="holt-btn holt-btn-quiet holt-btn-sm" href="/ui/series/{{ r.series_id }}">Episodes</a>
+        {% elif is_admin and r.status != 'pending' %}
+        <form method="post" action="/ui/requests/{{ r.id }}/delete" style="margin:0" onsubmit="return confirm('Remove this request from the list?')"><button type="submit" class="holt-btn holt-btn-quiet holt-btn-sm">Remove</button></form>
+        {% endif %}
+      </div>
+    </div>
+    {% if is_admin and r.status == 'pending' %}
+    <dialog id="decline-{{ r.id }}" class="holt-dialog holt-glass-float">
+      <form method="post" action="/ui/requests/{{ r.id }}/decline">
+        <div class="holt-eyebrow" style="margin-bottom: var(--holt-space-3)">Decline {{ r.title }}</div>
+        <div class="holt-field"><label>Reason (optional, shown to the requester)</label><input name="note" maxlength="300" placeholder="e.g. already on Plex under a different title"></div>
+        <div style="display:flex; gap: 8px; justify-content: flex-end">
+          <button type="button" class="holt-btn holt-btn-quiet" data-close-dialog>Cancel</button>
+          <button type="submit" class="holt-btn holt-btn-secondary">Decline</button>
+        </div>
+      </form>
+    </dialog>
+    {% endif %}
+    {% else %}
+    <div class="holt-empty holt-panel">
+      <div class="holt-empty-title">{% if is_admin and status in ('all', 'pending') %}Nothing waiting on you{% else %}No requests here{% endif %}</div>
+      <div class="holt-body">{% if is_admin %}Everything's fine.{% else %}Find something on Discover and hit Request.{% endif %}</div>
+      <a class="holt-btn holt-btn-secondary holt-btn-sm" href="/">Discover</a>
+    </div>
+    {% endfor %}
+  </div>
+{% endblock %}

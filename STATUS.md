@@ -17,6 +17,17 @@ restores torrents from resume data. See ROADMAP.md's M10 section for the details
 two loopback-swarm gotchas that cost the most debugging time.
 
 ## Currently working on
+**M11e Plex scan + M11f Requests are done** (2026-09-11): the scheduler walks the Plex
+libraries picked in Settings into `plex_media` (TMDB/TVDB/IMDb ids, per-season episode
+counts), so Discover and the detail pages know what is already on Plex; signed-in users
+request movies or specific seasons from the detail page, admins approve or decline (with a
+note) on `/requests`, approvals land in the library with only the wanted seasons monitored,
+and automation only grabs monitored episodes. Requests that are already on Plex or in the
+library are refused up front. `/api/requests` and `/api/plex/scan` for the clients. 36-check
+e2e (`tests/mock_plex.py` now includes a mock PMS library). **Next is M11g** (request
+limits, API tokens for the companion apps, flipping `AUTH_REQUIRED`), then the client
+redesigns U4/U5. Still not tried against real plex.tv.
+
 **M11d Discover is done** (2026-09-11): TMDB-driven home (hero, Recommended for you, trending,
 popular, upcoming, on the air), multi-search, movie/series detail pages with cast, trailer,
 seasons, availability and recommendations, admin add-to-library with TMDB→TVmaze mapping,

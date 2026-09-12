@@ -28,12 +28,29 @@ def _static_version() -> str:
         return "0"
 
 
+def _pending_requests(request: Request) -> int:
+    """Badge count for the sidebar: pending requests, admins only. One COUNT per page."""
+    if not auth.is_admin(request):
+        return 0
+    from app.db import SessionLocal
+    from app.models import MediaRequest
+
+    db = SessionLocal()
+    try:
+        return db.query(MediaRequest).filter(MediaRequest.status == "pending").count()
+    except Exception:
+        return 0
+    finally:
+        db.close()
+
+
 def _request_context(request: Request) -> dict:
     user = getattr(request.state, "user", None)
     return {
         "current_user": user,
         "is_admin": auth.is_admin(request),
         "auth_required": config.AUTH_REQUIRED,
+        "pending_requests": _pending_requests(request),
     }
 
 

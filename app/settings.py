@@ -31,6 +31,7 @@ class EffectiveSettings:
     plex_url: str
     plex_sections: list[str]
     plex_allow_any_account: bool
+    plex_scan_interval_minutes: int
 
     def engine_config(self) -> EngineConfig:
         return EngineConfig(
@@ -86,4 +87,5 @@ def effective(db: Session) -> EffectiveSettings:
         plex_url=_pick(row.plex_url, config.PLEX_URL),
         plex_sections=json.loads(row.plex_sections) if row.plex_sections else [],
         plex_allow_any_account=bool(row.plex_allow_any_account),
+        plex_scan_interval_minutes=_pick(row.plex_scan_interval_minutes, config.PLEX_SCAN_INTERVAL_MINUTES),
     )

@@ -17,7 +17,7 @@
 
   {#- Nav definition: one place, rendered three ways (sidebar, tab bar, more-sheet). -#}
   {% set nav_groups = [
-    ("Browse", [("discover", "/", "Discover", "compass")]),
+    ("Browse", [("discover", "/", "Discover", "compass"), ("requests", "/requests", "Requests", "inbox")]),
     ("Library", [("movies", "/library", "Movies", "film"), ("tv", "/tv", "TV", "tv"), ("calendar", "/calendar", "Calendar", "calendar")]),
     ("Admin", [("downloads", "/ui/downloads", "Downloads", "download"), ("indexers", "/ui/indexers", "Indexers", "db"), ("users", "/ui/users", "Users", "users"), ("settings", "/ui/settings", "Settings", "sliders")]),
   ] %}
@@ -48,7 +48,7 @@
       <nav class="holt-nav" {% if group_name == "Admin" %}data-admin{% endif %}>
         <div class="holt-nav-eyebrow">{{ group_name }}</div>
         {% for key, href, label, ico in items %}
-        <a href="{{ href }}" class="{{ 'active' if active_nav == key else '' }}" title="{{ label }}">{{ icon(ico) }}<span>{{ label }}</span></a>
+        <a href="{{ href }}" class="{{ 'active' if active_nav == key else '' }}" title="{{ label }}">{{ icon(ico) }}<span>{{ label }}</span>{% if key == 'requests' and pending_requests %}<span class="holt-badge holt-badge-solid holt-badge-pending" style="padding:4px 8px">{{ pending_requests }}</span>{% endif %}</a>
         {% endfor %}
       </nav>
       {% endfor %}
@@ -87,12 +87,12 @@
 
   <nav class="holt-tabbar holt-glass">
     <a class="holt-tab {{ 'active' if active_nav == 'discover' else '' }}" href="/">{{ icon("compass") }}Discover</a>
+    <a class="holt-tab {{ 'active' if active_nav == 'requests' else '' }}" href="/requests">{{ icon("inbox") }}Requests</a>
     <a class="holt-tab {{ 'active' if active_nav == 'movies' else '' }}" href="/library">{{ icon("film") }}Movies</a>
-    <a class="holt-tab {{ 'active' if active_nav == 'tv' else '' }}" href="/tv">{{ icon("tv") }}TV</a>
-    <button class="holt-tab {{ 'active' if active_nav in ('calendar', 'downloads', 'indexers', 'users', 'settings', 'profile') else '' }}" type="button" data-more>{{ icon("more") }}More</button>
+    <button class="holt-tab {{ 'active' if active_nav in ('tv', 'calendar', 'downloads', 'indexers', 'users', 'settings', 'profile') else '' }}" type="button" data-more>{{ icon("more") }}More</button>
   </nav>
   <div class="holt-sheet holt-glass-float">
-    {% for group_name, items in visible_groups %}{% for key, href, label, ico in items %}{% if key not in ('discover', 'movies', 'tv') %}
+    {% for group_name, items in visible_groups %}{% for key, href, label, ico in items %}{% if key not in ('discover', 'requests', 'movies') %}
     <a href="{{ href }}" class="{{ 'active' if active_nav == key else '' }}">{{ icon(ico) }}{{ label }}</a>
     {% endif %}{% endfor %}{% endfor %}
     {% if current_user %}<a href="/ui/profile" class="{{ 'active' if active_nav == 'profile' else '' }}"><span class="holt-avatar" style="width:22px;height:22px;font-size:9px">{{ current_user.initial }}</span>{{ current_user.username }}</a>

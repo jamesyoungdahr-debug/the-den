@@ -65,6 +65,8 @@ class Episode(Base):
     title = Column(String, nullable=True)
     air_date = Column(String, nullable=True)
     has_file = Column(Boolean, nullable=False, default=False)
+    # Automation only grabs monitored episodes; a season request monitors just its seasons.
+    monitored = Column(Boolean, nullable=False, default=True)
 
 
 class Settings(Base):
@@ -95,6 +97,9 @@ class Settings(Base):
     plex_url = Column(String, nullable=True)
     plex_sections = Column(String, nullable=True)  # JSON list of section keys
     plex_allow_any_account = Column(Boolean, nullable=True)
+    plex_scan_interval_minutes = Column(Integer, nullable=True)
+    plex_last_scan_at = Column(DateTime, nullable=True)
+    plex_last_scan_result = Column(String, nullable=True)
 
 
 class DownloadRecord(Base):
@@ -143,3 +148,50 @@ class User(Base):
     @property
     def initial(self) -> str:
         return (self.username or "?")[:1].upper()
+
+
+class PlexMedia(Base):
+    """What the owner's Plex server has, as of the last scan (M11e). Matched to TMDB cards
+    by tmdb_id (or tvdb_id for series). seasons is JSON {season_number: episode_count}."""
+
+    __tablename__ = "plex_media"
+
+    id = Column(Integer, primary_key=True)
+    media_type = Column(String, nullable=False)  # movie | tv
+    rating_key = Column(String, nullable=False, unique=True)
+    tmdb_id = Column(Integer, nullable=True, index=True)
+    tvdb_id = Column(Integer, nullable=True, index=True)
+    imdb_id = Column(String, nullable=True)
+    title = Column(String, nullable=False)
+    year = Column(Integer, nullable=True)
+    seasons = Column(String, nullable=True)
+    scanned_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class MediaRequest(Base):
+    """A user asking for a movie or for seasons of a series (M11f). Approval turns it into
+    library rows (movie_id / series_id); availability is derived from those, not stored."""
+
+    __tablename__ = "media_requests"
+
+    id = Column(Integer, primary_key=True)
+    media_type = Column(String, nullable=False)  # movie | tv
+    tmdb_id = Column(Integer, nullable=False, index=True)
+    title = Column(String, nullable=False)
+    year = Column(Integer, nullable=True)
+    poster_path = Column(String, nullable=True)
+    seasons = Column(String, nullable=True)  # JSON list of season numbers; empty/null = whole series
+    status = Column(String, nullable=False, default="pending")  # pending | approved | declined
+    note = Column(String, nullable=True)
+    requested_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    decided_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    decided_at = Column(DateTime, nullable=True)
+    movie_id = Column(Integer, ForeignKey("movies.id"), nullable=True)
+    series_id = Column(Integer, ForeignKey("series.id"), nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+    @property
+    def season_list(self) -> list[int]:
+        import json as _json
+        return _json.loads(self.seasons) if self.seasons else []

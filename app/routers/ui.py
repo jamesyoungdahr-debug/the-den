@@ -452,6 +452,10 @@ def ui_settings(request: Request, db: Session = Depends(get_db)):
             "has_discord_webhook": bool(row.discord_webhook_url),
             "state_dir": config.STATE_DIR,
             "saved": request.query_params.get("saved") == "1",
+            "notice": request.query_params.get("notice"),
+            "error": request.query_params.get("error"),
+            "plex_last_scan_at": row.plex_last_scan_at,
+            "plex_last_scan_result": row.plex_last_scan_result,
             "active_nav": "settings",
         },
     )

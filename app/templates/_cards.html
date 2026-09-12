@@ -3,6 +3,7 @@
   {%- if status == 'available' %}<span class="holt-badge holt-badge-solid holt-badge-available"><span class="dot"></span>available</span>
   {%- elif status == 'partial' %}<span class="holt-badge holt-badge-solid holt-badge-partial"><span class="dot"></span>partial</span>
   {%- elif status == 'wanted' %}<span class="holt-badge holt-badge-solid holt-badge-pending"><span class="dot"></span>in library</span>
+  {%- elif status == 'requested' %}<span class="holt-badge holt-badge-solid holt-badge-pending"><span class="dot"></span>requested</span>
   {%- endif -%}
 {%- endmacro %}
 

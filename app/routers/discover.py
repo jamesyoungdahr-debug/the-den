@@ -1,6 +1,7 @@
 """Discover (M11d): browse TMDB -- trending, popular, upcoming, recommendations, search,
-and movie/series detail pages -- with the library's status merged onto every card, and
-admin actions to add a title straight into the library. JSON twins for the companion apps."""
+and movie/series detail pages -- with the library's and Plex's status merged onto every
+card (M11e), request state (M11f), and admin actions to add a title straight into the
+library. JSON twins for the companion apps."""
 
 from __future__ import annotations
 
@@ -11,10 +12,10 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
-from app import auth, tmdb, tvmaze
+from app import auth, plex_scan, requests_service, tmdb, tvmaze
 from app import settings as settings_module
 from app.deps import get_db
-from app.models import DownloadRecord, Episode, Movie, Series
+from app.models import DownloadRecord, Episode, MediaRequest, Movie, Series, User
 from app.templating import templates
 
 log = logging.getLogger(__name__)
@@ -23,49 +24,67 @@ USER = [Depends(auth.page_user)]
 ADMIN = [Depends(auth.page_admin)]
 
 
-# ---- library status on TMDB cards ---------------------------------------------------
+# ---- status on TMDB cards --------------------------------------------------------------
 
-def _library_index(db: Session) -> tuple[dict[int, Movie], dict[int, dict]]:
-    """tmdb_id -> Movie, and tmdb_id -> {series, have, total} for series that carry a tmdb_id."""
-    movies = {m.tmdb_id: m for m in db.query(Movie)}
-    series_rows = db.query(Series).filter(Series.tmdb_id.isnot(None)).all()
-    series: dict[int, dict] = {}
-    if series_rows:
-        ids = [s.id for s in series_rows]
-        totals: dict[int, int] = {}
-        haves: dict[int, int] = {}
-        for sid, has_file in db.query(Episode.series_id, Episode.has_file).filter(Episode.series_id.in_(ids)):
-            totals[sid] = totals.get(sid, 0) + 1
-            haves[sid] = haves.get(sid, 0) + (1 if has_file else 0)
-        for s in series_rows:
-            series[s.tmdb_id] = {"series": s, "have": haves.get(s.id, 0), "total": totals.get(s.id, 0)}
-    return movies, series
+class Index:
+    """Everything needed to stamp a status on a TMDB card, loaded once per page."""
 
+    def __init__(self, db: Session):
+        self.movies: dict[int, Movie] = {m.tmdb_id: m for m in db.query(Movie)}
+        self.series: dict[int, dict] = {}
+        rows = db.query(Series).filter(Series.tmdb_id.isnot(None)).all()
+        if rows:
+            ids = [s.id for s in rows]
+            totals: dict[int, int] = {}
+            haves: dict[int, int] = {}
+            for sid, has_file in db.query(Episode.series_id, Episode.has_file).filter(Episode.series_id.in_(ids)):
+                totals[sid] = totals.get(sid, 0) + 1
+                haves[sid] = haves.get(sid, 0) + (1 if has_file else 0)
+            for s in rows:
+                self.series[s.tmdb_id] = {"series": s, "have": haves.get(s.id, 0), "total": totals.get(s.id, 0)}
+        self.plex_movies, self.plex_tv, self.plex_tv_tvdb = plex_scan.plex_index(db)
+        self.requested: dict[tuple[str, int], str] = {
+            (r.media_type, r.tmdb_id): r.status
+            for r in db.query(MediaRequest).filter(MediaRequest.status.in_(requests_service.OPEN_STATUSES))
+        }
 
-def _status(item: dict, movies: dict[int, Movie], series: dict[int, dict]) -> dict:
-    """Adds status (available | partial | wanted | None) and a library link to a card."""
-    if item["media_type"] == "movie":
-        m = movies.get(item["tmdb_id"])
-        if m is not None:
-            item["status"] = "available" if m.has_file else "wanted"
-            item["library_href"] = "/library"
-    else:
-        s = series.get(item["tmdb_id"])
-        if s is not None:
-            if s["total"] and s["have"] == s["total"]:
-                item["status"] = "available"
-            elif s["have"]:
-                item["status"] = "partial"
-            else:
-                item["status"] = "wanted"
-            item["library_href"] = f"/ui/series/{s['series'].id}"
-    item.setdefault("status", None)
-    return item
+    def stamp(self, item: dict) -> dict:
+        """status: available | partial | wanted | requested | None, plus on_plex / library_href."""
+        kind, tid = item["media_type"], item["tmdb_id"]
+        status = None
+        if kind == "movie":
+            m, p = self.movies.get(tid), self.plex_movies.get(tid)
+            item["on_plex"] = p is not None
+            if (m is not None and m.has_file) or p is not None:
+                status = "available"
+            elif m is not None:
+                status = "wanted"
+            if m is not None:
+                item["library_href"] = "/library"
+        else:
+            s, p = self.series.get(tid), self.plex_tv.get(tid)
+            item["on_plex"] = p is not None
+            complete = s is not None and s["total"] and s["have"] == s["total"]
+            if complete or (p is not None and s is None):
+                status = "available"
+            elif (s is not None and s["have"]) or p is not None:
+                status = "partial"
+            elif s is not None:
+                status = "wanted"
+            if s is not None:
+                item["library_href"] = f"/ui/series/{s['series'].id}"
+        req = self.requested.get((kind, tid))
+        if status is None and req == "pending":
+            status = "requested"
+        elif status is None and req == "approved":
+            status = "wanted"
+        item["status"] = status
+        return item
 
 
 def _decorate(items: list[dict], db: Session) -> list[dict]:
-    movies, series = _library_index(db)
-    return [_status(i, movies, series) for i in items]
+    idx = Index(db)
+    return [idx.stamp(i) for i in items]
 
 
 async def _rails(api_key: str) -> tuple[dict[str, list[dict]], list[str]]:
@@ -85,9 +104,9 @@ async def _rails(api_key: str) -> tuple[dict[str, list[dict]], list[str]]:
     return rails, errors
 
 
-async def _recommended_for_you(db: Session, api_key: str, movies: dict[int, Movie], series: dict[int, dict]) -> list[dict]:
+async def _recommended_for_you(db: Session, api_key: str, idx: Index) -> list[dict]:
     """TMDB's recommendations for the titles most recently added to the library, merged,
-    de-duplicated, minus anything already in the library, best-rated first."""
+    de-duplicated, minus anything already in the library or on Plex, best-rated first."""
     recent_movies = db.query(Movie).order_by(Movie.id.desc()).limit(6).all()
     recent_series = db.query(Series).filter(Series.tmdb_id.isnot(None)).order_by(Series.id.desc()).limit(4).all()
     calls = [tmdb.movie_details(m.tmdb_id, api_key) for m in recent_movies] + [tmdb.tv_details(s.tmdb_id, api_key) for s in recent_series]
@@ -103,12 +122,12 @@ async def _recommended_for_you(db: Session, api_key: str, movies: dict[int, Movi
             key = (rec["media_type"], rec["tmdb_id"])
             if key in seen:
                 continue
-            if rec["media_type"] == "movie" and rec["tmdb_id"] in movies:
+            if rec["media_type"] == "movie" and (rec["tmdb_id"] in idx.movies or rec["tmdb_id"] in idx.plex_movies):
                 continue
-            if rec["media_type"] == "tv" and rec["tmdb_id"] in series:
+            if rec["media_type"] == "tv" and (rec["tmdb_id"] in idx.series or rec["tmdb_id"] in idx.plex_tv):
                 continue
             seen.add(key)
-            picks.append(rec)
+            picks.append(idx.stamp(rec))
     picks.sort(key=lambda r: (r.get("rating") or 0), reverse=True)
     return picks[:18]
 
@@ -119,15 +138,16 @@ async def _recommended_for_you(db: Session, api_key: str, movies: dict[int, Movi
 async def discover_home(request: Request, db: Session = Depends(get_db)):
     api_key = settings_module.effective(db).tmdb_api_key
     rails, errors = await _rails(api_key) if api_key else ({}, ["no_key"])
-    movies, series = _library_index(db)
-    recommended = await _recommended_for_you(db, api_key, movies, series) if api_key else []
+    idx = Index(db)
+    recommended = await _recommended_for_you(db, api_key, idx) if api_key else []
     for name in rails:
-        rails[name] = [_status(i, movies, series) for i in rails[name]]
+        rails[name] = [idx.stamp(i) for i in rails[name]]
     hero = next((i for i in rails.get("trending", []) if i.get("backdrop_path")), None)
     stats = {
-        "movies": len(movies),
+        "movies": len(idx.movies),
         "series": db.query(Series).count(),
         "downloading": db.query(DownloadRecord).filter(DownloadRecord.status.notin_(["imported", "failed"])).count(),
+        "plex": len(idx.plex_movies) + len(idx.plex_tv),
     }
     return templates.TemplateResponse(
         "discover.html",
@@ -156,33 +176,41 @@ async def discover_search(request: Request, q: str = "", type: str = "all", db: 
     )
 
 
-async def _detail(kind: str, tmdb_id: int, db: Session) -> dict | None:
+async def _detail(kind: str, tmdb_id: int, db: Session, me: User | None = None) -> dict | None:
     api_key = settings_module.effective(db).tmdb_api_key
     item = await (tmdb.movie_details if kind == "movie" else tmdb.tv_details)(tmdb_id, api_key)
     if item is None:
         return None
-    movies, series = _library_index(db)
-    _status(item, movies, series)
-    item["recommendations"] = [_status(r, movies, series) for r in item.get("recommendations", [])]
-    if kind == "movie":
-        m = movies.get(tmdb_id)
-        item["library"] = {"id": m.id, "has_file": m.has_file} if m else None
-    else:
-        s = series.get(tmdb_id)
-        item["library"] = None
-        if s:
-            per_season: dict[int, dict] = {}
-            for e in db.query(Episode).filter(Episode.series_id == s["series"].id):
-                row = per_season.setdefault(e.season_number, {"have": 0, "total": 0})
-                row["total"] += 1
-                row["have"] += 1 if e.has_file else 0
-            item["library"] = {"id": s["series"].id, "have": s["have"], "total": s["total"], "seasons": per_season}
+    idx = Index(db)
+    idx.stamp(item)
+    item["recommendations"] = [idx.stamp(r) for r in item.get("recommendations", [])]
+    av = requests_service.availability(db, kind, tmdb_id, item.get("tvdb_id"))
+    item["availability"] = {
+        "den": av["den"], "plex": av["plex"], "available": av["available"] if kind == "movie" else None,
+        "available_seasons": sorted(av["available_seasons"]),
+    }
+    item["library"] = av["den"]
+    open_reqs = requests_service.open_requests_for(db, kind, tmdb_id)
+    names = {u.id: u.username for u in db.query(User).filter(User.id.in_({r.requested_by for r in open_reqs}))} if open_reqs else {}
+    item["requests"] = [
+        {"id": r.id, "status": r.status, "seasons": r.season_list, "by": names.get(r.requested_by, "?"), "mine": bool(me and r.requested_by == me.id)}
+        for r in open_reqs
+    ]
+    if kind == "tv":
+        taken = set(av["available_seasons"])
+        den = av["den"] or {}
+        for n, r in (den.get("seasons") or {}).items():
+            if r["monitored"] and r["have"] < r["total"]:
+                taken.add(n)
+        for r in open_reqs:
+            taken |= set(r.season_list) if r.season_list else {s["season_number"] for s in item["seasons"]}
+        item["requestable_seasons"] = [s["season_number"] for s in item["seasons"] if s["season_number"] > 0 and s["season_number"] not in taken]
     return item
 
 
 @router.get("/discover/movie/{tmdb_id}", response_class=HTMLResponse, dependencies=USER)
 async def discover_movie(request: Request, tmdb_id: int, db: Session = Depends(get_db)):
-    item = await _detail("movie", tmdb_id, db)
+    item = await _detail("movie", tmdb_id, db, getattr(request.state, "user", None))
     if item is None:
         raise HTTPException(404, "Movie not found on TMDB")
     return templates.TemplateResponse(
@@ -194,7 +222,7 @@ async def discover_movie(request: Request, tmdb_id: int, db: Session = Depends(g
 
 @router.get("/discover/tv/{tmdb_id}", response_class=HTMLResponse, dependencies=USER)
 async def discover_tv(request: Request, tmdb_id: int, db: Session = Depends(get_db)):
-    item = await _detail("tv", tmdb_id, db)
+    item = await _detail("tv", tmdb_id, db, getattr(request.state, "user", None))
     if item is None:
         raise HTTPException(404, "Series not found on TMDB")
     return templates.TemplateResponse(
@@ -275,8 +303,7 @@ _RAIL_CALLS = {
 @router.get("/api/discover/recommended", dependencies=[Depends(auth.require_user)])
 async def api_recommended(db: Session = Depends(get_db)):
     api_key = settings_module.effective(db).tmdb_api_key
-    movies, series = _library_index(db)
-    return await _recommended_for_you(db, api_key, movies, series)
+    return await _recommended_for_you(db, api_key, Index(db))
 
 
 @router.get("/api/discover/search", dependencies=[Depends(auth.require_user)])
@@ -286,16 +313,16 @@ async def api_search(q: str, db: Session = Depends(get_db)):
 
 
 @router.get("/api/discover/movie/{tmdb_id}", dependencies=[Depends(auth.require_user)])
-async def api_movie(tmdb_id: int, db: Session = Depends(get_db)):
-    item = await _detail("movie", tmdb_id, db)
+async def api_movie(request: Request, tmdb_id: int, db: Session = Depends(get_db)):
+    item = await _detail("movie", tmdb_id, db, getattr(request.state, "user", None))
     if item is None:
         raise HTTPException(404, "Movie not found on TMDB")
     return item
 
 
 @router.get("/api/discover/tv/{tmdb_id}", dependencies=[Depends(auth.require_user)])
-async def api_tv(tmdb_id: int, db: Session = Depends(get_db)):
-    item = await _detail("tv", tmdb_id, db)
+async def api_tv(request: Request, tmdb_id: int, db: Session = Depends(get_db)):
+    item = await _detail("tv", tmdb_id, db, getattr(request.state, "user", None))
     if item is None:
         raise HTTPException(404, "Series not found on TMDB")
     return item
