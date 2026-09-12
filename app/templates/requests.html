@@ -4,7 +4,7 @@
   <div class="holt-page-head">
     <div>
       <h1 class="holt-page-title">Requests</h1>
-      <div class="holt-meta">{% if is_admin %}{{ pending_total }} waiting on you · {{ items|length }} shown{% else %}Your requests · {{ items|length }}{% endif %}</div>
+      <div class="holt-meta">{% if is_admin %}{{ pending_total }} waiting on you · {{ items|length }} shown{% else %}Your requests · {{ items|length }}{% if quota %}{% if quota.movies.limit is not none %} · {{ quota.movies.remaining }} of {{ quota.movies.limit }} movies left{% endif %}{% if quota.series.limit is not none %} · {{ quota.series.remaining }} of {{ quota.series.limit }} series left{% endif %}{% if quota.movies.limit is not none or quota.series.limit is not none %} this {{ quota.days }} days{% endif %}{% endif %}{% endif %}</div>
     </div>
     <div class="holt-toolbar">
       <a class="holt-chip {{ 'is-on' if status == 'all' else '' }}" href="/requests">All</a>
@@ -29,6 +29,7 @@
           {{ 'Movie' if r.media_type == 'movie' else 'Series' }}
           {% if r.status == 'pending' %} · requested {{ r.created_at[:10] if r.created_at else '' }}
           {% elif r.status == 'approved' %} · approved by {{ r.decided_by or 'admin' }}{% if r.display_status != 'available' %} · being looked for{% endif %}
+          {% elif r.status == 'available' %} · available since {{ r.available_at[:10] if r.available_at else '' }}
           {% elif r.status == 'declined' %} · declined by {{ r.decided_by or 'admin' }}{% if r.note %} · “{{ r.note }}”{% endif %}{% endif %}
         </div>
       </div>

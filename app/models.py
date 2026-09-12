@@ -100,6 +100,13 @@ class Settings(Base):
     plex_scan_interval_minutes = Column(Integer, nullable=True)
     plex_last_scan_at = Column(DateTime, nullable=True)
     plex_last_scan_result = Column(String, nullable=True)
+    # Request quotas (M11g): how many movies / series a non-admin may request per window.
+    # Null = env default; 0 = unlimited. Per-user overrides live on User.
+    request_movie_limit = Column(Integer, nullable=True)
+    request_series_limit = Column(Integer, nullable=True)
+    request_limit_days = Column(Integer, nullable=True)
+    # Null = follow the AUTH_REQUIRED env var; set from Settings -> Accounts.
+    auth_required = Column(Boolean, nullable=True)
 
 
 class DownloadRecord(Base):
@@ -181,8 +188,9 @@ class MediaRequest(Base):
     year = Column(Integer, nullable=True)
     poster_path = Column(String, nullable=True)
     seasons = Column(String, nullable=True)  # JSON list of season numbers; empty/null = whole series
-    status = Column(String, nullable=False, default="pending")  # pending | approved | declined
+    status = Column(String, nullable=False, default="pending")  # pending | approved | available | declined
     note = Column(String, nullable=True)
+    available_at = Column(DateTime, nullable=True)  # set when an approved request is found to be fulfilled
     requested_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     decided_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     decided_at = Column(DateTime, nullable=True)

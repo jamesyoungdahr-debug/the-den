@@ -5,7 +5,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
 
-from app import auth, automation, config, scheduler
+from app import auth, automation, scheduler
 from app import settings as settings_module
 from app.db import SessionLocal, engine as db_engine
 from app.deps import get_db
@@ -75,6 +75,16 @@ async def _forbidden(request: Request, exc: auth.Forbidden):
 
 
 @app.on_event("startup")
+def load_auth_override():
+    """Settings -> Accounts may override the AUTH_REQUIRED env var (M11g)."""
+    db = SessionLocal()
+    try:
+        auth.set_required_override(settings_module.get_row(db).auth_required)
+    finally:
+        db.close()
+
+
+@app.on_event("startup")
 def seed_default_quality_profile():
     db = SessionLocal()
     try:
@@ -121,7 +131,7 @@ async def run_automation_now(db: Session = Depends(get_db)):
 def health():
     with db_engine.connect() as conn:
         conn.execute(text("SELECT 1"))
-    return {"status": "ok", "api_version": 2, "auth_required": config.AUTH_REQUIRED, "torrent_engine": torrent_engine.info()}
+    return {"status": "ok", "api_version": 2, "auth_required": auth.required(), "torrent_engine": torrent_engine.info()}
 
 
 @app.get("/forbidden", response_class=HTMLResponse, include_in_schema=False)

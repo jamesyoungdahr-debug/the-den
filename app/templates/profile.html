@@ -33,6 +33,20 @@
     </div>
 
     <div class="holt-panel">
+      <div class="holt-panel-head"><div class="holt-eyebrow">Requests</div><div class="holt-meta">{{ 'no limit (admin)' if quota.exempt else 'per ' ~ quota.days ~ ' days' }}</div></div>
+      {% if quota.exempt %}
+      <p class="holt-body" style="font-size:13.5px;margin:0">Admins' requests are approved instantly and aren't counted against a quota.</p>
+      {% else %}
+      <div class="holt-stat-row" style="display:flex;gap:var(--holt-space-4)">
+        <div><div class="holt-stat-value">{{ quota.movies.used }}{% if quota.movies.limit is not none %} / {{ quota.movies.limit }}{% endif %}</div><div class="holt-meta">movies</div></div>
+        <div><div class="holt-stat-value">{{ quota.series.used }}{% if quota.series.limit is not none %} / {{ quota.series.limit }}{% endif %}</div><div class="holt-meta">series</div></div>
+      </div>
+      <div class="holt-meta" style="margin-top:var(--holt-space-2)">Declined requests don't count. Ask an admin if you need more.</div>
+      {% endif %}
+      <a class="holt-btn holt-btn-quiet holt-btn-sm" href="/requests" style="margin-top:var(--holt-space-3)">Your requests →</a>
+    </div>
+
+    <div class="holt-panel">
       <div class="holt-panel-head"><div class="holt-eyebrow">Password</div></div>
       <form method="post" action="/ui/profile/password">
         {% if user.password_hash %}<div class="holt-field"><label>Current password</label><input name="current_password" type="password" autocomplete="current-password" required></div>{% endif %}

@@ -5,7 +5,7 @@
   <div class="holt-page-head">
     <div>
       <h1 class="holt-page-title">Users</h1>
-      <div class="holt-meta">{{ users|length }} accounts · {{ users|selectattr('is_admin')|list|length }} admin{% if not auth_required %} · sign-in is optional (AUTH_REQUIRED is off){% endif %}</div>
+      <div class="holt-meta">{{ users|length }} accounts · {{ users|selectattr('is_admin')|list|length }} admin{% if not auth_required %} · sign-in is optional (turn it on in <a href="/ui/settings#accounts">Settings</a>){% endif %}</div>
     </div>
   </div>
 
@@ -18,7 +18,7 @@
         <div class="holt-avatar">{{ u.initial }}</div>
         <div class="holt-row-main">
           <div class="holt-row-title">{{ u.username }}{% if current_user and current_user.id == u.id %} <span class="holt-meta">(you)</span>{% endif %}</div>
-          <div class="holt-row-meta">{{ 'plex' if u.plex_id else 'local' }} · {{ 'auto-approve' if u.auto_approve else 'needs approval' }} · last sign-in {{ u.last_login_at.strftime('%Y-%m-%d %H:%M') if u.last_login_at else 'never' }}</div>
+          <div class="holt-row-meta">{{ 'plex' if u.plex_id else 'local' }} · {{ 'auto-approve' if u.auto_approve else 'needs approval' }}{% if not u.is_admin %} · {{ u.movie_limit if u.movie_limit is not none else defaults.movies }} movies / {{ u.series_limit if u.series_limit is not none else defaults.series }} series per {{ u.limit_days or defaults.days }} days{% if u.movie_limit is not none or u.series_limit is not none or u.limit_days %} (custom){% endif %}{% endif %} · last sign-in {{ u.last_login_at.strftime('%Y-%m-%d %H:%M') if u.last_login_at else 'never' }}</div>
         </div>
         <span class="holt-badge {{ 'holt-badge-pending' if u.is_admin else 'holt-badge-missing' }}"><span class="dot"></span>{{ u.role }}</span>
         <div class="holt-row-actions">
@@ -30,6 +30,7 @@
             <input type="hidden" name="enabled" value="{{ '0' if u.auto_approve else '1' }}">
             <button type="submit" class="holt-btn holt-btn-quiet holt-btn-sm">{{ 'require approval' if u.auto_approve else 'auto-approve' }}</button>
           </form>
+          <a href="#" class="holt-btn holt-btn-quiet holt-btn-sm" data-open-dialog="limits-{{ u.id }}">limits</a>
           <a href="#" class="holt-btn holt-btn-quiet holt-btn-sm" data-open-dialog="reset-{{ u.id }}">reset password</a>
           {% if not (current_user and current_user.id == u.id) %}
           <form method="post" action="/ui/users/{{ u.id }}/delete" onsubmit="return confirm('Delete {{ u.username|e }}?')">
@@ -38,6 +39,22 @@
           {% endif %}
         </div>
       </div>
+      <dialog id="limits-{{ u.id }}" class="holt-dialog holt-glass-float">
+        <form method="post" action="/ui/users/{{ u.id }}/limits">
+          <div class="holt-eyebrow" style="margin-bottom: var(--holt-space-3)">{{ u.username }} · request limits</div>
+          <div class="holt-field"><label>Email (optional)</label><input name="email" type="email" value="{{ u.email or '' }}" autocomplete="off"></div>
+          <div class="holt-form-row">
+            <div class="holt-field"><label>Movies</label><input name="movie_limit" type="number" min="0" value="{{ u.movie_limit if u.movie_limit is not none else '' }}" placeholder="{{ defaults.movies }}"></div>
+            <div class="holt-field"><label>Series</label><input name="series_limit" type="number" min="0" value="{{ u.series_limit if u.series_limit is not none else '' }}" placeholder="{{ defaults.series }}"></div>
+            <div class="holt-field"><label>Per days</label><input name="limit_days" type="number" min="1" value="{{ u.limit_days or '' }}" placeholder="{{ defaults.days }}"></div>
+          </div>
+          <div class="holt-meta" style="margin-bottom: var(--holt-space-3)">Blank = the default from Settings; 0 = unlimited. Admins have no quota.</div>
+          <div style="display:flex; gap: 8px; justify-content: flex-end">
+            <button type="button" class="holt-btn holt-btn-quiet" data-close-dialog>Cancel</button>
+            <button type="submit" class="holt-btn holt-btn-primary">Save</button>
+          </div>
+        </form>
+      </dialog>
       <dialog id="reset-{{ u.id }}" class="holt-dialog holt-glass-float">
         <form method="post" action="/ui/users/{{ u.id }}/password">
           <div class="holt-eyebrow" style="margin-bottom: var(--holt-space-3)">Reset password for {{ u.username }}</div>
@@ -51,7 +68,7 @@
       {% else %}
       <div class="holt-empty">
         <div class="holt-empty-title">No accounts yet</div>
-        <div class="holt-body">Sign-in is optional until AUTH_REQUIRED is turned on. Create the admin account first.</div>
+        <div class="holt-body">Sign-in is optional until it's turned on in Settings. Create the admin account first.</div>
         <a class="holt-btn holt-btn-primary holt-btn-sm" href="/setup">Create admin</a>
       </div>
       {% endfor %}

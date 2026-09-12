@@ -5,7 +5,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app import auth, plex, plex_access
+from app import auth, plex, plex_access, requests_service
 from app.deps import get_db
 from app.models import User
 from app.templating import templates
@@ -185,12 +185,12 @@ async def api_plex_login(body: PlexPinBody, request: Request, db: Session = Depe
 
 
 @router.get("/ui/profile", response_class=HTMLResponse)
-def profile_page(request: Request, user: User | None = Depends(auth.page_user)):
+def profile_page(request: Request, user: User | None = Depends(auth.page_user), db: Session = Depends(get_db)):
     if user is None:
         raise auth.LoginRequired("/ui/profile")
     return templates.TemplateResponse(
         "profile.html",
-        {"request": request, "user": user, "new_token": None,
+        {"request": request, "user": user, "new_token": None, "quota": requests_service.quota(db, user),
          "error": request.query_params.get("error"), "notice": request.query_params.get("notice")},
     )
 
@@ -204,7 +204,7 @@ def profile_new_token(request: Request, user: User | None = Depends(auth.page_us
     user.api_token = token
     db.commit()
     # Shown exactly once; only its existence is stored/served afterwards.
-    return templates.TemplateResponse("profile.html", {"request": request, "user": user, "new_token": token})
+    return templates.TemplateResponse("profile.html", {"request": request, "user": user, "new_token": token, "quota": requests_service.quota(db, user)})
 
 
 @router.post("/ui/profile/password")
@@ -250,15 +250,15 @@ def api_logout(request: Request):
 
 
 @router.get("/api/auth/me")
-def api_me(request: Request):
-    """Who the caller is. Anonymous while AUTH_REQUIRED is off is reported as an admin
+def api_me(request: Request, db: Session = Depends(get_db)):
+    """Who the caller is. Anonymous while sign-in is optional is reported as an admin
     with no account, so clients can gate their UI the same way the web UI does."""
     user = getattr(request.state, "user", None)
     if user is None:
         if auth.is_admin(request):
-            return {"id": None, "username": None, "role": "admin", "is_admin": True, "anonymous": True, "auth_required": False}
+            return {"id": None, "username": None, "role": "admin", "is_admin": True, "anonymous": True, "auth_required": False, "quota": None}
         raise HTTPException(401, "Sign in required")
-    return {**_user_out(user), "anonymous": False, "auth_required": True}
+    return {**_user_out(user), "anonymous": False, "auth_required": auth.required(), "quota": requests_service.quota(db, user)}
 
 
 @router.post("/api/auth/token")

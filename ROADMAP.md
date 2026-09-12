@@ -19,7 +19,7 @@ Deploy target: native systemd service on Arch Linux (no Docker).
 - [x] M8 -- Notifications + calendar
 - [x] M9 -- Distro packaging: systemd unit, config conventions, PKGBUILD
 - [x] M10 -- Built-in torrent client: libtorrent in-process, qBittorrent dependency removed
-- [ ] M11 -- Discover + Requests (M11a-f done; M11g pending): Overseerr-style browsing, Plex + local login, admin-only plumbing, Plex library awareness, user requests with admin approval -- planned, see [docs/requests-plan.md](docs/requests-plan.md)
+- [x] M11 -- Discover + Requests (done 2026-09-12): Overseerr-style browsing, Plex + local login, admin-only plumbing, Plex library awareness, user requests with admin approval -- planned, see [docs/requests-plan.md](docs/requests-plan.md)
 - [ ] UI redesign track ("HoltOS Glass": left sidebar shell, glass/blur surfaces, poster-first pages, across web + KDE + Android) -- planned, see [docs/ui-redesign-plan.md](docs/ui-redesign-plan.md); sequenced ahead of M11's pages
 
 ## Notes

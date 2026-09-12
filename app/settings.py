@@ -32,6 +32,10 @@ class EffectiveSettings:
     plex_sections: list[str]
     plex_allow_any_account: bool
     plex_scan_interval_minutes: int
+    request_movie_limit: int
+    request_series_limit: int
+    request_limit_days: int
+    auth_required: bool
 
     def engine_config(self) -> EngineConfig:
         return EngineConfig(
@@ -88,4 +92,8 @@ def effective(db: Session) -> EffectiveSettings:
         plex_sections=json.loads(row.plex_sections) if row.plex_sections else [],
         plex_allow_any_account=bool(row.plex_allow_any_account),
         plex_scan_interval_minutes=_pick(row.plex_scan_interval_minutes, config.PLEX_SCAN_INTERVAL_MINUTES),
+        request_movie_limit=_pick(row.request_movie_limit, config.REQUEST_MOVIE_LIMIT),
+        request_series_limit=_pick(row.request_series_limit, config.REQUEST_SERIES_LIMIT),
+        request_limit_days=_pick(row.request_limit_days, config.REQUEST_LIMIT_DAYS),
+        auth_required=_pick(row.auth_required, config.AUTH_REQUIRED),
     )

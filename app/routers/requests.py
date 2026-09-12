@@ -30,6 +30,7 @@ def _out(db: Session, req: MediaRequest, users: dict[int, User]) -> dict:
         "decided_by": decider.username if decider else None,
         "decided_at": req.decided_at.isoformat() if req.decided_at else None,
         "created_at": req.created_at.isoformat() if req.created_at else None,
+        "available_at": req.available_at.isoformat() if req.available_at else None,
         "movie_id": req.movie_id, "series_id": req.series_id, "label": svc.label(req),
         "href": f"/discover/{req.media_type}/{req.tmdb_id}",
     }
@@ -42,7 +43,7 @@ def _visible(db: Session, request: Request, status: str | None, mine: bool) -> l
         if me is None:
             return []
         q = q.filter(MediaRequest.requested_by == me.id)
-    if status in ("pending", "approved", "declined"):
+    if status in ("pending", "approved", "declined", "available"):
         q = q.filter(MediaRequest.status == status)
     return q.order_by(MediaRequest.id.desc()).all()
 
@@ -66,12 +67,12 @@ def requests_page(request: Request, status: str = "all", db: Session = Depends(g
     reqs = _visible(db, request, status if status != "all" else None, mine=False)
     users = _users(db, reqs)
     items = [_out(db, r, users) for r in reqs]
-    if status == "available":
-        items = [i for i in items if i["display_status"] == "available"]
     pending = db.query(MediaRequest).filter(MediaRequest.status == "pending").count() if auth.is_admin(request) else None
+    me = getattr(request.state, "user", None)
+    quota = svc.quota(db, me) if me is not None and not me.is_admin else None
     return templates.TemplateResponse(
         "requests.html",
-        {"request": request, "items": items, "status": status, "pending_total": pending,
+        {"request": request, "items": items, "status": status, "pending_total": pending, "quota": quota,
          "notice": request.query_params.get("notice"), "error": request.query_params.get("error"), "active_nav": "requests"},
     )
 
@@ -144,6 +145,15 @@ def api_list(request: Request, status: str | None = None, mine: bool = False, db
     reqs = _visible(db, request, status, mine)
     users = _users(db, reqs)
     return [_out(db, r, users) for r in reqs]
+
+
+@router.get("/api/requests/quota", dependencies=[Depends(auth.require_user)])
+def api_quota(request: Request, db: Session = Depends(get_db)):
+    """The caller's request allowance for the current window (admins: exempt)."""
+    me = getattr(request.state, "user", None)
+    if me is None:
+        return {"exempt": True, "days": None, "movies": None, "series": None}
+    return svc.quota(db, db.get(User, me.id))
 
 
 @router.post("/api/requests", status_code=201, dependencies=[Depends(auth.require_user)])

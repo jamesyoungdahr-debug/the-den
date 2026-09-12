@@ -47,3 +47,8 @@ PLEX_URL = os.environ.get("PLEX_URL", "")
 PLEX_TV_URL = os.environ.get("PLEX_TV_URL", "https://plex.tv")
 PLEX_AUTH_URL = os.environ.get("PLEX_AUTH_URL", "https://app.plex.tv/auth")
 PLEX_SCAN_INTERVAL_MINUTES = int(os.environ.get("PLEX_SCAN_INTERVAL_MINUTES", "30"))
+
+# Request quotas for non-admin users (M11g); 0 = unlimited. Overridable in Settings and per user.
+REQUEST_MOVIE_LIMIT = int(os.environ.get("REQUEST_MOVIE_LIMIT", "10"))
+REQUEST_SERIES_LIMIT = int(os.environ.get("REQUEST_SERIES_LIMIT", "5"))
+REQUEST_LIMIT_DAYS = int(os.environ.get("REQUEST_LIMIT_DAYS", "7"))

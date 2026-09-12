@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import auth
+from app import settings as settings_module
 from app.deps import get_db
 from app.models import User
 from app.templating import templates
@@ -41,7 +42,11 @@ def _last_admin_guard(db: Session, target: User, new_role: str | None = None, de
 @router.get("/ui/users", response_class=HTMLResponse)
 def users_page(request: Request, _: User | None = Depends(auth.page_admin), db: Session = Depends(get_db)):
     users = db.query(User).order_by(User.id).all()
-    return templates.TemplateResponse("users.html", {"request": request, "users": users, "error": request.query_params.get("error")})
+    s = settings_module.effective(db)
+    defaults = {"movies": s.request_movie_limit, "series": s.request_series_limit, "days": s.request_limit_days}
+    return templates.TemplateResponse(
+        "users.html", {"request": request, "users": users, "defaults": defaults, "error": request.query_params.get("error"), "active_nav": "users"}
+    )
 
 
 @router.post("/ui/users")
@@ -81,6 +86,23 @@ def ui_set_auto_approve(user_id: int, enabled: str = Form(""), _: User | None = 
     if user is None:
         raise HTTPException(404, "User not found")
     user.auto_approve = enabled == "1"
+    db.commit()
+    return RedirectResponse("/ui/users", status_code=303)
+
+
+@router.post("/ui/users/{user_id}/limits")
+def ui_set_limits(
+    user_id: int, email: str = Form(""), movie_limit: str = Form(""), series_limit: str = Form(""), limit_days: str = Form(""),
+    _: User | None = Depends(auth.page_admin), db: Session = Depends(get_db),
+):
+    """Per-user request quota; blank fields fall back to the Settings defaults."""
+    user = db.get(User, user_id)
+    if user is None:
+        raise HTTPException(404, "User not found")
+    user.email = email.strip() or None
+    user.movie_limit = int(movie_limit) if movie_limit.strip().isdigit() else None
+    user.series_limit = int(series_limit) if series_limit.strip().isdigit() else None
+    user.limit_days = int(limit_days) if limit_days.strip().isdigit() and int(limit_days) > 0 else None
     db.commit()
     return RedirectResponse("/ui/users", status_code=303)
 

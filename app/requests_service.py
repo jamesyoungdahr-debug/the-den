@@ -1,12 +1,13 @@
 """Requests (M11f): a user asks for a movie or for seasons of a series; an admin approves
 or declines; approval drops the title straight into the library, which the automation
-loop then fetches. Availability is never stored -- it is derived from the library and
-the Plex scan every time it's asked for."""
+loop then fetches. Availability is derived from the library and the Plex scan every time
+it's asked for; once an approved request is found fulfilled it is stamped "available"
+(M11g) so the requester is told exactly once. Non-admins have request quotas (M11g)."""
 
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
 
@@ -66,6 +67,8 @@ def open_requests_for(db: Session, media_type: str, tmdb_id: int) -> list[MediaR
 
 def fulfilled(db: Session, req: MediaRequest) -> bool:
     """An approved request whose title (or every requested season) is now available."""
+    if req.status == "available":
+        return True
     if req.status != "approved":
         return False
     av = availability(db, req.media_type, req.tmdb_id)
@@ -77,6 +80,55 @@ def fulfilled(db: Session, req: MediaRequest) -> bool:
         seasons = den.get("seasons") or {}
         return bool(seasons) and all(r["total"] and r["have"] == r["total"] for r in seasons.values())
     return wanted <= av["available_seasons"]
+
+
+async def mark_available(db: Session) -> list[MediaRequest]:
+    """Stamp approved requests that are now fulfilled (library import or Plex scan) and
+    tell the channel once. Called at the end of every automation cycle and Plex scan."""
+    done: list[MediaRequest] = []
+    for req in db.query(MediaRequest).filter(MediaRequest.status == "approved").all():
+        if fulfilled(db, req):
+            req.status = "available"
+            req.available_at = datetime.now(timezone.utc)
+            done.append(req)
+    if done:
+        db.commit()
+        s = settings_module.effective(db)
+        for req in done:
+            requester = db.get(User, req.requested_by)
+            await notify(f"**{_label(req)}** is now available" + (f" -- requested by {requester.username}" if requester else ""), s.discord_webhook_url)
+    return done
+
+
+# ---- quotas ------------------------------------------------------------------------------
+
+def quota(db: Session, user: User) -> dict:
+    """Requests made by this user in the current window against their limits. Admins are
+    exempt (limit None). Per-user limits override the Settings defaults; 0 = unlimited."""
+    s = settings_module.effective(db)
+    days = user.limit_days or s.request_limit_days
+    limits = {
+        "movie": s.request_movie_limit if user.movie_limit is None else user.movie_limit,
+        "tv": s.request_series_limit if user.series_limit is None else user.series_limit,
+    }
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+    out = {"days": days, "exempt": user.is_admin}
+    for kind, key in (("movie", "movies"), ("tv", "series")):
+        used = db.query(MediaRequest).filter(
+            MediaRequest.requested_by == user.id, MediaRequest.media_type == kind,
+            MediaRequest.status != "declined", MediaRequest.created_at >= since,
+        ).count()
+        limit = None if user.is_admin or not limits[kind] else limits[kind]
+        out[key] = {"used": used, "limit": limit, "remaining": None if limit is None else max(0, limit - used)}
+    return out
+
+
+def _check_quota(db: Session, user: User, media_type: str) -> None:
+    q = quota(db, user)
+    bucket = q["movies" if media_type == "movie" else "series"]
+    if bucket["limit"] is not None and bucket["remaining"] <= 0:
+        what = "movies" if media_type == "movie" else "series"
+        raise RequestError(429, f"Request limit reached: {bucket['limit']} {what} every {q['days']} days")
 
 
 # ---- create ----------------------------------------------------------------------------
@@ -117,6 +169,7 @@ async def create_request(db: Session, user: User, media_type: str, tmdb_id: int,
         if media_type == "movie" or not existing.season_list or set(existing.season_list) & set(seasons):
             who = "you" if existing.requested_by == user.id else "someone"
             raise RequestError(409, f"Already requested by {who} ({existing.status})")
+    _check_quota(db, user, media_type)
 
     req = MediaRequest(
         media_type=media_type, tmdb_id=tmdb_id, title=details["title"], year=details.get("year"),

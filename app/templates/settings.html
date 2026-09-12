@@ -18,6 +18,7 @@
       <a href="#library">Library</a>
       <a href="#torrent">Torrent client</a>
       <a href="#automation">Automation</a>
+      <a href="#requests">Requests</a>
       <a href="#notifications">Notifications</a>
       <a href="#plex">Plex</a>
       <a href="#accounts">Accounts</a>
@@ -63,6 +64,16 @@
           <input type="number" name="automation_interval_seconds" value="{{ s.automation_interval_seconds }}" min="60">
           <div class="holt-meta">How often The Den advances downloads, imports finished ones, and searches for anything missing. Applied immediately.</div>
         </div>
+      </section>
+
+      <section class="holt-panel" id="requests">
+        <div class="holt-panel-head"><div class="holt-eyebrow">Requests</div><div class="holt-meta">quotas for non-admins</div></div>
+        <div class="holt-form-row">
+          <div class="holt-field"><label>Movies per window (0 = unlimited)</label><input type="number" name="request_movie_limit" value="{{ s.request_movie_limit }}" min="0"></div>
+          <div class="holt-field"><label>Series per window (0 = unlimited)</label><input type="number" name="request_series_limit" value="{{ s.request_series_limit }}" min="0"></div>
+          <div class="holt-field"><label>Window (days)</label><input type="number" name="request_limit_days" value="{{ s.request_limit_days }}" min="1"></div>
+        </div>
+        <div class="holt-meta" style="margin-top: var(--holt-space-2)">Defaults for everyone; set a different allowance for one person from <a href="/ui/users">Users</a>. Admins and auto-approve users skip the queue, and admins have no quota. Declined requests don't count.</div>
       </section>
 
       <section class="holt-panel" id="notifications">
@@ -148,8 +159,13 @@
 
     <section class="holt-panel" id="accounts" style="grid-column: 2">
       <div class="holt-panel-head"><div class="holt-eyebrow">Accounts</div><span class="holt-badge {{ 'holt-badge-available' if auth_required else 'holt-badge-missing' }}"><span class="dot"></span>{{ 'sign-in required' if auth_required else 'sign-in optional' }}</span></div>
-      <p class="holt-body" style="font-size:13.5px;margin:0 0 var(--holt-space-3)">{% if auth_required %}Every page and API call needs a signed-in account.{% else %}Anyone who isn't signed in is treated as an admin, so the desktop and Android apps keep working. Set <code>AUTH_REQUIRED=true</code> in the environment to require sign-in everywhere.{% endif %}</p>
-      <a class="holt-btn holt-btn-secondary holt-btn-sm" href="/ui/users">Manage users</a>
+      <p class="holt-body" style="font-size:13.5px;margin:0 0 var(--holt-space-3)">{% if auth_required %}Every page and API call needs a signed-in account. The desktop and Android apps sign in with an API token from each person's profile.{% else %}Anyone who isn't signed in is treated as an admin, so the desktop and Android apps keep working without a login. Turn sign-in on once everyone has an account (or a Plex login) and the apps have their API tokens.{% endif %}</p>
+      <form method="post" action="/ui/settings/accounts" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-family:var(--holt-font-core);font-size:13px;color:var(--holt-ink-70)"><input type="checkbox" name="require_signin" value="1" {% if auth_required %}checked{% endif %} style="width:auto;margin:0"> Require sign-in everywhere</label>
+        <button type="submit" class="holt-btn holt-btn-secondary holt-btn-sm">Save</button>
+        <a class="holt-btn holt-btn-quiet holt-btn-sm" href="/ui/users">Manage users</a>
+      </form>
+      {% if not current_user %}<div class="holt-meta" style="margin-top:var(--holt-space-2)">You're browsing anonymously; sign in as an admin before turning this on or you'd lock yourself out.</div>{% endif %}
     </section>
   </div>
 {% endblock %}

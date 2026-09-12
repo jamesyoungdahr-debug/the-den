@@ -23,6 +23,8 @@ async def _plex_job() -> None:
     db = SessionLocal()
     try:
         await plex_scan.scan(db)
+        from app import requests_service  # local: requests_service imports plex_scan
+        await requests_service.mark_available(db)
     except plex_scan.NotConfigured:
         pass  # nothing to scan until an admin connects Plex and picks a server
     except Exception:

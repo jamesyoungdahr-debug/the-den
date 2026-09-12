@@ -4,6 +4,7 @@ then search+grab anything still missing."""
 
 from sqlalchemy.orm import Session
 
+from app import requests_service
 from app.candidates import scored_candidates
 from app.download_check import check_and_import, reap_seeded
 from app.grabber import grab_episode, grab_movie
@@ -73,3 +74,7 @@ async def run_cycle(db: Session) -> None:
     await _advance_downloads(db)
     await _grab_missing_movies(db)
     await _grab_missing_episodes(db)
+    try:
+        await requests_service.mark_available(db)
+    except Exception:
+        pass  # a notification problem must never break the cycle

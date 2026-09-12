@@ -6,7 +6,7 @@ from pathlib import Path
 from fastapi import Request
 from fastapi.templating import Jinja2Templates
 
-from app import auth, config
+from app import auth
 
 TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w342"
 
@@ -49,7 +49,7 @@ def _request_context(request: Request) -> dict:
     return {
         "current_user": user,
         "is_admin": auth.is_admin(request),
-        "auth_required": config.AUTH_REQUIRED,
+        "auth_required": auth.required(),
         "pending_requests": _pending_requests(request),
     }
 

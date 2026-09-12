@@ -108,8 +108,19 @@ page lists which seasons Plex has. Shared users of that server can sign in with 
 requests for what is already on Plex or in the library. Admins get a pending badge in the
 sidebar and approve or decline (with a note) on **Requests**; an approval adds the title to
 the library with only the requested seasons monitored, so automation searches for just those.
-Admins and users marked *auto-approve* skip the queue. JSON twins live at `/api/requests`
-and `/api/plex/scan`.
+Admins and users marked *auto-approve* skip the queue. Non-admins have a request quota
+(default 10 movies and 5 series per 7 days; change the defaults in Settings → Requests or
+per person on Users; 0 means unlimited). When an approved request turns up, through an
+import or the next Plex scan, it is marked *available* and Discord is told once. JSON twins
+live at `/api/requests`, `/api/requests/quota` and `/api/plex/scan`.
+
+## Accounts
+
+Sign-in is optional out of the box (`AUTH_REQUIRED=false`): anyone who isn't signed in is
+treated as an admin so the desktop and Android apps keep working. Create accounts on
+Users, or let people sign in with Plex, then turn on **Require sign-in** in Settings →
+Accounts (it overrides the env var, and only a signed-in admin can flip it). The apps
+authenticate with the API token from each person's profile, sent as `X-Api-Key`.
 
 ## How the built-in torrent client works
 

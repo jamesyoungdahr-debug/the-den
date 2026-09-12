@@ -17,6 +17,16 @@ restores torrents from resume data. See ROADMAP.md's M10 section for the details
 two loopback-swarm gotchas that cost the most debugging time.
 
 ## Currently working on
+**M11g is done (2026-09-12), which closes M11.** Request quotas (defaults in Settings →
+Requests, per-user overrides on Users, admins exempt), "now available" detection with a
+one-time Discord post when an approved request lands via import or Plex scan, and a
+**Require sign-in** toggle in Settings → Accounts that overrides the `AUTH_REQUIRED` env
+var (guarded so an anonymous admin can't lock themselves out). `/api/requests/quota`,
+`quota` on `/api/auth/me`, `auth_required` + quota fields on `/api/settings`. 61-check e2e.
+**Next: U4 (KDE client) and U5 (Android)** -- both need the login step, API-token auth,
+the changed `/api/settings` fields, and the Discover/Requests screens. Still not tried
+against real plex.tv.
+
 **M11e Plex scan + M11f Requests are done** (2026-09-11): the scheduler walks the Plex
 libraries picked in Settings into `plex_media` (TMDB/TVDB/IMDb ids, per-season episode
 counts), so Discover and the detail pages know what is already on Plex; signed-in users
