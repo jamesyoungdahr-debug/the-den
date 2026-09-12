@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from app import importer, settings as settings_module
 from app.models import DownloadRecord, Episode, Movie, Series
-from app.notifier import notify
+from app.notifier import notify_event
 from app.torrent import engine
 
 TERMINAL_STATUSES = ("imported", "failed")
@@ -60,7 +60,7 @@ async def _import(db: Session, record: DownloadRecord) -> None:
     # "completed" = finished downloading but nothing importable in it (no video file).
     record.status = "imported" if imported else "completed"
     if imported:
-        await notify(f"Imported: {record.release_title}", s.discord_webhook_url)
+        await notify_event(db, "imported", f"Imported: {record.release_title}", legacy_discord_url=s.discord_webhook_url)
 
 
 def reap_seeded(db: Session) -> int:

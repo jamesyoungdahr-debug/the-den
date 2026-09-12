@@ -24,6 +24,9 @@ Output: a list of defects, fixed as they appear. Gate for everything below.
 
 ### M15 Notifications (server, web, KDE, Android)
 
+**Done 2026-09-12 (server 0.6.0, client 0.4.5, android 0.5.2).** `notification_agents` table, `app/notifier.py` with Discord / ntfy / webhook / Telegram / Pushover senders and `notify_event` fan-out, `/api/notifications/*` (kinds, events, agents CRUD, test), agent lists with add/edit/test in the web settings page, the KDE settings page and the Android settings screen. Verified: API smoke (validation, secret blanking, edit keeps secret, delete), event sweep through `tests/mock_webhook.py` (9/9 ntfy, 2/2 Telegram by subscription), KDE harness 13 pages clean, Android build. Not yet: Pushover against the real service, the "upgraded" / "download_failed" / "health_warning" events have no emitter until M16, M18, M19.
+
+
 - `app/notifier.py` becomes agent-based: Discord (existing), **ntfy** (topic URL,
   optional token, priority), **generic webhook** (JSON POST), Telegram, Pushover.
 - Event catalogue with per-agent toggles: grabbed, imported, upgraded, download failed,

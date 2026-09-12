@@ -91,11 +91,14 @@
       </section>
 
       <section class="holt-panel" id="notifications">
-        <div class="holt-panel-head"><div class="holt-eyebrow">Notifications</div><div class="holt-meta">optional</div></div>
-        <div class="holt-field" style="margin:0">
-          <label>Discord webhook URL {{ "· currently set" if has_discord_webhook else "· not set" }}</label>
+        <div class="holt-panel-head"><div class="holt-eyebrow">Notifications</div><div class="holt-meta">Discord, ntfy, webhook, Telegram, Pushover</div></div>
+        <div id="agent-list" class="holt-row-list"></div>
+        <div id="agent-result" class="holt-message" style="display:none; margin-top: var(--holt-space-2);"></div>
+        <div style="margin-top: var(--holt-space-3)"><a href="#" class="holt-btn holt-btn-secondary holt-btn-sm" onclick="openAgent(null); return false;">Add agent</a></div>
+        <div class="holt-field" style="margin: var(--holt-space-3) 0 0">
+          <label>Legacy Discord webhook URL {{ "· currently set" if has_discord_webhook else "· not set" }}</label>
           <input type="password" name="discord_webhook_url" placeholder="leave blank to keep current value" autocomplete="off">
-          <div class="holt-meta">Channel settings → Integrations → Webhooks. Grabs and imports post there.</div>
+          <div class="holt-meta">Still fires for every event; add it as an agent above to pick events.</div>
         </div>
       </section>
     </form>
@@ -193,5 +196,120 @@
         el.textContent = resp.ok ? `OK: ${data.solver}${data.version ? " " + data.version : ""}` : `FAILED: ${data.detail || JSON.stringify(data)}`;
       } catch (e) { el.className = "holt-message holt-message-warning"; el.textContent = `FAILED: ${e}`; }
     }
+  </script>
+  <dialog id="agent-dialog" class="holt-dialog holt-glass-float">
+    <div class="holt-eyebrow" style="margin-bottom: var(--holt-space-3)">Notification agent</div>
+    <input type="hidden" id="agent-id">
+    <div class="holt-field"><label for="agent-name">Name</label><input id="agent-name" placeholder="e.g. Phone"></div>
+    <div class="holt-field"><label for="agent-kind">Kind</label><select id="agent-kind"></select></div>
+    <div id="agent-fields"></div>
+    <div class="holt-field">
+      <label>Events</label>
+      <div id="agent-events" style="display:grid; grid-template-columns: 1fr 1fr; gap: 6px 12px"></div>
+      <div class="holt-meta">Leave all unticked to receive every event.</div>
+    </div>
+    <div class="holt-field"><label style="display:flex; align-items:center; gap:8px"><input type="checkbox" id="agent-enabled" style="width:auto"> Enabled</label></div>
+    <div style="display:flex; gap: 8px; justify-content: flex-end">
+      <button type="button" class="holt-btn holt-btn-quiet" data-close-dialog>Cancel</button>
+      <button type="button" class="holt-btn holt-btn-secondary" id="agent-test">Send test</button>
+      <button type="button" class="holt-btn holt-btn-primary" id="agent-save">Save</button>
+    </div>
+  </dialog>
+
+  <script>
+    // Notification agents (M15): the section above talks to /api/notifications directly.
+    let KINDS = [], EVENTS = [], AGENTS = [], CURRENT = null;
+    const SECRET_KEYS = ["token", "webhook_url", "bot_token", "app_token", "user_key"];
+    async function api(method, path, body) {
+      const opts = { method, credentials: "same-origin" };
+      if (body !== undefined) { opts.headers = { "Content-Type": "application/json" }; opts.body = JSON.stringify(body); }
+      const res = await fetch("/api/notifications" + path, opts);
+      if (!res.ok) { let d = res.statusText; try { d = (await res.json()).detail || d; } catch (e) {} throw new Error(d); }
+      return res.status === 204 ? null : res.json();
+    }
+    function show(text, ok) {
+      const el = document.getElementById("agent-result");
+      el.textContent = text; el.className = "holt-message " + (ok ? "holt-message-positive" : "holt-message-warning"); el.style.display = "block";
+    }
+    async function loadNotifications() {
+      [KINDS, EVENTS, AGENTS] = await Promise.all([api("GET", "/kinds"), api("GET", "/events"), api("GET", "/agents")]);
+      const sel = document.getElementById("agent-kind");
+      sel.innerHTML = KINDS.map(k => `<option value="${k.kind}">${k.kind}</option>`).join("");
+      document.getElementById("agent-events").innerHTML = EVENTS.map(e => `<label class="holt-check" style="display:flex; gap:6px; align-items:center; font-size:13px"><input type="checkbox" value="${e.key}" style="width:auto"> ${e.label}</label>`).join("");
+      renderAgents();
+    }
+    function renderAgents() {
+      const list = document.getElementById("agent-list");
+      if (!AGENTS.length) { list.innerHTML = '<div class="holt-empty"><div class="holt-empty-title">No agents yet</div><div class="holt-body">Add Discord, ntfy, a webhook, Telegram or Pushover.</div></div>'; return; }
+      list.innerHTML = "";
+      AGENTS.forEach(a => {
+        const row = document.createElement("div"); row.className = "holt-row";
+        const meta = a.kind + " · " + (a.events.length ? a.events.length + " events" : "all events");
+        row.innerHTML = `<div class="holt-row-main"><div class="holt-row-title"></div><div class="holt-row-meta"></div></div>
+          <span class="holt-badge ${a.enabled ? "holt-badge-available" : "holt-badge-missing"}"><span class="dot"></span>${a.enabled ? "enabled" : "disabled"}</span>
+          <div class="holt-row-actions"><a href="#" class="holt-btn holt-btn-quiet holt-btn-sm" data-act="test">test</a><a href="#" class="holt-btn holt-btn-quiet holt-btn-sm" data-act="edit">edit</a><a href="#" class="holt-btn holt-btn-quiet holt-btn-sm" data-act="delete">delete</a></div>`;
+        row.querySelector(".holt-row-title").textContent = a.name;
+        row.querySelector(".holt-row-meta").textContent = meta;
+        row.querySelector('[data-act="test"]').onclick = (ev) => { ev.preventDefault(); testAgent(a.id); };
+        row.querySelector('[data-act="edit"]').onclick = (ev) => { ev.preventDefault(); openAgent(a); };
+        row.querySelector('[data-act="delete"]').onclick = (ev) => { ev.preventDefault(); if (confirm("Delete this agent?")) deleteAgent(a.id); };
+        list.appendChild(row);
+      });
+    }
+    function renderFields(agent) {
+      const kind = document.getElementById("agent-kind").value;
+      const def = KINDS.find(k => k.kind === kind);
+      const box = document.getElementById("agent-fields");
+      box.innerHTML = "";
+      (def ? def.fields : []).forEach(key => {
+        const secret = SECRET_KEYS.includes(key);
+        const div = document.createElement("div"); div.className = "holt-field";
+        const label = document.createElement("label"); label.textContent = key.replace(/_/g, " ") + (key === "token" ? " (optional)" : "");
+        const input = document.createElement("input"); input.id = "cfg-" + key; input.type = secret ? "password" : "text"; input.autocomplete = "off";
+        if (agent && agent.kind === kind && !secret) input.value = agent.config[key] || "";
+        if (agent && agent.kind === kind && secret && agent["has_" + key]) input.placeholder = "leave blank to keep the current value";
+        if (kind === "ntfy" && key === "url") input.placeholder = input.placeholder || "https://ntfy.sh";
+        div.appendChild(label); div.appendChild(input); box.appendChild(div);
+      });
+    }
+    function openAgent(agent) {
+      CURRENT = agent;
+      document.getElementById("agent-id").value = agent ? agent.id : "";
+      document.getElementById("agent-name").value = agent ? agent.name : "";
+      document.getElementById("agent-kind").value = agent ? agent.kind : (KINDS[0] ? KINDS[0].kind : "");
+      document.getElementById("agent-enabled").checked = agent ? agent.enabled : true;
+      document.querySelectorAll("#agent-events input").forEach(cb => { cb.checked = agent ? agent.events.includes(cb.value) : false; });
+      renderFields(agent);
+      document.getElementById("agent-dialog").showModal();
+    }
+    function formPayload() {
+      const config = {};
+      document.querySelectorAll("#agent-fields input").forEach(i => { config[i.id.replace(/^cfg-/, "")] = i.value; });
+      return {
+        name: document.getElementById("agent-name").value, kind: document.getElementById("agent-kind").value, config,
+        events: Array.from(document.querySelectorAll("#agent-events input:checked")).map(cb => cb.value),
+        enabled: document.getElementById("agent-enabled").checked,
+      };
+    }
+    async function saveAgent() {
+      const id = document.getElementById("agent-id").value;
+      try {
+        await api(id ? "PUT" : "POST", id ? "/agents/" + id : "/agents", formPayload());
+        document.getElementById("agent-dialog").close(); show("Saved", true); await loadNotifications();
+      } catch (e) { show(e.message, false); }
+    }
+    async function testAgent(id) {
+      try {
+        if (id) await api("POST", "/agents/" + id + "/test"); else { const p = formPayload(); await api("POST", "/test", { kind: p.kind, config: p.config }); }
+        show("Test sent", true);
+      } catch (e) { show(e.message, false); }
+    }
+    async function deleteAgent(id) {
+      try { await api("DELETE", "/agents/" + id); show("Deleted", true); await loadNotifications(); } catch (e) { show(e.message, false); }
+    }
+    document.getElementById("agent-save").onclick = saveAgent;
+    document.getElementById("agent-test").onclick = () => testAgent(document.getElementById("agent-id").value || null);
+    document.getElementById("agent-kind").addEventListener("change", () => renderFields(CURRENT));
+    document.addEventListener("DOMContentLoaded", loadNotifications);
   </script>
 {% endblock %}

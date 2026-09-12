@@ -17,6 +17,13 @@ restores torrents from resume data. See ROADMAP.md's M10 section for the details
 two loopback-swarm gotchas that cost the most debugging time.
 
 ## Currently working on
+**M15 -- notification agents (2026-09-12).** Discord, ntfy, generic webhook, Telegram and
+Pushover agents, each subscribed to a set of events (grabbed, imported, upgraded, download
+failed, request submitted / approved / declined / available, health warning), managed from
+Settings on all three surfaces via `/api/notifications`. The old single Discord webhook
+setting keeps working as a legacy agent. Verified with `tests/e2e_notifications.sh` against
+the extended `tests/mock_webhook.py`. Plan: `docs/tier1-plan.md`.
+
 **M13 -- Plex-style file names (2026-09-12).** Decided: keep hard-links (the torrent keeps
 seeding, no extra space), rename the imported file. `app/importer.py` now writes
 `Movies/Title (Year)/Title (Year).mkv` and `TV/Show/Season 01/Show - S01E02 - Title.mkv`;

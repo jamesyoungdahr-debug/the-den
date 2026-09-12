@@ -209,3 +209,16 @@ class MediaRequest(Base):
     def season_list(self) -> list[int]:
         import json as _json
         return _json.loads(self.seasons) if self.seasons else []
+
+
+class NotificationAgent(Base):
+    """A place notifications go (M15); one row per Discord webhook, ntfy topic, etc."""
+
+    __tablename__ = "notification_agents"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+    kind = Column(String, nullable=False)  # discord | ntfy | webhook | telegram | pushover
+    config = Column(String, nullable=True)  # JSON object with the kind's fields, see app/notifier.KINDS
+    events = Column(String, nullable=True)  # JSON list of event keys; null/empty = every event
+    enabled = Column(Boolean, nullable=False, default=True)

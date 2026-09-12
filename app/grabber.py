@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app import settings as settings_module
 from app.models import DownloadRecord, Episode, Movie
-from app.notifier import notify
+from app.notifier import notify_event
 from app.torrent import engine
 
 
@@ -21,7 +21,7 @@ async def _grab(
     db.add(record)
     db.commit()
     db.refresh(record)
-    await notify(f"Grabbed **{label}** -- {release_title}", s.discord_webhook_url)
+    await notify_event(db, "grabbed", f"Grabbed **{label}** -- {release_title}", legacy_discord_url=s.discord_webhook_url)
     return record
 
 

@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from app import plex_scan, tmdb, tvmaze
 from app import settings as settings_module
 from app.models import Episode, MediaRequest, Movie, Series, User
-from app.notifier import notify
+from app.notifier import notify_event
 
 OPEN_STATUSES = ("pending", "approved")
 
@@ -96,7 +96,7 @@ async def mark_available(db: Session) -> list[MediaRequest]:
         s = settings_module.effective(db)
         for req in done:
             requester = db.get(User, req.requested_by)
-            await notify(f"**{_label(req)}** is now available" + (f" -- requested by {requester.username}" if requester else ""), s.discord_webhook_url)
+            await notify_event(db, "request_available", f"**{_label(req)}** is now available" + (f" -- requested by {requester.username}" if requester else ""), legacy_discord_url=s.discord_webhook_url)
     return done
 
 
@@ -183,7 +183,7 @@ async def create_request(db: Session, user: User, media_type: str, tmdb_id: int,
     if user.is_admin or user.auto_approve:
         await approve(db, req, user)
     else:
-        await notify(f"**{user.username}** requested **{_label(req)}** -- approve it at /requests", s.discord_webhook_url)
+        await notify_event(db, "request_submitted", f"**{user.username}** requested **{_label(req)}** -- approve it at /requests", legacy_discord_url=s.discord_webhook_url)
     return req
 
 
@@ -244,7 +244,7 @@ async def approve(db: Session, req: MediaRequest, admin: User) -> MediaRequest:
     req.decided_at = datetime.now(timezone.utc)
     db.commit()
     requester = db.get(User, req.requested_by)
-    await notify(f"Approved **{_label(req)}** for {requester.username if requester else 'someone'} -- The Den is looking for it", s.discord_webhook_url)
+    await notify_event(db, "request_approved", f"Approved **{_label(req)}** for {requester.username if requester else 'someone'} -- The Den is looking for it", legacy_discord_url=s.discord_webhook_url)
     return req
 
 
@@ -268,7 +268,7 @@ async def decline(db: Session, req: MediaRequest, admin: User, note: str | None 
     db.commit()
     s = settings_module.effective(db)
     requester = db.get(User, req.requested_by)
-    await notify(f"Declined **{_label(req)}** for {requester.username if requester else 'someone'}" + (f": {req.note}" if req.note else ""), s.discord_webhook_url)
+    await notify_event(db, "request_declined", f"Declined **{_label(req)}** for {requester.username if requester else 'someone'}" + (f": {req.note}" if req.note else ""), legacy_discord_url=s.discord_webhook_url)
     return req
 
 

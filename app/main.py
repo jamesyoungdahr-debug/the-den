@@ -10,7 +10,7 @@ from app import settings as settings_module
 from app.db import SessionLocal, engine as db_engine
 from app.deps import get_db
 from app.models import QualityProfile
-from app.routers import api_settings, discover, downloads, indexers, library, movies, plex as plex_routes, requests as request_routes, search, series, torrents, ui, users
+from app.routers import api_settings, discover, downloads, indexers, library, movies, notifications, plex as plex_routes, requests as request_routes, search, series, torrents, ui, users
 from app.routers import auth as auth_routes
 from app.templating import templates
 from app.torrent import engine as torrent_engine
@@ -30,6 +30,7 @@ app.include_router(series.router)
 app.include_router(downloads.router)
 app.include_router(torrents.router)
 app.include_router(api_settings.router)
+app.include_router(notifications.router)
 app.include_router(ui.router)
 
 
