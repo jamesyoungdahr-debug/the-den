@@ -21,6 +21,7 @@ Deploy target: native systemd service on Arch Linux (no Docker).
 - [x] M10 -- Built-in torrent client: libtorrent in-process, qBittorrent dependency removed
 - [x] M11 -- Discover + Requests (done 2026-09-12): Overseerr-style browsing, Plex + local login, admin-only plumbing, Plex library awareness, user requests with admin approval -- planned, see [docs/requests-plan.md](docs/requests-plan.md)
 - [x] M12 -- Indexer presets (done 2026-09-12): a Prowlarr-style catalog (public trackers, usenet, Jackett/Prowlarr/generic), native implementations for eight public trackers, and a Cloudflare solver (built-in Chromium or external FlareSolverr/Byparr) -- see [docs/indexers-plan.md](docs/indexers-plan.md)
+- [x] M13 -- Plex-style file names (done 2026-09-12): imports keep hard-linking (torrents seed on) and now name files `Title (Year).ext` and `Show - S01E02 - Episode.ext` inside the existing `Movies/Title (Year)/` and `TV/Show/Season 01/` layout
 - [ ] UI redesign track ("HoltOS Glass": left sidebar shell, glass/blur surfaces, poster-first pages, across web + KDE + Android) -- planned, see [docs/ui-redesign-plan.md](docs/ui-redesign-plan.md); sequenced ahead of M11's pages
 
 ## Notes

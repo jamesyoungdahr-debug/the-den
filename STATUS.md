@@ -17,6 +17,12 @@ restores torrents from resume data. See ROADMAP.md's M10 section for the details
 two loopback-swarm gotchas that cost the most debugging time.
 
 ## Currently working on
+**M13 -- Plex-style file names (2026-09-12).** Decided: keep hard-links (the torrent keeps
+seeding, no extra space), rename the imported file. `app/importer.py` now writes
+`Movies/Title (Year)/Title (Year).mkv` and `TV/Show/Season 01/Show - S01E02 - Title.mkv`;
+the folder layout is unchanged so existing libraries are not split. Covered by
+`tests/test_importer.py` (5 checks, drafted by the local model).
+
 **M12 -- indexer presets, native public trackers, Cloudflare solver (2026-09-12).**
 Indexers are now picked from a catalog (`GET /indexers/presets`: Knaben, The Pirate Bay,
 YTS, Nyaa, LimeTorrents, TorrentDownloads, EZTV, 1337x, AnimeTosho, thirteen usenet
@@ -114,8 +120,6 @@ milestones and open decisions are in `docs/requests-plan.md`. Also planned: a fu
 - Built-in Cloudflare solver: verify against 1337x / EZTV from a residential connection
   (the dev network is refused by Cloudflare outright); if it still fails there, look at
   what Byparr does differently for the Turnstile iframe.
-- Library placement (M13 candidate): move-or-hard-link choice, Plex-style file names
-  (`Title (Year).ext`, `Title - S01E02.ext`); folders already follow the Plex layout.
 - Torrent client polish worth doing once real use shows the need: per-torrent file
   selection, sequential download, IP filter, proxy support, a session-wide stats line
   (libtorrent exposes all of these; none are wired yet).
