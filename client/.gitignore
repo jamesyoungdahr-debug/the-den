@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.venv/
+.flatpak-builder/
+build-dir/
+*.flatpak
