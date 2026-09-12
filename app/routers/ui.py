@@ -9,12 +9,12 @@ from app import indexers as indexer_engine
 from app import auth, config, library_service
 from app import settings as settings_module
 from app import tmdb, torznab, tvmaze
-from app.candidates import scored_candidates
+from app.candidates import episode_query, movie_query, profile_for, scored_candidates
 from app.deps import get_db
 from app.download_check import check_and_import
 from app.grabber import grab_episode as do_grab_episode
 from app.grabber import grab_movie as do_grab_movie
-from app.models import DownloadRecord, Episode, Indexer, Movie, QualityProfile, Series
+from app.models import DownloadRecord, Episode, Indexer, Movie, Series
 from app.routers.api_settings import apply_runtime_changes
 from app.templating import templates
 from app.torrent import engine as torrent_engine
@@ -171,8 +171,8 @@ async def ui_movie_candidates(movie_id: int, request: Request, db: Session = Dep
     movie = db.get(Movie, movie_id)
     if not movie:
         raise HTTPException(404, "Movie not found")
-    query = f"{movie.title} {movie.year}" if movie.year else movie.title
-    profile = db.get(QualityProfile, movie.quality_profile_id) if movie.quality_profile_id else db.query(QualityProfile).first()
+    query = movie_query(movie)
+    profile = profile_for(db, movie.quality_profile_id)
     candidates = await scored_candidates(db, query, profile)
     return templates.TemplateResponse(
         "candidates.html",
@@ -306,8 +306,8 @@ async def ui_episode_candidates(episode_id: int, request: Request, db: Session =
     if not episode:
         raise HTTPException(404, "Episode not found")
     series = db.get(Series, episode.series_id)
-    query = f"{series.title} S{episode.season_number:02d}E{episode.episode_number:02d}"
-    profile = db.get(QualityProfile, series.quality_profile_id) if series.quality_profile_id else db.query(QualityProfile).first()
+    query = episode_query(series, episode)
+    profile = profile_for(db, series.quality_profile_id)
     candidates = await scored_candidates(db, query, profile)
     return templates.TemplateResponse(
         "candidates.html",

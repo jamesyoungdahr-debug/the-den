@@ -123,9 +123,10 @@ milestones and open decisions are in `docs/requests-plan.md`. Also planned: a fu
 - Torrent client polish worth doing once real use shows the need: per-torrent file
   selection, sequential download, IP filter, proxy support, a session-wide stats line
   (libtorrent exposes all of these; none are wired yet).
-- Cleanup findings from the earlier code review still stand: the same query-building +
-  quality-profile-fallback logic duplicated across `movies.py`/`series.py`/`ui.py`/
-  `automation.py`; N+1 queries in `ui.py`'s `calendar()` and `tv_library()`;
-  `scheduler.py` (and now `app/torrent/engine.py`) using a module-level global instead of DI.
+- Cleanup (2026-09-12): the query-building and quality-profile fallback now live in
+  `app/candidates.py` (`movie_query`, `episode_query`, `profile_for`) and the five call sites
+  use them; the calendar and TV-library N+1s were already gone. Still module-level globals:
+  `scheduler.py`, `app/torrent/engine.py`, `app/indexers/solver.py` -- left as is on purpose,
+  each is a process-wide singleton and DI would only add plumbing.
 - Optional: wire up real poster art (tiles currently show the intentional striped
   placeholder -- TMDB/TVmaze poster URLs aren't fetched/displayed yet).

@@ -1,9 +1,26 @@
 from sqlalchemy.orm import Session
 
 from app import indexers as indexer_engine
-from app.models import QualityProfile
+from app.models import Episode, Movie, QualityProfile, Series
 from app.parser import parse_quality
 from app.scoring import best_release
+
+
+
+def profile_for(db: Session, quality_profile_id: int | None, default: QualityProfile | None = None) -> QualityProfile | None:
+    """The title's own profile, else `default` (the automation cycle passes the default profile
+    so it is not re-queried per title), else the first profile in the table."""
+    return db.get(QualityProfile, quality_profile_id) if quality_profile_id else default or db.query(QualityProfile).first()
+
+
+def movie_query(movie: Movie) -> str:
+    """Indexer query for a movie: title plus year when known."""
+    return f"{movie.title} {movie.year}" if movie.year else movie.title
+
+
+def episode_query(series: Series, episode: Episode) -> str:
+    """Indexer query for an episode: the SxxEyy form is what indexers expect."""
+    return f"{series.title} S{episode.season_number:02d}E{episode.episode_number:02d}"
 
 
 async def scored_candidates(db: Session, query: str, profile: QualityProfile | None) -> list[dict]:

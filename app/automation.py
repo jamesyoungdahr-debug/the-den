@@ -5,7 +5,7 @@ then search+grab anything still missing."""
 from sqlalchemy.orm import Session
 
 from app import requests_service
-from app.candidates import scored_candidates
+from app.candidates import episode_query, movie_query, profile_for, scored_candidates
 from app.download_check import check_and_import, reap_seeded
 from app.grabber import grab_episode, grab_movie
 from app.models import DownloadRecord, Episode, Movie, QualityProfile, Series
@@ -38,10 +38,10 @@ async def _grab_missing_movies(db: Session) -> None:
     for movie in db.query(Movie).filter(Movie.has_file == False).all():  # noqa: E712
         if _has_active_download(db, movie_id=movie.id):
             continue
-        profile = db.get(QualityProfile, movie.quality_profile_id) if movie.quality_profile_id else default_profile
+        profile = profile_for(db, movie.quality_profile_id, default=default_profile)
         if not profile:
             continue
-        query = f"{movie.title} {movie.year}" if movie.year else movie.title
+        query = movie_query(movie)
         candidates = await scored_candidates(db, query, profile)
         best = next((c for c in candidates if c["is_best"]), None)
         if best:
@@ -57,10 +57,10 @@ async def _grab_missing_episodes(db: Session) -> None:
         if _has_active_download(db, episode_id=episode.id):
             continue
         series = db.get(Series, episode.series_id)
-        profile = db.get(QualityProfile, series.quality_profile_id) if series.quality_profile_id else default_profile
+        profile = profile_for(db, series.quality_profile_id, default=default_profile)
         if not profile:
             continue
-        query = f"{series.title} S{episode.season_number:02d}E{episode.episode_number:02d}"
+        query = episode_query(series, episode)
         candidates = await scored_candidates(db, query, profile)
         best = next((c for c in candidates if c["is_best"]), None)
         if best:

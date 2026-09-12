@@ -5,10 +5,10 @@ from sqlalchemy.orm import Session
 from app import auth
 from app import settings as settings_module
 from app import tmdb
-from app.candidates import scored_candidates
+from app.candidates import movie_query, profile_for, scored_candidates
 from app.deps import get_db
 from app.grabber import grab_movie as do_grab_movie
-from app.models import DownloadRecord, Movie, QualityProfile
+from app.models import DownloadRecord, Movie
 from app.schemas import DownloadRecordOut, GrabRequest, MovieCreate, MovieOut, ScoredReleaseOut
 
 router = APIRouter(prefix="/movies", tags=["movies"])
@@ -63,8 +63,8 @@ async def movie_candidates(movie_id: int, db: Session = Depends(get_db)):
     if not movie:
         raise HTTPException(404, "Movie not found")
 
-    query = f"{movie.title} {movie.year}" if movie.year else movie.title
-    profile = db.get(QualityProfile, movie.quality_profile_id) if movie.quality_profile_id else db.query(QualityProfile).first()
+    query = movie_query(movie)
+    profile = profile_for(db, movie.quality_profile_id)
     return await scored_candidates(db, query, profile)
 
 

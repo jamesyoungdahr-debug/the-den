@@ -3,10 +3,10 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app import auth, tvmaze
-from app.candidates import scored_candidates
+from app.candidates import episode_query, profile_for, scored_candidates
 from app.deps import get_db
 from app.grabber import grab_episode as do_grab_episode
-from app.models import DownloadRecord, Episode, QualityProfile, Series
+from app.models import DownloadRecord, Episode, Series
 from app.schemas import DownloadRecordOut, EpisodeOut, GrabRequest, ScoredReleaseOut, SeriesCreate, SeriesOut
 
 router = APIRouter(tags=["series"])
@@ -81,8 +81,8 @@ async def episode_candidates(episode_id: int, db: Session = Depends(get_db)):
     if not series:
         raise HTTPException(404, "Series not found")
 
-    query = f"{series.title} S{episode.season_number:02d}E{episode.episode_number:02d}"
-    profile = db.get(QualityProfile, series.quality_profile_id) if series.quality_profile_id else db.query(QualityProfile).first()
+    query = episode_query(series, episode)
+    profile = profile_for(db, series.quality_profile_id)
     return await scored_candidates(db, query, profile)
 
 
