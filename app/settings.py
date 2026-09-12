@@ -36,6 +36,7 @@ class EffectiveSettings:
     request_series_limit: int
     request_limit_days: int
     auth_required: bool
+    flaresolverr_url: str
 
     def engine_config(self) -> EngineConfig:
         return EngineConfig(
@@ -96,4 +97,5 @@ def effective(db: Session) -> EffectiveSettings:
         request_series_limit=_pick(row.request_series_limit, config.REQUEST_SERIES_LIMIT),
         request_limit_days=_pick(row.request_limit_days, config.REQUEST_LIMIT_DAYS),
         auth_required=_pick(row.auth_required, config.AUTH_REQUIRED),
+        flaresolverr_url=_pick(row.flaresolverr_url, config.FLARESOLVERR_URL),
     )

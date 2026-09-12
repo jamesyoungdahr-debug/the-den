@@ -17,6 +17,19 @@ restores torrents from resume data. See ROADMAP.md's M10 section for the details
 two loopback-swarm gotchas that cost the most debugging time.
 
 ## Currently working on
+**M12 -- indexer presets, native public trackers, Cloudflare solver (2026-09-12).**
+Indexers are now picked from a catalog (`GET /indexers/presets`: Knaben, The Pirate Bay,
+YTS, Nyaa, LimeTorrents, TorrentDownloads, EZTV, 1337x, AnimeTosho, thirteen usenet
+indexers, Jackett/Prowlarr/generic) and the public trackers are talked to natively
+(`app/indexers/native.py`), so Jackett/Prowlarr are no longer needed for them. Sites behind
+Cloudflare go through a solver: the built-in one drives the system Chromium via nodriver
+(`app/indexers/solver.py`, `chromium` is now a package dependency), or an external
+FlareSolverr/Byparr URL from Settings -> Indexers. Five trackers verified live, all parsers
+covered offline (`tests/test_native_indexers.py`, 11 checks); the built-in solver could not
+be verified from the dev network (Cloudflare never clears there, even in a normal browser)
+and needs the HoltOS box. All three clients got the preset picker and the solver field.
+Details and open items: `docs/indexers-plan.md`.
+
 **Library pages now include Plex (2026-09-12, v0.4.3).** Movies and TV merge The Den's rows
 with the Plex scan (`app/library_service.py`): Plex-only titles appear with their Plex
 poster via the new `/api/plex/thumb/{rating_key}` proxy (owner token stays server-side;
@@ -98,12 +111,11 @@ milestones and open decisions are in `docs/requests-plan.md`. Also planned: a fu
   indexer. The engine itself HAS now been run against a public swarm: the Ubuntu 24.04.4
   ISO torrent pulled 60+ peers via tracker+DHT and peaked at 45 MiB/s, with the rate
   limiter and live settings reload both confirmed. Still untested: a real indexer grab.
-- **the-den-client / the-den-android need updating** (reviewed; see `docs/requests-plan.md`
-  "Companion apps" -- the Android Settings screen is actually broken by this): `GET/POST /api/settings` no longer
-  has `qbit_url` / `qbit_username` / `qbit_password` / `has_qbit_password`; it has
-  `downloads_root`, `state_dir` (read-only), `torrent_port`, `download_rate_limit_kib`,
-  `upload_rate_limit_kib`, `seed_ratio_limit`, `seed_time_limit_minutes` instead. They can
-  also now use `/torrents` for live download progress.
+- Built-in Cloudflare solver: verify against 1337x / EZTV from a residential connection
+  (the dev network is refused by Cloudflare outright); if it still fails there, look at
+  what Byparr does differently for the Turnstile iframe.
+- Library placement (M13 candidate): move-or-hard-link choice, Plex-style file names
+  (`Title (Year).ext`, `Title - S01E02.ext`); folders already follow the Plex layout.
 - Torrent client polish worth doing once real use shows the need: per-torrent file
   selection, sequential download, IP filter, proxy support, a session-wide stats line
   (libtorrent exposes all of these; none are wired yet).

@@ -11,3 +11,6 @@ itsdangerous==2.2.0
 # stop at CPython 3.13, so it comes from the OS package (python3-libtorrent on Debian/
 # Ubuntu, libtorrent-rasterbar on Arch) and the venv is created with
 # --system-site-packages to see it. On Python <= 3.13, `pip install libtorrent` also works.
+# Built-in Cloudflare solver (app/indexers/solver.py) drives the system Chromium; 0.46 is
+# pinned because 0.47+ ship a generated file Python 3.14 refuses to import (non-UTF-8 byte).
+nodriver==0.46

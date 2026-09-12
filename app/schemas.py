@@ -2,11 +2,14 @@ from pydantic import BaseModel
 
 
 class IndexerCreate(BaseModel):
-    name: str
-    url: str
+    name: str = ""
+    url: str = ""
     api_key: str | None = None
     protocol: str = "torznab"
     enabled: bool = True
+    # M12: "torznab" | "newznab" | a native slug; `preset` is the catalog entry it came from
+    implementation: str | None = None
+    preset: str | None = None
 
 
 class IndexerOut(IndexerCreate):

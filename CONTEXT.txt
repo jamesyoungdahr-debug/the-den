@@ -17,7 +17,29 @@ FastAPI + SQLAlchemy/Alembic (SQLite) + Jinja2 + APScheduler media manager with 
 libtorrent client, Discover (TMDB), Plex login + library scan, Requests with quotas, and the
 HoltOS Glass UI. Companion apps: KDE client (the-den-client) and Android app (the-den-android).
 
-LAST TASK: U5 - ANDROID REDESIGN (COMPLETE 2026-09-12, v0.5.0). No task in progress.
+LAST TASK: M12 - INDEXER PRESETS + NATIVE TRACKERS + CLOUDFLARE SOLVER (2026-09-12). UNCOMMITTED.
+------------------------------------------------
+Plan and status: the-den/docs/indexers-plan.md. All code in this task after the first pass was
+drafted by the local LM Studio model through lmstudio-bridge (user rule: ALL code, even
+one-liners, goes to the local model; Claude specs, reviews, tests, commits).
+Server (the-den, uncommitted): app/indexers/{__init__,catalog,native,fetch,solver}.py,
+migration c9d0e1f2a3b4, routers/indexers.py (+/presets, +/solver/test), search+candidates+ui
+dispatch through app.indexers, settings.flaresolverr_url everywhere, web indexers dialog =
+preset picker, settings page Indexers section, PKGBUILD depends on chromium, requirements
+nodriver==0.46, tests/test_native_indexers.py (11 checks pass), docs/privacy-android.md.
+Android (uncommitted): drawer nav + blur + permanent sidebar >=840dp, rememberSaveable state,
+release signing config (keystore.properties, gitignored), preset picker in Indexers add sheet,
+solver field in Settings, PRIVACY.md. Debug build installed on Pixel 9 Pro Fold + Galaxy S25.
+KDE client (uncommitted): indexer_model presets/loadPresets/addIndexer(preset,...),
+IndexersPage preset combo, SettingsPage solver field, check_indexer_model.py updated (passes).
+OPEN IN THIS TASK: KDE app icon fix (main.py QIcon.fromTheme + PKGBUILD assets), library
+header wording ("N titles - M available - K tracked") in Android/web/KDE, then commit+push
+all three repos (the-den 0.5.0, android 0.5.1, client 0.4.4).
+VERIFIED LIVE: Knaben, TPB, Nyaa, LimeTorrents, TorrentDownloads. NOT: YTS (DNS blocked here),
+1337x/EZTV via built-in solver (Cloudflare refuses this network even in a normal browser;
+test on the HoltOS box).
+
+PREVIOUS TASK: U5 - ANDROID REDESIGN (COMPLETE 2026-09-12, v0.5.0).
 ------------------------------------------------
 Plan: the-den/docs/ui-redesign-plan.md (U5 row). Target version 0.5.0 (versionCode 5).
 Done so far (all uncommitted in the-den-android):
@@ -54,7 +76,14 @@ NOT yet done:
 
 BUILD / DEV ENVIRONMENT
 -----------------------
-- Everything runs in WSL Ubuntu (root). No Python on Windows.
+- Everything runs in WSL Ubuntu (root). No Python on Windows. WSL was wiped once (2026-09-12)
+  and rebuilt: JDK 17 (apt), Android SDK at /root/android-sdk (cmdline-tools, platform 35,
+  build-tools 35.0.0), the-den venv, PySide6 venv at ~/.venvs/kde-client (pip; no Kirigami, so
+  only the model tests run here), nodriver + playwright Chromium + google-chrome-stable + xvfb
+  for solver experiments. Test backend: port 8687, AUTH_REQUIRED=false, DB ~/the-den-test/den.db.
+  Dev backend on 8686 reachable from the LAN via a Windows portproxy to the WSL IP (re-add
+  after WSL restarts; the WSL IP changes). Phones connect over wireless adb (adb.exe in
+  C:SERSiam	oolsplatform-tools); re-pair from the phone's wireless debugging screen.
 - the-den venv: ~/.venvs/the-den (apt libtorrent). Dev backend: 127.0.0.1:8686 with AUTH_REQUIRED=true.
   Mock Plex on 8084 via the scratchpad script m11c/start_dev_plex.sh (never put the word "uvicorn" in
   the outer wsl command line). Owner token: ~/the-den-dev/owner-token.txt; owner cookies

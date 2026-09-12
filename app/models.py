@@ -14,7 +14,10 @@ class Indexer(Base):
     name = Column(String, nullable=False)
     url = Column(String, nullable=False)
     api_key = Column(String, nullable=True)
-    protocol = Column(String, nullable=False, default="torznab")  # torznab | newznab
+    protocol = Column(String, nullable=False, default="torznab")  # torznab | newznab | native
+    # torznab | newznab | a native public-tracker slug (app/indexers/native.py); catalog preset it came from
+    implementation = Column(String, nullable=True)
+    preset = Column(String, nullable=True)
     enabled = Column(Boolean, nullable=False, default=True)
 
 
@@ -105,6 +108,8 @@ class Settings(Base):
     request_movie_limit = Column(Integer, nullable=True)
     request_series_limit = Column(Integer, nullable=True)
     request_limit_days = Column(Integer, nullable=True)
+    # FlareSolverr / Byparr base URL for Cloudflare-fronted public trackers (M12)
+    flaresolverr_url = Column(String, nullable=True)
     # Null = follow the AUTH_REQUIRED env var; set from Settings -> Accounts.
     auth_required = Column(Boolean, nullable=True)
 

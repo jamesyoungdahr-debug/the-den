@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
+from app import indexers as indexer_engine
 from app import auth, config, library_service
 from app import settings as settings_module
 from app import tmdb, torznab, tvmaze
@@ -50,18 +51,13 @@ async def indexers_page(request: Request, q: str | None = None, db: Session = De
     indexers = db.query(Indexer).all()
     results = None
     if q:
-        enabled = [i for i in indexers if i.enabled]
-        gathered = []
-        for i in enabled:
-            try:
-                gathered.extend(await torznab.search(i.url, i.api_key, q, i.name))
-            except Exception:
-                pass  # a broken indexer shouldn't blank out the whole search
+        gathered = await indexer_engine.search_all(db, q, [i for i in indexers if i.enabled])
         gathered.sort(key=lambda r: r.seeders or 0, reverse=True)
         results = gathered
     return templates.TemplateResponse(
         "indexers.html",
-        {"request": request, "indexers": indexers, "query": q, "results": results, "active_nav": "indexers"},
+        {"request": request, "indexers": indexers, "query": q, "results": results, "active_nav": "indexers",
+         "presets": indexer_engine.as_dicts()},
     )
 
 
@@ -71,9 +67,13 @@ def ui_create_indexer(
     url: str = Form(...),
     api_key: str = Form(""),
     protocol: str = Form("torznab"),
+    preset: str = Form(""),
     db: Session = Depends(get_db),
 ):
-    db.add(Indexer(name=name, url=url, api_key=api_key or None, protocol=protocol, enabled=True))
+    chosen = indexer_engine.BY_SLUG.get(preset)
+    impl = chosen.implementation if chosen else protocol
+    db.add(Indexer(name=name or (chosen.name if chosen else ""), url=url or (chosen.url if chosen else ""), api_key=api_key or None,
+                   protocol=impl if impl in ("torznab", "newznab") else "native", implementation=impl, preset=preset or None, enabled=True))
     db.commit()
     return RedirectResponse("/ui/indexers", status_code=303)
 
@@ -100,6 +100,7 @@ async def library(request: Request, q: str | None = None, filter: str = "all", d
         "downloading": len(downloading_ids),
         "plex": sum(1 for m in all_movies if m["on_plex"]),
         "plex_only": sum(1 for m in all_movies if m["source"] == "plex"),
+        "tracked": sum(1 for m in all_movies if m["id"]),
     }
     if filter == "missing":
         movies = [m for m in all_movies if not m["available"]]
@@ -226,7 +227,7 @@ async def tv_library(request: Request, q: str | None = None, filter: str = "all"
         "tv.html",
         {
             "request": request, "series": rows, "query": q, "candidates": candidates, "filter": filter,
-            "counts": {"total": len(all_rows), "plex": sum(1 for r in all_rows if r["on_plex"]), "plex_only": sum(1 for r in all_rows if r["source"] == "plex")},
+            "counts": {"total": len(all_rows), "plex": sum(1 for r in all_rows if r["on_plex"]), "plex_only": sum(1 for r in all_rows if r["source"] == "plex"), "tracked": sum(1 for r in all_rows if r["id"])},
             "episodes_total": sum(r["total"] for r in all_rows), "episodes_have": sum(r["have"] for r in all_rows),
             "library_tvmaze_ids": {r["tvmaze_id"] for r in all_rows if r["tvmaze_id"]}, "active_nav": "tv",
         },
@@ -508,10 +509,12 @@ def ui_save_settings(
     request_movie_limit: str = Form(""),
     request_series_limit: str = Form(""),
     request_limit_days: str = Form(""),
+    flaresolverr_url: str = Form(""),
     db: Session = Depends(get_db),
 ):
     row = settings_module.get_row(db)
     old = settings_module.effective(db)
+    row.flaresolverr_url = flaresolverr_url.strip() or None
     row.request_movie_limit = _int_or_none(request_movie_limit)
     row.request_series_limit = _int_or_none(request_series_limit)
     row.request_limit_days = _int_or_none(request_limit_days) or None

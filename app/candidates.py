@@ -1,20 +1,14 @@
 from sqlalchemy.orm import Session
 
-from app.models import Indexer, QualityProfile
+from app import indexers as indexer_engine
+from app.models import QualityProfile
 from app.parser import parse_quality
 from app.scoring import best_release
-from app.torznab import search as torznab_search
 
 
 async def scored_candidates(db: Session, query: str, profile: QualityProfile | None) -> list[dict]:
     """Search all enabled indexers for `query`, quality-tag every release, and flag the best one."""
-    indexers = db.query(Indexer).filter(Indexer.enabled == True).all()  # noqa: E712
-    releases = []
-    for indexer in indexers:
-        try:
-            releases.extend(await torznab_search(indexer.url, indexer.api_key, query, indexer.name))
-        except Exception:
-            pass  # one broken indexer shouldn't blank out the whole search
+    releases = await indexer_engine.search_all(db, query)
 
     best = best_release(releases, profile) if profile else None
 

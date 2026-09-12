@@ -120,6 +120,9 @@ def stop_scheduler():
 @app.on_event("shutdown")
 async def stop_torrent_engine():
     await torrent_engine.stop()
+    from app.indexers import solver
+
+    await solver.close()  # the built-in Cloudflare solver's Chromium, if it was started
 
 
 @app.post("/automation/run-now", dependencies=[Depends(auth.require_admin)])

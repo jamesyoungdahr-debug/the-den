@@ -17,7 +17,7 @@
       <div class="holt-row">
         <div class="holt-row-main">
           <div class="holt-row-title">{{ i.name }}</div>
-          <div class="holt-row-meta">{{ i.protocol }} — {{ i.url }}</div>
+          <div class="holt-row-meta">{{ i.implementation or i.protocol }} — {{ i.url }}</div>
         </div>
         <span class="holt-badge {{ 'holt-badge-available' if i.enabled else 'holt-badge-missing' }}"><span class="dot"></span>{{ "enabled" if i.enabled else "disabled" }}</span>
         <div class="holt-row-actions">
@@ -65,16 +65,47 @@
   <dialog id="add-indexer" class="holt-dialog holt-glass-float">
     <form method="post" action="/ui/indexers">
       <div class="holt-eyebrow" style="margin-bottom: var(--holt-space-3)">Add indexer</div>
-      <div class="holt-field"><label>Name</label><input name="name" placeholder="e.g. My Tracker" required></div>
-      <div class="holt-field"><label>URL</label><input name="url" placeholder="https://indexer.example/api" required></div>
-      <div class="holt-field"><label>API key</label><input name="api_key" placeholder="optional"></div>
-      <div class="holt-field"><label>Protocol</label><select name="protocol"><option value="torznab">torznab</option><option value="newznab">newznab</option></select></div>
+      <div class="holt-field">
+        <label>Indexer</label>
+        <select name="preset" id="preset" onchange="applyPreset()">
+          <optgroup label="Public trackers (no account)">
+            {% for p in presets if p.kind == "public" %}<option value="{{ p.slug }}">{{ p.name }}{{ " · needs FlareSolverr" if p.cloudflare }}</option>{% endfor %}
+          </optgroup>
+          <optgroup label="Usenet (API key)">
+            {% for p in presets if p.kind == "usenet" %}<option value="{{ p.slug }}">{{ p.name }}</option>{% endfor %}
+          </optgroup>
+          <optgroup label="Generic">
+            {% for p in presets if p.kind == "generic" %}<option value="{{ p.slug }}">{{ p.name }}</option>{% endfor %}
+          </optgroup>
+        </select>
+        <div class="holt-meta" id="preset-desc"></div>
+      </div>
+      <div class="holt-field"><label>Name</label><input name="name" id="f-name" placeholder="shown on releases"></div>
+      <div class="holt-field" id="f-url-wrap"><label>URL</label><input name="url" id="f-url" placeholder="https://indexer.example/api"></div>
+      <div class="holt-field" id="f-key-wrap"><label>API key</label><input name="api_key" id="f-key" placeholder="from your account page" autocomplete="off"></div>
+      <input type="hidden" name="protocol" id="f-protocol" value="torznab">
       <div style="display:flex; gap: 8px; justify-content: flex-end">
         <button type="button" class="holt-btn holt-btn-quiet" data-close-dialog>Cancel</button>
         <button type="submit" class="holt-btn holt-btn-primary">Add</button>
       </div>
     </form>
   </dialog>
+
+  <script>
+    const PRESETS = {{ presets | tojson }};
+    function applyPreset() {
+      const p = PRESETS.find(x => x.slug === document.getElementById("preset").value);
+      if (!p) return;
+      document.getElementById("preset-desc").textContent = p.description + (p.site ? " · " + p.site : "");
+      document.getElementById("f-name").value = p.name;
+      document.getElementById("f-url").value = p.url;
+      document.getElementById("f-url").required = !p.url;
+      document.getElementById("f-key-wrap").style.display = p.fields.includes("api_key") ? "" : "none";
+      document.getElementById("f-key").required = p.needs_api_key;
+      document.getElementById("f-protocol").value = p.implementation;
+    }
+    applyPreset();
+  </script>
 
   <script>
     async function testIndexer(id) {

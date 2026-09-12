@@ -19,6 +19,7 @@
       <a href="#torrent">Torrent client</a>
       <a href="#automation">Automation</a>
       <a href="#requests">Requests</a>
+      <a href="#indexers">Indexers</a>
       <a href="#notifications">Notifications</a>
       <a href="#plex">Plex</a>
       <a href="#accounts">Accounts</a>
@@ -74,6 +75,19 @@
           <div class="holt-field"><label>Window (days)</label><input type="number" name="request_limit_days" value="{{ s.request_limit_days }}" min="1"></div>
         </div>
         <div class="holt-meta" style="margin-top: var(--holt-space-2)">Defaults for everyone; set a different allowance for one person from <a href="/ui/users">Users</a>. Admins and auto-approve users skip the queue, and admins have no quota. Declined requests don't count.</div>
+      </section>
+
+      <section class="holt-panel" id="indexers">
+        <div class="holt-panel-head"><div class="holt-eyebrow">Indexers</div><div class="holt-meta">Cloudflare bypass</div></div>
+        <div class="holt-field" style="margin:0">
+          <label>FlareSolverr / Byparr URL</label>
+          <div style="display:flex; gap: 8px">
+            <input type="url" name="flaresolverr_url" id="flaresolverr_url" value="{{ s.flaresolverr_url }}" placeholder="http://127.0.0.1:8191" style="flex:1">
+            <button type="button" class="holt-btn holt-btn-quiet" onclick="testSolver(); return false;">test</button>
+          </div>
+          <div class="holt-meta">Public trackers behind Cloudflare's browser check (1337x, sometimes others) are fetched through it. Run <a href="https://github.com/FlareSolverr/FlareSolverr">FlareSolverr</a> or <a href="https://github.com/ThePhaseless/Byparr">Byparr</a> and paste its address; leave blank if you only use Torznab/Newznab or trackers that don't need it.</div>
+          <div id="solver-result" class="holt-message" style="display:none; margin-top: var(--holt-space-2);"></div>
+        </div>
       </section>
 
       <section class="holt-panel" id="notifications">
@@ -168,4 +182,16 @@
       {% if not current_user %}<div class="holt-meta" style="margin-top:var(--holt-space-2)">You're browsing anonymously; sign in as an admin before turning this on or you'd lock yourself out.</div>{% endif %}
     </section>
   </div>
+  <script>
+    async function testSolver() {
+      const el = document.getElementById("solver-result");
+      el.style.display = "block"; el.className = "holt-message"; el.textContent = "testing...";
+      try {
+        const resp = await fetch("/indexers/solver/test", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({url: document.getElementById("flaresolverr_url").value})});
+        const data = await resp.json();
+        el.className = "holt-message " + (resp.ok ? "holt-message-positive" : "holt-message-warning");
+        el.textContent = resp.ok ? `OK: ${data.solver}${data.version ? " " + data.version : ""}` : `FAILED: ${data.detail || JSON.stringify(data)}`;
+      } catch (e) { el.className = "holt-message holt-message-warning"; el.textContent = `FAILED: ${e}`; }
+    }
+  </script>
 {% endblock %}

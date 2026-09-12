@@ -52,3 +52,7 @@ PLEX_SCAN_INTERVAL_MINUTES = int(os.environ.get("PLEX_SCAN_INTERVAL_MINUTES", "3
 REQUEST_MOVIE_LIMIT = int(os.environ.get("REQUEST_MOVIE_LIMIT", "10"))
 REQUEST_SERIES_LIMIT = int(os.environ.get("REQUEST_SERIES_LIMIT", "5"))
 REQUEST_LIMIT_DAYS = int(os.environ.get("REQUEST_LIMIT_DAYS", "7"))
+
+# FlareSolverr or Byparr base URL (e.g. http://127.0.0.1:8191). Public trackers behind
+# Cloudflare's browser check are fetched through it; blank = those indexers fail with a hint.
+FLARESOLVERR_URL = os.environ.get("FLARESOLVERR_URL", "")

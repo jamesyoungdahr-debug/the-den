@@ -46,6 +46,8 @@ class SettingsUpdate(BaseModel):
     # Require sign-in everywhere (overrides the AUTH_REQUIRED env var). Only a signed-in
     # admin may turn it on, so nobody locks themselves out.
     auth_required: bool | None = None
+    # FlareSolverr / Byparr for Cloudflare-fronted public trackers (M12); blank = none
+    flaresolverr_url: str | None = None
 
 
 @router.get("/settings")
@@ -87,6 +89,7 @@ def get_settings(db: Session = Depends(get_db)):
         "request_series_limit": s.request_series_limit,
         "request_limit_days": s.request_limit_days,
         "auth_required": auth.required(),
+        "flaresolverr_url": s.flaresolverr_url,
     }
 
 
@@ -154,6 +157,8 @@ def save_settings(payload: SettingsUpdate, request: Request, db: Session = Depen
         row.plex_allow_any_account = payload.plex_allow_any_account
     if payload.plex_scan_interval_minutes is not None:
         row.plex_scan_interval_minutes = payload.plex_scan_interval_minutes
+    if payload.flaresolverr_url is not None:
+        row.flaresolverr_url = payload.flaresolverr_url.strip() or None
 
     db.commit()
     apply_runtime_changes(old, settings_module.effective(db))

@@ -20,6 +20,7 @@ Deploy target: native systemd service on Arch Linux (no Docker).
 - [x] M9 -- Distro packaging: systemd unit, config conventions, PKGBUILD
 - [x] M10 -- Built-in torrent client: libtorrent in-process, qBittorrent dependency removed
 - [x] M11 -- Discover + Requests (done 2026-09-12): Overseerr-style browsing, Plex + local login, admin-only plumbing, Plex library awareness, user requests with admin approval -- planned, see [docs/requests-plan.md](docs/requests-plan.md)
+- [x] M12 -- Indexer presets (done 2026-09-12): a Prowlarr-style catalog (public trackers, usenet, Jackett/Prowlarr/generic), native implementations for eight public trackers, and a Cloudflare solver (built-in Chromium or external FlareSolverr/Byparr) -- see [docs/indexers-plan.md](docs/indexers-plan.md)
 - [ ] UI redesign track ("HoltOS Glass": left sidebar shell, glass/blur surfaces, poster-first pages, across web + KDE + Android) -- planned, see [docs/ui-redesign-plan.md](docs/ui-redesign-plan.md); sequenced ahead of M11's pages
 
 ## Notes
@@ -40,9 +41,9 @@ Deploy target: native systemd service on Arch Linux (no Docker).
   actually matches (relies on the SxxEyy search query steering indexer results correctly).
   Fine for now; a stricter release-title parser could validate this later if it causes
   wrong grabs in practice.
-- No authentication anywhere in the app. Fine on localhost/behind a VPN; do not expose
-  it directly to the internet without adding one (or fronting it with an auth-checking
-  reverse proxy).
+- Accounts and sign-in arrived with M11b (local users, Plex login, API tokens). Sign-in is
+  optional until Settings -> Accounts turns it on; do not expose the app to the internet
+  without doing so.
 - M9 packaging (PKGBUILD, systemd, sysusers/tmpfiles) has been verified for real: a
   genuine Arch Linux environment (WSL2, systemd enabled), full `makepkg -si` +
   `pacman -U` + `systemctl enable --now`, service came up and answered `/health`.

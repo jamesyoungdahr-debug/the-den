@@ -6,7 +6,7 @@
 # is not how packages meant for the official Arch repos or AUR are expected
 # to behave (they must not reach the network during build()).
 pkgname=the-den
-pkgver=0.4.3
+pkgver=0.5.0
 pkgrel=1
 pkgdesc="Unified movie/TV library manager with a built-in torrent client (Sonarr+Radarr+Prowlarr+qBittorrent replacement)"
 arch=('any')
@@ -14,7 +14,7 @@ url="https://github.com/jamesyoungdahr-debug/the-den"
 license=('unknown')
 # libtorrent-rasterbar ships the Python bindings the built-in torrent client is made of;
 # the venv is created with --system-site-packages so it can import them.
-depends=('python' 'libtorrent-rasterbar')
+depends=('python' 'libtorrent-rasterbar' 'chromium')  # chromium: the built-in Cloudflare solver for public trackers (app/indexers/solver.py)
 makedepends=('python-virtualenv')
 backup=('etc/the-den/the-den.env')
 install=the-den.install

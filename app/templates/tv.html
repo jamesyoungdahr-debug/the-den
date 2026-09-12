@@ -43,7 +43,7 @@
   <div class="holt-page-head">
     <div>
       <h1 class="holt-page-title">TV</h1>
-      <div class="holt-meta">{{ counts.total }} series · {{ episodes_have }} of {{ episodes_total }} episodes in The Den{% if counts.plex %} · {{ counts.plex }} on Plex{% endif %}</div>
+      <div class="holt-meta">{{ counts.total }} series · {{ episodes_have }} of {{ episodes_total }} episodes available · {{ counts.tracked }} tracked</div>
     </div>
     <div class="holt-toolbar">
       <a class="holt-chip {{ 'is-on' if filter == 'all' else '' }}" href="/tv">All</a>
