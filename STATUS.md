@@ -26,8 +26,10 @@ warnings, full-app screenshot walk); still to be looked at on a real HoltOS desk
 settings fields, then Discover and Requests first.
 
 **The KDE client now lives in this repo** (2026-09-12): `client/` is the old
-`the-den-client` repo merged with `git subtree` (history kept). Its `PKGBUILD` still
-builds from `client/`; the server package ignores the directory. U4 happens here from now
+`the-den-client` repo merged with `git subtree` (history kept). Since v0.4.1 the root
+`PKGBUILD` packages it inside `the-den` (`/opt/the-den/client`, `/usr/bin/the-den-client`,
+desktop entry; `replaces=the-den-client`), because the HoltOS updater only tracks the
+`the-den` package. The Qt/Kirigami/font dependencies are therefore hard deps of `the-den`. U4 happens here from now
 on; the Android app stays in `the-den-android` (Gradle wants its own repo root).
 
 **M11g is done (2026-09-12), which closes M11.** Request quotas (defaults in Settings →

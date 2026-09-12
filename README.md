@@ -91,7 +91,7 @@ ROADMAP.md for details) and came up cleanly.
 ## Repository layout
 
 - `app/`, `migrations/`, `tests/` -- the server (FastAPI + SQLite + libtorrent) and its offline mocks.
-- `client/` -- the KDE desktop client (PySide6 + Kirigami) in the same HoltOS Glass design as the web UI, with Plex/local sign-in, Discover, Requests, the library, and the built-in torrent client's Downloads; its own `PKGBUILD`, run `makepkg -si` from inside `client/`. Merged in from the former `the-den-client` repo on 2026-09-12 with its history.
+- `client/` -- the KDE desktop client (PySide6 + Kirigami) in the same HoltOS Glass design as the web UI, with Plex/local sign-in, Discover, Requests, the library, and the built-in torrent client's Downloads. It ships inside the `the-den` package (installed to `/opt/the-den/client`, launched as `the-den-client` or "The Den" in the app menu), so the HoltOS updater only tracks one package. Merged in from the former `the-den-client` repo on 2026-09-12 with its history.
 - `design/` -- the HoltOS Glass tokens (`tokens.json`) and their generated exports for the web UI, the KDE client and the Android app.
 - `docs/` -- the Requests and UI redesign plans.
 

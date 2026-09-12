@@ -9,9 +9,12 @@ its JSON API instead of using a browser. See [ROADMAP.md](ROADMAP.md) for how it
 built and [STATUS.md](STATUS.md) for what's done/next right now.
 
 Since 2026-09-12 the client lives in the main repo under `client/` (merged from the old
-`the-den-client` repo with its history), so server and client ship from one release tag
-and share the HoltOS design tokens in [`../design/`](../design/). Commands below are run
-from this `client/` directory.
+`the-den-client` repo with its history) and **ships inside the `the-den` Arch package**:
+`makepkg -si` from the repo root installs the server to `/opt/the-den` and the client to
+`/opt/the-den/client`, with `/usr/bin/the-den-client` and an app-menu entry, so the
+HoltOS updater only has to follow one package. Server and client share the HoltOS design
+tokens in [`../design/`](../design/). Commands below are run from this `client/`
+directory.
 
 ## Running it for development
 Needs the system PySide6 (the pip wheel bundles its own Qt, which can't load the distro's

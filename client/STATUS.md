@@ -38,7 +38,7 @@ Nothing in progress; U4 is committed.
 ## Next steps
 - **See it on a real screen.** The screenshot walk uses the Basic QQC2 style offscreen;
   `org.kde.desktop` on the HoltOS desktop may size controls differently. Run
-  `makepkg -si` from `client/` there and click through.
+  `makepkg -si` from the repo root there (the client ships inside the `the-den` package) and click through.
 - Live blur behind the sidebar/top bar (`MultiEffect`) once seen on real hardware; the
   ground-layer glass is deliberate for now.
 - Users page (per-person quotas, roles) is web-only; the client points there.
