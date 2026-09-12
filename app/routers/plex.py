@@ -2,15 +2,17 @@
 Settings form that picks which one The Den is tied to."""
 
 import json
+from collections import OrderedDict
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request
+import httpx
+from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app import auth, plex, plex_scan, scheduler
 from app import settings as settings_module
 from app.deps import get_db
-from app.models import PlexMedia
+from app.models import PlexMedia, User
 
 router = APIRouter(tags=["plex"])
 
@@ -64,6 +66,42 @@ def api_scan_status(db: Session = Depends(get_db)):
         "items": db.query(PlexMedia).count(),
         "interval_minutes": settings_module.effective(db).plex_scan_interval_minutes,
     }
+
+
+_THUMB_CACHE: "OrderedDict[str, tuple[bytes, str]]" = OrderedDict()
+_THUMB_CACHE_MAX = 400
+
+
+@router.get("/api/plex/thumb/{rating_key}")
+async def plex_thumb(rating_key: str, request: Request, api_key: str | None = None, db: Session = Depends(get_db)):
+    """A Plex poster, fetched with the owner's token so browsers and the apps never see
+    it. Auth: the usual session/X-Api-Key, or ?api_key= because <img> and QML Image
+    can't send headers -- or nothing at all while sign-in is optional."""
+    allowed = not auth.required() or getattr(request.state, "user", None) is not None
+    if not allowed and api_key:
+        allowed = db.query(User).filter(User.api_token == api_key).first() is not None
+    if not allowed:
+        raise HTTPException(401, "Sign in required")
+    row = db.query(PlexMedia).filter(PlexMedia.rating_key == rating_key).first()
+    if row is None or not row.thumb:
+        raise HTTPException(404, "No poster for that item")
+    cached = _THUMB_CACHE.get(rating_key)
+    if cached is None:
+        s = settings_module.effective(db)
+        if not (s.plex_url and s.plex_token):
+            raise HTTPException(409, "Plex isn't connected")
+        try:
+            async with httpx.AsyncClient(timeout=20, verify=False) as client:
+                resp = await client.get(f"{s.plex_url}{row.thumb}", headers=plex._headers(s.plex_token))
+                resp.raise_for_status()
+        except httpx.HTTPError as exc:
+            raise HTTPException(502, f"Plex didn't return the poster: {exc}")
+        cached = (resp.content, resp.headers.get("content-type", "image/jpeg"))
+        _THUMB_CACHE[rating_key] = cached
+        while len(_THUMB_CACHE) > _THUMB_CACHE_MAX:
+            _THUMB_CACHE.popitem(last=False)
+    body, media_type = cached
+    return Response(content=body, media_type=media_type, headers={"Cache-Control": "private, max-age=86400"})
 
 
 @router.post("/ui/settings/plex/scan", dependencies=[Depends(auth.page_admin)])

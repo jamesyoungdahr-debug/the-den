@@ -111,8 +111,13 @@ TMDB offline (`TMDB_BASE_URL`).
 
 Connect the Plex account that owns your server in Settings → Plex, pick the server and the
 movie/show libraries, and The Den scans them on a timer (default every 30 minutes, or
-**Scan now**). Anything already on Plex shows as *available* on Discover, and the detail
-page lists which seasons Plex has. Shared users of that server can sign in with Plex and
+**Scan now**). Anything already on Plex shows as *available* on Discover, the detail
+page lists which seasons Plex has, and the **Movies** and **TV** pages show the whole
+collection: what The Den manages, what is only on Plex (with its Plex poster, served
+through `/api/plex/thumb/{key}` so the Plex token never leaves the server), and what is
+both, with an *On Plex* filter; admins can pull a Plex-only title into The Den with one
+click. The apps read the same merged lists from `/api/library/movies` and
+`/api/library/series`. Shared users of that server can sign in with Plex and
 **request** a movie or particular seasons of a series from the detail page; The Den refuses
 requests for what is already on Plex or in the library. Admins get a pending badge in the
 sidebar and approve or decline (with a note) on **Requests**; an approval adds the title to

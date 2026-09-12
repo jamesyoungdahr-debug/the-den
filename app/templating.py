@@ -15,7 +15,9 @@ def poster_url(path: str | None) -> str:
     """TMDB stores a bare path ('/abc.jpg'); TVmaze stores a full URL. Either way, a URL."""
     if not path:
         return ""
-    return path if path.startswith("http") else f"{TMDB_IMAGE_BASE}{path}"
+    if path.startswith("http") or path.startswith("/api/"):  # full URL, or our own Plex thumb proxy
+        return path
+    return f"{TMDB_IMAGE_BASE}{path}"
 
 
 def _static_version() -> str:

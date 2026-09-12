@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
-from app import auth, config
+from app import auth, config, library_service
 from app import settings as settings_module
 from app import tmdb, torznab, tvmaze
 from app.candidates import scored_candidates
@@ -91,18 +91,22 @@ def ui_delete_indexer(indexer_id: int, db: Session = Depends(get_db)):
 
 @router.get("/library", response_class=HTMLResponse, dependencies=USER)
 async def library(request: Request, q: str | None = None, filter: str = "all", db: Session = Depends(get_db)):
-    all_movies = db.query(Movie).order_by(Movie.id.desc()).all()
-    downloading_ids = _downloading_movie_ids(db)
+    all_movies = library_service.merged_movies(db)  # The Den's rows + what the Plex scan found
+    downloading_ids = {m["id"] for m in all_movies if m["downloading"]}
     counts = {
         "total": len(all_movies),
-        "have": sum(1 for m in all_movies if m.has_file),
-        "missing": sum(1 for m in all_movies if not m.has_file),
+        "have": sum(1 for m in all_movies if m["available"]),
+        "missing": sum(1 for m in all_movies if not m["available"]),
         "downloading": len(downloading_ids),
+        "plex": sum(1 for m in all_movies if m["on_plex"]),
+        "plex_only": sum(1 for m in all_movies if m["source"] == "plex"),
     }
     if filter == "missing":
-        movies = [m for m in all_movies if not m.has_file]
+        movies = [m for m in all_movies if not m["available"]]
     elif filter == "have":
-        movies = [m for m in all_movies if m.has_file]
+        movies = [m for m in all_movies if m["available"]]
+    elif filter == "plex":
+        movies = [m for m in all_movies if m["on_plex"]]
     else:
         filter, movies = "all", all_movies
     candidates = None
@@ -115,14 +119,14 @@ async def library(request: Request, q: str | None = None, filter: str = "all", d
         "library.html",
         {
             "request": request, "movies": movies, "counts": counts, "filter": filter,
-            "downloading_ids": downloading_ids, "library_tmdb_ids": {m.tmdb_id for m in all_movies},
+            "downloading_ids": downloading_ids, "library_tmdb_ids": {m["tmdb_id"] for m in all_movies if m["tmdb_id"]},
             "query": q, "candidates": candidates, "active_nav": "movies",
         },
     )
 
 
 @router.post("/ui/movies", dependencies=ADMIN)
-def ui_add_movie(
+async def ui_add_movie(
     tmdb_id: int = Form(...),
     title: str = Form(...),
     year: str = Form(""),
@@ -131,6 +135,14 @@ def ui_add_movie(
     db: Session = Depends(get_db),
 ):
     if not db.query(Movie).filter(Movie.tmdb_id == tmdb_id).first():
+        if not poster_path or poster_path.startswith("/api/"):
+            # Coming from a Plex-only card: fetch the TMDB poster rather than storing our proxy URL.
+            try:
+                details = await tmdb.movie_details(tmdb_id, settings_module.effective(db).tmdb_api_key)
+            except Exception:
+                details = None
+            poster_path = (details or {}).get("poster_path") or ""
+            overview = overview or (details or {}).get("overview") or ""
         db.add(
             Movie(
                 tmdb_id=tmdb_id,
@@ -194,9 +206,16 @@ async def ui_grab_movie(
 # --- TV -----------------------------------------------------------------
 
 @router.get("/tv", response_class=HTMLResponse, dependencies=USER)
-async def tv_library(request: Request, q: str | None = None, db: Session = Depends(get_db)):
-    all_series = db.query(Series).order_by(Series.id.desc()).all()
-    rows = _series_rows(db, all_series)
+async def tv_library(request: Request, q: str | None = None, filter: str = "all", db: Session = Depends(get_db)):
+    all_rows = library_service.merged_series(db)  # The Den's series + what the Plex scan found
+    if filter == "missing":
+        rows = [r for r in all_rows if not r["available"]]
+    elif filter == "have":
+        rows = [r for r in all_rows if r["available"]]
+    elif filter == "plex":
+        rows = [r for r in all_rows if r["on_plex"]]
+    else:
+        filter, rows = "all", all_rows
     candidates = None
     if q:
         try:
@@ -206,9 +225,10 @@ async def tv_library(request: Request, q: str | None = None, db: Session = Depen
     return templates.TemplateResponse(
         "tv.html",
         {
-            "request": request, "series": rows, "query": q, "candidates": candidates,
-            "episodes_total": sum(r["total"] for r in rows), "episodes_have": sum(r["have"] for r in rows),
-            "library_tvmaze_ids": {s.tvmaze_id for s in all_series}, "active_nav": "tv",
+            "request": request, "series": rows, "query": q, "candidates": candidates, "filter": filter,
+            "counts": {"total": len(all_rows), "plex": sum(1 for r in all_rows if r["on_plex"]), "plex_only": sum(1 for r in all_rows if r["source"] == "plex")},
+            "episodes_total": sum(r["total"] for r in all_rows), "episodes_have": sum(r["have"] for r in all_rows),
+            "library_tvmaze_ids": {r["tvmaze_id"] for r in all_rows if r["tvmaze_id"]}, "active_nav": "tv",
         },
     )
 

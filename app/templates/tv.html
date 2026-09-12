@@ -43,7 +43,13 @@
   <div class="holt-page-head">
     <div>
       <h1 class="holt-page-title">TV</h1>
-      <div class="holt-meta">{{ series|length }} series · {{ episodes_have }} of {{ episodes_total }} episodes</div>
+      <div class="holt-meta">{{ counts.total }} series · {{ episodes_have }} of {{ episodes_total }} episodes in The Den{% if counts.plex %} · {{ counts.plex }} on Plex{% endif %}</div>
+    </div>
+    <div class="holt-toolbar">
+      <a class="holt-chip {{ 'is-on' if filter == 'all' else '' }}" href="/tv">All</a>
+      <a class="holt-chip {{ 'is-on' if filter == 'missing' else '' }}" href="/tv?filter=missing">Incomplete</a>
+      <a class="holt-chip {{ 'is-on' if filter == 'have' else '' }}" href="/tv?filter=have">Have</a>
+      {% if counts.plex %}<a class="holt-chip {{ 'is-on' if filter == 'plex' else '' }}" href="/tv?filter=plex">On Plex</a>{% endif %}
     </div>
   </div>
 
@@ -51,26 +57,35 @@
   <div class="holt-grid">
     {% for s in series %}
     <div class="holt-card">
-      <a class="holt-poster" href="/ui/series/{{ s.series.id }}">
-        {% if s.series.poster_path %}<img src="{{ s.series.poster_path|poster }}" alt="" loading="lazy">{% else %}<span class="holt-poster-letter">{{ s.series.title[:1] }}</span>{% endif %}
-        {% if s.total and s.have == s.total %}<span class="holt-badge holt-badge-solid holt-badge-available"><span class="dot"></span>complete</span>
-        {% elif s.have %}<span class="holt-badge holt-badge-solid holt-badge-partial"><span class="dot"></span>{{ s.have }}/{{ s.total }}</span>
+      {% set href = ('/ui/series/' ~ s.id) if s.id else (('/discover/tv/' ~ s.tmdb_id) if s.tmdb_id else '') %}
+      <{{ 'a' if href else 'div' }} class="holt-poster"{% if href %} href="{{ href }}"{% endif %}>
+        {% if s.poster_path %}<img src="{{ s.poster_path|poster }}" alt="" loading="lazy">{% else %}<span class="holt-poster-letter">{{ s.title[:1] }}</span>{% endif %}
+        {% if s.source == 'plex' %}<span class="holt-badge holt-badge-solid holt-badge-available"><span class="dot"></span>on Plex · {{ s.plex_seasons|length }} season{{ '' if s.plex_seasons|length == 1 else 's' }}</span>
+        {% elif s.total and s.have == s.total %}<span class="holt-badge holt-badge-solid holt-badge-available"><span class="dot"></span>complete{% if s.on_plex %} · Plex{% endif %}</span>
+        {% elif s.have %}<span class="holt-badge holt-badge-solid holt-badge-partial"><span class="dot"></span>{{ s.have }}/{{ s.total }}{% if s.on_plex %} · Plex{% endif %}</span>
+        {% elif s.on_plex %}<span class="holt-badge holt-badge-solid holt-badge-available"><span class="dot"></span>on Plex · wanted</span>
         {% else %}<span class="holt-badge holt-badge-solid holt-badge-missing"><span class="dot"></span>missing</span>{% endif %}
         <div class="holt-poster-actions">
-          <span class="holt-btn holt-btn-primary holt-btn-sm">Episodes</span>
-          {% if is_admin %}
-          <form method="post" action="/ui/series/{{ s.series.id }}/delete" onsubmit="return confirm('Remove {{ s.series.title|e }} from the library?')">
-            <button type="submit" class="holt-btn holt-btn-quiet holt-btn-sm">Remove</button>
-          </form>
+          {% if s.source == 'plex' %}
+            {% if is_admin and s.tmdb_id %}
+            <form method="post" action="/ui/discover/tv/{{ s.tmdb_id }}/add"><button type="submit" class="holt-btn holt-btn-secondary holt-btn-sm" title="Track it in The Den too">Add to Den</button></form>
+            {% elif s.tmdb_id %}<span class="holt-btn holt-btn-secondary holt-btn-sm">Details</span>{% endif %}
+          {% else %}
+            <span class="holt-btn holt-btn-primary holt-btn-sm">Episodes</span>
+            {% if is_admin %}
+            <form method="post" action="/ui/series/{{ s.id }}/delete" onsubmit="return confirm('Remove {{ s.title|e }} from the library?')">
+              <button type="submit" class="holt-btn holt-btn-quiet holt-btn-sm">Remove</button>
+            </form>
+            {% endif %}
           {% endif %}
         </div>
-      </a>
-      <div class="holt-card-title" title="{{ s.series.title }}">{{ s.series.title }}</div>
-      <div class="holt-card-meta">{{ s.series.year or "-" }} · {{ s.have }}/{{ s.total }} episodes</div>
+      </{{ 'a' if href else 'div' }}>
+      <div class="holt-card-title" title="{{ s.title }}">{{ s.title }}</div>
+      <div class="holt-card-meta">{{ s.year or "-" }} · {% if s.source == 'plex' %}Plex only{% else %}{{ s.have }}/{{ s.total }} episodes{% if s.on_plex %} · Den + Plex{% endif %}{% endif %}</div>
     </div>
     {% endfor %}
   </div>
   {% else %}
-  <div class="holt-empty holt-panel"><div class="holt-empty-title">No series yet</div><div class="holt-body">Search above to add the first one.</div></div>
+  <div class="holt-empty holt-panel"><div class="holt-empty-title">{% if filter == 'plex' %}Nothing from Plex yet{% elif filter == 'all' %}No series yet{% else %}Nothing here{% endif %}</div><div class="holt-body">{% if filter == 'all' %}Search above to add the first one, or connect Plex in Settings to see what you already have.{% elif filter == 'plex' %}Connect Plex in Settings and run a scan.{% else %}Everything's fine.{% endif %}</div></div>
   {% endif %}
 {% endblock %}

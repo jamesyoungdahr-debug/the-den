@@ -124,6 +124,7 @@ async def scan(db: Session) -> dict:
                     row.tvdb_id = ids.get("tvdb")
                     row.imdb_id = ids.get("imdb")
                     row.seasons = json.dumps(seasons) if seasons is not None else None
+                    row.thumb = item.get("thumb") or None
                     row.scanned_at = datetime.now(timezone.utc)
                     seen.add(rating_key)
                     if kind == "movie":

@@ -172,6 +172,7 @@ class PlexMedia(Base):
     title = Column(String, nullable=False)
     year = Column(Integer, nullable=True)
     seasons = Column(String, nullable=True)
+    thumb = Column(String, nullable=True)  # poster path on the PMS, served via /api/plex/thumb/{rating_key}
     scanned_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 

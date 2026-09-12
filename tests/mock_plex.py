@@ -149,16 +149,32 @@ def library_sections(x_plex_token: str | None = Header(default=None)):
 #   Severance (tmdb 95396, tvdb 371980) with season 1 complete in TV Shows.
 LIBRARY = {
     "1": [
-        {"ratingKey": "101", "type": "movie", "title": "Dune: Part Two", "year": 2024,
+        {"ratingKey": "101", "type": "movie", "title": "Dune: Part Two", "year": 2024, "thumb": "/library/metadata/101/thumb/1",
          "Guid": [{"id": "tmdb://693134"}, {"id": "imdb://tt15239678"}]},
-        {"ratingKey": "102", "type": "movie", "title": "Inception", "year": 2010,
+        {"ratingKey": "102", "type": "movie", "title": "Inception", "year": 2010, "thumb": "/library/metadata/102/thumb/1",
          "guid": "com.plexapp.agents.themoviedb://27205?lang=en"},
     ],
     "2": [
-        {"ratingKey": "201", "type": "show", "title": "Severance", "year": 2022,
+        {"ratingKey": "201", "type": "show", "title": "Severance", "year": 2022, "thumb": "/library/metadata/201/thumb/1",
          "Guid": [{"id": "tmdb://95396"}, {"id": "tvdb://371980"}, {"id": "imdb://tt11280740"}]},
     ],
 }
+
+
+def _png(width: int = 2, height: int = 3, rgb: tuple[int, int, int] = (0xB1, 0x4D, 0xFF)) -> bytes:
+    """A tiny solid-colour PNG (real CRCs, real zlib) standing in for every poster."""
+    import struct
+    import zlib
+
+    def chunk(kind: bytes, data: bytes) -> bytes:
+        return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data) & 0xFFFFFFFF)
+
+    raw = b"".join(b"\x00" + bytes(rgb) * width for _ in range(height))
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(raw)) + chunk(b"IEND", b""))
+
+
+THUMB_PNG = _png()
 SEASONS = {"201": [{"type": "season", "index": 1, "leafCount": 9}]}
 
 
@@ -170,6 +186,13 @@ def section_items(key: str, x_plex_token: str | None = Header(default=None), x_p
     items = LIBRARY.get(key, [])
     page = items[x_plex_container_start:x_plex_container_start + x_plex_container_size]
     return {"MediaContainer": {"totalSize": len(items), "size": len(page), "Metadata": page}}
+
+
+@app.get("/library/metadata/{rating_key}/thumb/{version}")
+def thumb(rating_key: str, version: str, x_plex_token: str | None = Header(default=None)):
+    if _account_for_token(x_plex_token) is None:
+        return Response(status_code=401)
+    return Response(content=THUMB_PNG, media_type="image/png")
 
 
 @app.get("/library/metadata/{rating_key}/children")

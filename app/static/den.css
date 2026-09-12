@@ -65,7 +65,11 @@ html { scroll-behavior: smooth; }
   border-top: 0; border-bottom: 0; border-left: 0;
   z-index: 4;
   transition: width var(--holt-dur-base) var(--holt-ease-out);
-  overflow: hidden;
+  /* Short windows: the sidebar scrolls instead of clipping the Admin group and the account row. */
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,.15) transparent;
 }
 
 .holt-lockup {

@@ -17,6 +17,14 @@ restores torrents from resume data. See ROADMAP.md's M10 section for the details
 two loopback-swarm gotchas that cost the most debugging time.
 
 ## Currently working on
+**Library pages now include Plex (2026-09-12, v0.4.3).** Movies and TV merge The Den's rows
+with the Plex scan (`app/library_service.py`): Plex-only titles appear with their Plex
+poster via the new `/api/plex/thumb/{rating_key}` proxy (owner token stays server-side;
+`?api_key=` accepted because `<img>`/QML `Image` can't send headers), *On Plex* filter,
+"Add to Den" for admins; `/api/library/movies|series` for the apps; `plex_media.thumb`
+column (migration `b8c9d0e1f2a3`). The web sidebar scrolls on short windows. Verified by
+the e2e (72 checks) and the client harness.
+
 **U4 -- the KDE client redesign -- is done** (2026-09-12, in the `the-den-client` repo): Plex/local sign-in
 with a personal API token, the HoltOS Glass shell, Discover / Search / Detail / Requests
 pages, poster-grid libraries, Downloads on the built-in torrent client, and a Settings
