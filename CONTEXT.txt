@@ -32,6 +32,7 @@ release signing config (keystore.properties, gitignored), preset picker in Index
 solver field in Settings, PRIVACY.md. Debug build installed on Pixel 9 Pro Fold + Galaxy S25.
 KDE client (uncommitted): indexer_model presets/loadPresets/addIndexer(preset,...),
 IndexersPage preset combo, SettingsPage solver field, check_indexer_model.py updated (passes).
+DONE 2026-09-12: server cleanup (shared query/profile helpers, 8e56b1d); KDE QML harness runs in WSL again (system PySide6 6.10 + KF6 Kirigami via apt; python3, not the venv) and all 13 pages compile clean; screenshot walk renders 10 pages.
 OPEN AFTER THIS TASK: KDE icon + QML + built-in solver verification on the HoltOS box, Android 0.5.1 APK not yet installed on the phones (they dropped off adb), library
 header wording DONE in all three clients.
 Repo status lines above (REPOS AND VERSIONS) are stale: 0.5.0 / 0.4.4 / 0.5.1 now.
