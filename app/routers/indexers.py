@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta, timezone
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -5,7 +7,7 @@ from sqlalchemy.orm import Session
 from app import auth
 from app import indexers as indexer_engine
 from app.deps import get_db
-from app.models import Indexer
+from app.models import Indexer, IndexerStat
 from app.schemas import IndexerCreate, IndexerOut
 
 router = APIRouter(prefix="/indexers", tags=["indexers"], dependencies=[Depends(auth.require_admin)])
@@ -69,6 +71,53 @@ def create_indexer(payload: IndexerCreate, db: Session = Depends(get_db)):
         raise HTTPException(400, "Name is required")
     indexer = Indexer(**data)
     db.add(indexer)
+    db.commit()
+    db.refresh(indexer)
+    return indexer
+
+
+@router.get("/stats")
+def indexer_stats(days: int = 7, db: Session = Depends(get_db)):
+    """Per-indexer search counters over the last `days` days (M16). Registered above /{indexer_id}."""
+    since = (datetime.now(timezone.utc) - timedelta(days=days - 1)).strftime("%Y-%m-%d")
+    empty = {"searches": 0, "successes": 0, "failures": 0, "total_ms": 0, "last_error": None}
+    totals: dict[int, dict] = {}
+    for st in db.query(IndexerStat).filter(IndexerStat.day >= since).order_by(IndexerStat.day).all():
+        t = totals.setdefault(st.indexer_id, dict(empty))
+        t["searches"] += st.searches
+        t["successes"] += st.successes
+        t["failures"] += st.failures
+        t["total_ms"] += st.total_ms
+        if st.last_error:
+            t["last_error"] = st.last_error  # rows arrive oldest first, so the newest wins
+    out = []
+    for ix in db.query(Indexer).order_by(Indexer.id).all():
+        t = totals.get(ix.id, empty)
+        out.append({
+            "indexer_id": ix.id, "name": ix.name, "enabled": ix.enabled,
+            "searches": t["searches"], "successes": t["successes"], "failures": t["failures"],
+            "avg_ms": int(t["total_ms"] / t["searches"]) if t["searches"] else None,
+            "success_rate": round(t["successes"] / t["searches"], 3) if t["searches"] else None,
+            "last_error": t["last_error"],
+        })
+    return out
+
+
+class IndexerPatch(BaseModel):
+    enabled: bool | None = None
+    name: str | None = None
+
+
+@router.patch("/{indexer_id}", response_model=IndexerOut)
+def patch_indexer(indexer_id: int, payload: IndexerPatch, db: Session = Depends(get_db)):
+    """Enable/disable or rename an indexer."""
+    indexer = db.get(Indexer, indexer_id)
+    if not indexer:
+        raise HTTPException(404, "Indexer not found")
+    if payload.enabled is not None:
+        indexer.enabled = payload.enabled
+    if payload.name is not None:
+        indexer.name = payload.name
     db.commit()
     db.refresh(indexer)
     return indexer

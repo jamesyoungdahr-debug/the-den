@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
+from app import health
 from app import auth, plex_scan, requests_service, tmdb, tvmaze
 from app import settings as settings_module
 from app.deps import get_db

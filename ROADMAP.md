@@ -23,7 +23,8 @@ Deploy target: native systemd service on Arch Linux (no Docker).
 - [x] M12 -- Indexer presets (done 2026-09-12): a Prowlarr-style catalog (public trackers, usenet, Jackett/Prowlarr/generic), native implementations for eight public trackers, and a Cloudflare solver (built-in Chromium or external FlareSolverr/Byparr) -- see [docs/indexers-plan.md](docs/indexers-plan.md)
 - [x] M13 -- Plex-style file names (done 2026-09-12): imports keep hard-linking (torrents seed on) and now name files `Title (Year).ext` and `Show - S01E02 - Episode.ext` inside the existing `Movies/Title (Year)/` and `TV/Show/Season 01/` layout
 - [x] M15 -- Notification agents (done 2026-09-12): Discord, ntfy, webhook, Telegram, Pushover with per-agent event subscriptions, on every surface
-- [ ] M14, M16-M21 -- Tier 1: shakedown, notification agents, health + indexer stats, custom formats, upgrades, failed-download handling, season packs, Android search + push -- planned, see [docs/tier1-plan.md](docs/tier1-plan.md)
+- [x] M16 -- Health + indexer stats (done 2026-09-12): per-day search stats, health checks each cycle, banner + stats + enable/disable on every surface
+- [ ] M14, M17-M21 -- Tier 1: shakedown, custom formats, upgrades, failed-download handling, season packs, Android search + push -- planned, see [docs/tier1-plan.md](docs/tier1-plan.md)
 - [ ] UI redesign track ("HoltOS Glass": left sidebar shell, glass/blur surfaces, poster-first pages, across web + KDE + Android) -- planned, see [docs/ui-redesign-plan.md](docs/ui-redesign-plan.md); sequenced ahead of M11's pages
 
 ## Notes

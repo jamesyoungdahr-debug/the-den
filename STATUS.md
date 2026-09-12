@@ -17,6 +17,13 @@ restores torrents from resume data. See ROADMAP.md's M10 section for the details
 two loopback-swarm gotchas that cost the most debugging time.
 
 ## Currently working on
+**M16 -- health and indexer stats (2026-09-12).** Every search is counted per indexer per
+day (`indexer_stats`); `app/health.py` checks folders, the torrent engine, the Cloudflare
+solver, the Plex token and failing indexers at the end of each automation cycle, keeps the
+open issues in `health_issues`, fires `health_warning` for new ones and returns them from
+`/health` as `checks`. Discover shows a banner, the Indexers page shows a 7-day stats line
+and enable / disable, on the web, the KDE client and Android. Plan: `docs/tier1-plan.md`.
+
 **M15 -- notification agents (2026-09-12).** Discord, ntfy, generic webhook, Telegram and
 Pushover agents, each subscribed to a set of events (grabbed, imported, upgraded, download
 failed, request submitted / approved / declined / available, health warning), managed from

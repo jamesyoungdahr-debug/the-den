@@ -18,9 +18,11 @@
         <div class="holt-row-main">
           <div class="holt-row-title">{{ i.name }}</div>
           <div class="holt-row-meta">{{ i.implementation or i.protocol }} — {{ i.url }}</div>
+          <div class="holt-row-meta" data-stats="{{ i.id }}">loading stats…</div>
         </div>
         <span class="holt-badge {{ 'holt-badge-available' if i.enabled else 'holt-badge-missing' }}"><span class="dot"></span>{{ "enabled" if i.enabled else "disabled" }}</span>
         <div class="holt-row-actions">
+          <a href="#" class="holt-btn holt-btn-quiet holt-btn-sm" onclick="toggleIndexer({{ i.id }}, {{ 'false' if i.enabled else 'true' }}); return false;">{{ 'disable' if i.enabled else 'enable' }}</a>
           <a href="#" class="holt-btn holt-btn-quiet holt-btn-sm" onclick="testIndexer({{ i.id }}); return false;">test</a>
           <form method="post" action="/ui/indexers/{{ i.id }}/delete">
             <button type="submit" class="holt-btn holt-btn-quiet holt-btn-sm">delete</button>

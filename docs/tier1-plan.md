@@ -36,6 +36,8 @@ Output: a list of defects, fixed as they appear. Gate for everything below.
 
 ### M16 Health and indexer stats (server, web, KDE, Android)
 
+**Done 2026-09-12 (server 0.6.1, client 0.4.6, android 0.5.3).** `indexer_stats` (per indexer, per UTC day: searches / successes / failures / total ms / last error, written by `search_all`) and `health_issues` tables, `app/health.py` (folders exist and writable, torrent engine running, Cloudflare solver present when a Cloudflare preset is enabled, Plex token valid vs plex.tv unreachable, any indexer with 3+ searches and no success today) run at the end of every automation cycle; issues are reconciled (new ones fire `health_warning`, cleared ones are deleted). `/health` returns `checks`; `GET /indexers/stats?days=7`; `PATCH /indexers/{id}` (enable / rename). Discover banner and Indexers stats line + enable/disable on the web, the KDE client and Android. Verified: `m16_smoke.sh` (stats populated, issues appear and clear, health_warning posted to the ntfy mock, PATCH), KDE harness 13 pages clean, Android build. Not done: the "torrent port reachable from outside" check (needs a public reflector); the health check runs on the automation cadence only, not on demand.
+
 - `indexer_stats` table: per indexer, per day, searches / successes / failures /
   average ms / last error. Written by `app/indexers.search_all`.
 - Health checks run each automation cycle: library folders writable, downloads folder

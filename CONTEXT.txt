@@ -17,7 +17,7 @@ FastAPI + SQLAlchemy/Alembic (SQLite) + Jinja2 + APScheduler media manager with 
 libtorrent client, Discover (TMDB), Plex login + library scan, Requests with quotas, and the
 HoltOS Glass UI. Companion apps: KDE client (the-den-client) and Android app (the-den-android).
 
-LAST TASK: M15 - NOTIFICATION AGENTS (2026-09-12). the-den v0.6.0, client v0.4.5, android v0.5.2. Plan: docs/tier1-plan.md (M14 shakedown is the user's; M16 health + indexer stats is next for Claude).
+LAST TASK: M16 - HEALTH + INDEXER STATS (2026-09-12). the-den v0.6.1, client v0.4.6, android v0.5.3. Plan: docs/tier1-plan.md (M14 shakedown is the user's; M17 custom formats is next for Claude). Android 0.5.3 APK built, not yet installed on the phones.
 ------------------------------------------------
 Plan and status: the-den/docs/indexers-plan.md. All code in this task after the first pass was
 drafted by the local LM Studio model through lmstudio-bridge (user rule: ALL code, even

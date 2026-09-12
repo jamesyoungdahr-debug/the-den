@@ -222,3 +222,31 @@ class NotificationAgent(Base):
     config = Column(String, nullable=True)  # JSON object with the kind's fields, see app/notifier.KINDS
     events = Column(String, nullable=True)  # JSON list of event keys; null/empty = every event
     enabled = Column(Boolean, nullable=False, default=True)
+
+
+class IndexerStat(Base):
+    """Per-indexer, per-day search counters (M16): what the health check and the Indexers page read."""
+
+    __tablename__ = "indexer_stats"
+
+    id = Column(Integer, primary_key=True)
+    indexer_id = Column(Integer, ForeignKey("indexers.id", ondelete="CASCADE"), nullable=False)
+    day = Column(String, nullable=False)  # YYYY-MM-DD, UTC
+    searches = Column(Integer, nullable=False, default=0)
+    successes = Column(Integer, nullable=False, default=0)
+    failures = Column(Integer, nullable=False, default=0)
+    total_ms = Column(Integer, nullable=False, default=0)
+    last_error = Column(String, nullable=True)
+
+
+class HealthIssue(Base):
+    """A currently-open health problem (M16); rows come and go as app/health.py re-checks."""
+
+    __tablename__ = "health_issues"
+
+    id = Column(Integer, primary_key=True)
+    key = Column(String, unique=True, nullable=False)
+    level = Column(String, nullable=False)  # warning | error
+    message = Column(String, nullable=False)
+    first_seen = Column(DateTime, nullable=False)
+    last_seen = Column(DateTime, nullable=False)

@@ -5,7 +5,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
 
-from app import auth, automation, scheduler
+from app import auth, automation, health, scheduler
 from app import settings as settings_module
 from app.db import SessionLocal, engine as db_engine
 from app.deps import get_db
@@ -133,10 +133,10 @@ async def run_automation_now(db: Session = Depends(get_db)):
 
 
 @app.get("/health")
-def health():
+def health_check(db: Session = Depends(get_db)):
     with db_engine.connect() as conn:
         conn.execute(text("SELECT 1"))
-    return {"status": "ok", "api_version": 2, "auth_required": auth.required(), "torrent_engine": torrent_engine.info()}
+    return {"status": "ok", "api_version": 2, "auth_required": auth.required(), "torrent_engine": torrent_engine.info(), "checks": health.current(db)}
 
 
 @app.get("/forbidden", response_class=HTMLResponse, include_in_schema=False)

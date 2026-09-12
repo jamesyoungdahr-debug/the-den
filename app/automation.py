@@ -5,6 +5,7 @@ then search+grab anything still missing."""
 from sqlalchemy.orm import Session
 
 from app import requests_service
+from app import health
 from app.candidates import episode_query, movie_query, profile_for, scored_candidates
 from app.download_check import check_and_import, reap_seeded
 from app.grabber import grab_episode, grab_movie
@@ -78,3 +79,7 @@ async def run_cycle(db: Session) -> None:
         await requests_service.mark_available(db)
     except Exception:
         pass  # a notification problem must never break the cycle
+    try:
+        await health.run(db)
+    except Exception:
+        pass  # health checks are advisory
