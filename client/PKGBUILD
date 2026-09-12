@@ -3,7 +3,7 @@
 # Builds from this checkout directly (no VCS/network source fetch) — run
 # `makepkg -si` from this directory (client/ in the the-den repo).
 pkgname=the-den-client
-pkgver=0.1.0
+pkgver=0.4.0
 pkgrel=1
 pkgdesc="Native KDE desktop companion app for The Den — talks to its JSON API instead of a browser"
 arch=('any')
