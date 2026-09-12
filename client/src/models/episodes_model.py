@@ -1,70 +1,46 @@
-import json
-from typing import Callable
+from PySide6.QtCore import Property, Signal, Slot
 
-from PySide6.QtCore import QAbstractListModel, QModelIndex, QUrl, Qt, Signal, Slot
-from PySide6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
+from models.base import JsonListModel
 
 
-class EpisodesModel(QAbstractListModel):
-    """Episodes for one series -- GET /series/{id}/episodes. Stateful: load(seriesId)
-    remembers the series for a possible future refresh() call, matching EpisodesPage's
-    "open a series, see its episodes" flow."""
+class EpisodesModel(JsonListModel):
+    """Episodes for one series -- GET /series/{id}/episodes. load(seriesId) remembers the
+    series so refresh() after a grab reloads the same list."""
 
-    EpisodeIdRole = Qt.ItemDataRole.UserRole + 1
-    SeasonNumberRole = Qt.ItemDataRole.UserRole + 2
-    EpisodeNumberRole = Qt.ItemDataRole.UserRole + 3
-    TitleRole = Qt.ItemDataRole.UserRole + 4
-    HasFileRole = Qt.ItemDataRole.UserRole + 5
+    FIELDS = [
+        ("episodeId", "id"),
+        ("seriesId", "series_id"),
+        ("seasonNumber", "season_number"),
+        ("episodeNumber", "episode_number"),
+        ("title", "title", ""),
+        ("airDate", "air_date", ""),
+        ("hasFile", "has_file", False),
+    ]
 
-    errorOccurred = Signal(str)
+    seriesChanged = Signal()
+    # A Property's notify must be a signal declared on the same class (a base-class
+    # signal, or re-declaring the base's name, crashes PySide's property cache), so
+    # derived stats get their own signal, emitted after every reset.
+    statsChanged = Signal()
 
-    def __init__(self, base_url_provider: Callable[[], str], parent=None):
-        super().__init__(parent)
-        self._items: list[dict] = []
-        self._manager = QNetworkAccessManager(self)
-        self._base_url = base_url_provider
+    def __init__(self, api, parent=None):
+        super().__init__(api, parent)
         self._series_id: int | None = None
 
-    def rowCount(self, parent=QModelIndex()) -> int:
-        return 0 if parent.isValid() else len(self._items)
+    def _set_items(self, items: list[dict]) -> None:
+        super()._set_items(items)
+        self.statsChanged.emit()
 
-    def data(self, index: QModelIndex, role: int):
-        if not index.isValid():
-            return None
-        item = self._items[index.row()]
-        return {
-            self.EpisodeIdRole: item["id"],
-            self.SeasonNumberRole: item["season_number"],
-            self.EpisodeNumberRole: item["episode_number"],
-            self.TitleRole: item.get("title") or "",
-            self.HasFileRole: item["has_file"],
-        }.get(role)
-
-    def roleNames(self):
-        return {
-            self.EpisodeIdRole: b"episodeId",
-            self.SeasonNumberRole: b"seasonNumber",
-            self.EpisodeNumberRole: b"episodeNumber",
-            self.TitleRole: b"title",
-            self.HasFileRole: b"hasFile",
-        }
+    currentSeriesId = Property(int, lambda self: self._series_id or 0, notify=seriesChanged)
+    haveCount = Property(int, lambda self: sum(1 for e in self._items if e.get("has_file")), notify=statsChanged)
 
     @Slot(int)
     def load(self, seriesId: int) -> None:
         self._series_id = seriesId
-        reply = self._manager.get(QNetworkRequest(QUrl(f"{self._base_url()}/series/{seriesId}/episodes")))
-        reply.finished.connect(lambda: self._on_load_reply(reply))
+        self.seriesChanged.emit()
+        self._fetch(f"/series/{seriesId}/episodes")
 
-    def _on_load_reply(self, reply: QNetworkReply) -> None:
-        if reply.error() == QNetworkReply.NetworkError.NoError:
-            body = bytes(reply.readAll().data())
-            try:
-                items = json.loads(body)
-            except json.JSONDecodeError:
-                items = []
-            self.beginResetModel()
-            self._items = items
-            self.endResetModel()
-        else:
-            self.errorOccurred.emit(reply.errorString())
-        reply.deleteLater()
+    @Slot()
+    def refresh(self) -> None:
+        if self._series_id is not None:
+            self._fetch(f"/series/{self._series_id}/episodes")

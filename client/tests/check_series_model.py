@@ -8,14 +8,19 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
+import os
+
+from api_client import ApiClient
 from PySide6.QtCore import QCoreApplication, QTimer
 
 from models.series_model import SeriesListModel, SeriesSearchResultsModel
 
-BASE_URL = "http://127.0.0.1:8686"
+BASE_URL = os.environ.get("DEN_URL", "http://127.0.0.1:8686")
+TOKEN = os.environ.get("DEN_API_TOKEN", "")
+api = ApiClient(BASE_URL, TOKEN, persist=False)
 app = QCoreApplication(sys.argv)
-library = SeriesListModel(lambda: BASE_URL)
-search = SeriesSearchResultsModel(lambda: BASE_URL)
+library = SeriesListModel(api)
+search = SeriesSearchResultsModel(api)
 failures = []
 
 

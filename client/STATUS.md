@@ -1,48 +1,45 @@
 # Status
 
 ## Last completed
-Fixed 2 correctness bugs found by a full-codebase review (commit `d157416`), both
-the same root cause: `CandidatesModel` and `ApiClient` are shared singleton
-instances with no guard against a slow, superseded network reply landing after a
-newer one. `CandidatesModel` could show a slow grab's result on whatever movie's
-page the user had since navigated to, and could overwrite the currently-open
-page's release list with a different movie's data if its `load()` reply arrived
-late; `ApiClient.checkHealth()` could show a stale "Connection failed" over a
-newer, correct "Connected". Both fixed with a local request-sequence counter, not
-a project-wide model refactor. New isolated tests
-(`tests/check_candidates_model_race_guard.py`,
-`tests/check_api_client_race_guard.py`) exercise both races against a fake
-backend and pass; `tests/check_candidates_model.py` updated for
-`grabFinished`'s new 3-arg signature (untested this pass — needs real mock
-indexer/qBittorrent fixtures that weren't set up).
+**U4 -- the HoltOS Glass redesign of the whole client (2026-09-12).** Everything was
+rebuilt on the backend's current API:
 
-Before that: M8 (take two, after Flatpak was abandoned) — native Arch package.
-All 7 feature milestones (M0–M7) plus packaging are done.
+- **Sign-in.** Login page with *Sign in with Plex* (backend PIN flow, plex.tv opens in
+  the system browser, the client polls) and a local username/password form; either way
+  the client swaps the session for a personal API token (`POST /api/auth/token`), keeps
+  only that in QSettings, and sends it as `X-Api-Key`. `GET /api/auth/me` decides what
+  the shell shows (admin group, request buttons, quota).
+- **Shell.** Glass sidebar with Browse / Library / Admin groups (Admin only for admins,
+  pending-requests badge), rail mode when collapsed or under 900px, top bar with global
+  search and the page's single primary action, page stack, toasts.
+- **Pages.** Discover (hero + Recommended for you + rails), Search (poster grid with type
+  chips), Detail (backdrop hero, facts, genres, cast, seasons with per-season
+  availability, availability panel, request/add with a season picker, recommendations),
+  Requests (filters, approve / decline with a note / withdraw / remove), Movies and TV as
+  poster grids with add dialogs, Episodes with progress and per-season sections,
+  Releases with quality chips and best-match, Calendar as an agenda (missing / upcoming /
+  movies wanted), Downloads on `/torrents` (engine header, grouped rows with drawn
+  progress bars, pause / resume / remove, add by hand, polling while visible), Indexers
+  with test/delete and an add dialog, Settings as cards bound to `/api/settings` (fixed:
+  it had been broken since the torrent client replaced qBittorrent).
+- **Code.** `JsonListModel`/`JsonRecord` base (fields declared, roles generated, the
+  reply-sequence guard everywhere, `loading`/`count`), so the near-identical model pairs
+  and the copy-pasted error banner block flagged by the last review are gone. `theme.py`
+  reads the shared `design/exports/holt_tokens.py`. A `holt/` QML component library.
+- **Verified headlessly** against the dev backend: 10 model checks, the page compile
+  harness (13 pages, zero QML warnings) and a full-app screenshot walk (10 PNGs, zero
+  warnings) via `tests/run_all.sh`. Two PySide pitfalls found on the way and documented
+  in the code: a `Property` notify must be a signal declared on the same class (a base
+  signal, or re-declaring the base's name, segfaults), and integer `font.pixelSize`.
 
 ## Currently working on
-Nothing in progress. The review-fix pass is committed and pushed.
+Nothing in progress; U4 is committed.
 
 ## Next steps
-- **Get a real look at it.** The one thing left that this dev environment genuinely
-  cannot provide: install the package (or just `makepkg -si` from this repo) on the
-  actual HoltOS target hardware/VM and see it run for real — spacing, layout, does it
-  actually look like the design intent.
-- Known backend gaps (not fixed here, belong in the-den): `tmdb.search_movie()` 500s
-  on a bad key; `GET /series/{id}/episodes` doesn't 404 on a nonexistent series id.
-- Known client-side gap, now **partially** addressed: `CandidatesModel` and
-  `ApiClient` have the out-of-order-reply guard as of the fixes above; every other
-  `QAbstractListModel` subclass (`MovieListModel`, `SeriesListModel`,
-  `EpisodesModel`, `DownloadsModel`, `IndexerModel`, `CalendarEpisodesModel`, the
-  `*SearchResultsModel` pair) still doesn't have it — deliberately out of scope for
-  the review-fix pass, which targeted the two confirmed concrete failure scenarios
-  rather than a project-wide model refactor.
-- The review also flagged real duplication worth a dedicated pass: the movie/series
-  model pairs (`MovieListModel`/`SeriesListModel`,
-  `MovieSearchResultsModel`/`SeriesSearchResultsModel`) are near-identical and could
-  share a base class; the same error-banner `Connections`+`InlineMessage` QML
-  boilerplate is copy-pasted across all 7 pages; `CalendarEpisodesModel` re-fetches
-  data `MovieListModel`/`EpisodesModel` already hold instead of deriving from it.
-- Known testing-process gap: regression scripts assume shared pre-seeded fixtures
-  rather than self-seeding (see M6 in ROADMAP.md).
-- If Flatpak distribution is wanted later too (e.g. for non-HoltOS use), the M8
-  attempt notes in ROADMAP.md capture exactly where that got stuck and why.
+- **See it on a real screen.** The screenshot walk uses the Basic QQC2 style offscreen;
+  `org.kde.desktop` on the HoltOS desktop may size controls differently. Run
+  `makepkg -si` from `client/` there and click through.
+- Live blur behind the sidebar/top bar (`MultiEffect`) once seen on real hardware; the
+  ground-layer glass is deliberate for now.
+- Users page (per-person quotas, roles) is web-only; the client points there.
+- Window state (size, sidebar collapsed) is not yet remembered between runs.

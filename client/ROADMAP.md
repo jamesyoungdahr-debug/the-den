@@ -25,6 +25,11 @@ Built the same way as the backend: one milestone at a time, tested before moving
 - [x] M8 — Native Arch package (`PKGBUILD`, `.desktop` entry, icon), matching
       the-den's own packaging approach. Built, installed, and verified for real —
       see the "M8" note below.
+- [x] U4 (2026-09-12) — HoltOS Glass redesign on the current backend API: sign-in
+      (Plex PIN + local, API token), glass sidebar shell, Discover / Search / Detail /
+      Requests pages, poster-grid libraries, Downloads on `/torrents`, Settings
+      rebuilt, `JsonListModel` base + `holt/` component library, headless page
+      harness and screenshot walk. See STATUS.md and `../docs/ui-redesign-plan.md`.
 
 ## Notes
 

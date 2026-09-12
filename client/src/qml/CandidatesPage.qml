@@ -2,114 +2,64 @@ import QtQuick
 import QtQuick.Controls as Controls
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
+import "holt"
+import "holt/Holt.js" as H
 
-Kirigami.ScrollablePage {
+// Scored releases for one movie or episode; Grab sends one to the built-in client.
+HoltPage {
     id: page
-    title: "Releases"
-
-    // Movies push this page with just itemId/heading, taking the default
-    // candidatesSource (the movie CandidatesModel). Episodes override
-    // candidatesSource to the episode CandidatesModel at push time -- same page,
-    // same underlying model class, different backend resource ("movies" vs
-    // "episodes"), see src/models/candidates_model.py.
+    objectName: "candidatesPage"
     property var candidatesSource: candidatesModel
     property int itemId: 0
     property string heading: ""
+    title: "Releases"
+    padding: Theme.space4
 
     Component.onCompleted: candidatesSource.load(itemId)
 
-    ListView {
-        id: listView
-        model: page.candidatesSource
+    Connections {
+        target: page.candidatesSource
+        function onErrorOccurred(message) { banner.showError(message) }
+        function onGrabFinished(itemId, ok, message) {
+            if (itemId !== page.itemId) return
+            banner.show(ok ? "Grabbed — watch it on Downloads" : "Grab failed: " + message, ok ? "positive" : "error")
+            if (ok) Controls.ApplicationWindow.window.toast("Grabbed " + page.heading, "positive")
+        }
+    }
 
-        header: ColumnLayout {
-            width: ListView.view.width
-            spacing: Kirigami.Units.largeSpacing
+    ColumnLayout {
+        width: page.width - 2 * page.padding
+        spacing: Theme.space3
 
-            // Nested here, not as a page-level sibling: ListView.header is
-            // Component-typed, so an inline item assigned to it gets implicitly
-            // wrapped in its own Component with its own id scope -- statusBanner
-            // is only visible to things declared inside that same wrapped scope.
-            Connections {
-                target: page.candidatesSource
-                function onErrorOccurred(message) {
-                    statusBanner.text = "Error: " + message
-                    statusBanner.type = Kirigami.MessageType.Error
-                    statusBanner.visible = true
+        PageHeader { title: page.heading; meta: page.candidatesSource.loading ? "searching your indexers…" : page.candidatesSource.count + " releases, best match first" }
+        StatusBanner { id: banner }
+
+        Repeater {
+            model: page.candidatesSource
+            delegate: HoltRow {
+                required property var model
+                thumbWidth: 0
+                highlighted: model.isBest
+                RowLayout {
+                    spacing: 8
+                    Rectangle { visible: model.isBest; width: 3; height: 16; radius: 1; color: Theme.current }
+                    Text { text: model.title; font.family: Theme.fontCore; font.pixelSize: 13; font.weight: Font.Bold; color: Theme.ink; elide: Text.ElideMiddle; Layout.fillWidth: true }
                 }
-                function onGrabFinished(itemId, ok, message) {
-                    // candidatesSource is a single shared model instance reused across
-                    // every item's Releases page -- if the user grabbed here, then
-                    // navigated to a different item before this (slow) reply came
-                    // back, itemId won't match this page's, so ignore it: it's not
-                    // this page's result to show.
-                    if (itemId !== page.itemId) return
-                    statusBanner.text = ok ? "Grabbed — check Downloads" : "Grab failed: " + message
-                    statusBanner.type = ok ? Kirigami.MessageType.Positive : Kirigami.MessageType.Warning
-                    statusBanner.visible = true
-                }
-            }
-
-            Kirigami.Heading {
-                text: page.heading
-                level: 2
-                Layout.fillWidth: true
-                elide: Text.ElideRight
-            }
-
-            Kirigami.InlineMessage {
-                id: statusBanner
-                Layout.fillWidth: true
-                visible: false
+                Meta { text: model.indexerName + " · " + (model.size ? H.bytes(model.size) + " · " : "") + model.seeders + " seeders · " + model.peers + " peers" }
+                actions: [
+                    Chip { text: model.quality; enabled: false; implicitHeight: 24 },
+                    Badge { visible: model.isBest; tone: "available"; label: "best match" },
+                    HoltButton { kind: model.isBest ? "primary" : "secondary"; small: true; text: "Grab"; onClicked: page.candidatesSource.grab(model.downloadUrl, model.title) }
+                ]
             }
         }
 
-        delegate: Kirigami.SwipeListItem {
-            width: ListView.view.width
-            contentItem: RowLayout {
-                spacing: Kirigami.Units.largeSpacing
+        Repeater { model: page.candidatesSource.loading && page.candidatesSource.count === 0 ? 4 : 0; delegate: Skeleton { Layout.fillWidth: true; height: 64 } }
 
-                Rectangle {
-                    visible: isBest
-                    width: 4
-                    Layout.fillHeight: true
-                    color: Theme.current
-                    radius: 2
-                }
-
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: 2
-
-                    Text {
-                        text: title
-                        font.family: Theme.fontCore
-                        font.weight: Font.Bold
-                        font.pixelSize: 13
-                        color: Theme.ink
-                        elide: Text.ElideRight
-                        Layout.fillWidth: true
-                    }
-                    Text {
-                        text: indexerName + " — " + quality + " — " + (seeders !== null && seeders !== undefined ? seeders : "-") + " seeders"
-                        font.family: Theme.fontMono
-                        font.pixelSize: 10
-                        color: Theme.ink42
-                    }
-                }
-
-                StatusPill {
-                    visible: isBest
-                    label: "best match"
-                    tone: "healthy"
-                }
-
-                Controls.Button {
-                    text: "Grab"
-                    highlighted: true
-                    onClicked: page.candidatesSource.grab(downloadUrl, title)
-                }
-            }
+        EmptyState {
+            visible: !page.candidatesSource.loading && page.candidatesSource.count === 0
+            title: "No releases found"
+            body: "None of your enabled indexers returned anything for this. Automation keeps trying every cycle."
         }
     }
 }

@@ -17,6 +17,14 @@ restores torrents from resume data. See ROADMAP.md's M10 section for the details
 two loopback-swarm gotchas that cost the most debugging time.
 
 ## Currently working on
+**U4 -- the KDE client redesign -- is done** (2026-09-12, `client/`): Plex/local sign-in
+with a personal API token, the HoltOS Glass shell, Discover / Search / Detail / Requests
+pages, poster-grid libraries, Downloads on the built-in torrent client, and a Settings
+page that works against the current API again. Verified offscreen (13 pages, zero QML
+warnings, full-app screenshot walk); still to be looked at on a real HoltOS desktop.
+**Next: U5, the Android app** (`the-den-android`): login + API token, the changed
+settings fields, then Discover and Requests first.
+
 **The KDE client now lives in this repo** (2026-09-12): `client/` is the old
 `the-den-client` repo merged with `git subtree` (history kept). Its `PKGBUILD` still
 builds from `client/`; the server package ignores the directory. U4 happens here from now

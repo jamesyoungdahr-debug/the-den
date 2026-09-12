@@ -16,12 +16,16 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
+import os
+
+from api_client import ApiClient
 from PySide6.QtCore import QCoreApplication, QTimer
 
 from models.candidates_model import CandidatesModel
 
 PORT = 18687
 BASE_URL = f"http://127.0.0.1:{PORT}"
+api = ApiClient(BASE_URL, "", persist=False)
 failures = []
 
 
@@ -72,7 +76,7 @@ server = ThreadingHTTPServer(("127.0.0.1", PORT), FakeBackendHandler)
 threading.Thread(target=server.serve_forever, daemon=True).start()
 
 app = QCoreApplication(sys.argv)
-model = CandidatesModel(lambda: BASE_URL, resource="movies")
+model = CandidatesModel(api, resource="movies")
 grab_results = []
 
 

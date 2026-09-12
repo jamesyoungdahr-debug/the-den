@@ -1,152 +1,91 @@
-import json
-from typing import Callable
+"""Calendar data composed client-side from /movies and /series/{id}/episodes (there is no
+JSON calendar endpoint): missing movies, and every episode without a file across the
+library, split into "aired but missing" and "upcoming" by air date."""
 
-from PySide6.QtCore import QAbstractListModel, QModelIndex, QUrl, Qt, Signal, Slot
-from PySide6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequest
+from __future__ import annotations
 
-# There's no JSON /calendar endpoint on the backend (only the HTML page), so these
-# compose the calendar view client-side from the already-tested /movies and
-# /series/{id}/episodes endpoints, filtering to has_file=false -- rather than expand
-# the backend's API surface for one screen.
+from datetime import date
+
+from PySide6.QtCore import Property, Signal, Slot
+
+from models.base import JsonListModel
 
 
-class CalendarMoviesModel(QAbstractListModel):
-    """Missing movies -- GET /movies, filtered to has_file=false."""
+class CalendarMoviesModel(JsonListModel):
+    """Missing movies -- GET /movies filtered to has_file=false."""
 
-    TitleRole = Qt.ItemDataRole.UserRole + 1
-    YearRole = Qt.ItemDataRole.UserRole + 2
-
-    errorOccurred = Signal(str)
-
-    def __init__(self, base_url_provider: Callable[[], str], parent=None):
-        super().__init__(parent)
-        self._items: list[dict] = []
-        self._manager = QNetworkAccessManager(self)
-        self._base_url = base_url_provider
-
-    def rowCount(self, parent=QModelIndex()) -> int:
-        return 0 if parent.isValid() else len(self._items)
-
-    def data(self, index: QModelIndex, role: int):
-        if not index.isValid():
-            return None
-        item = self._items[index.row()]
-        return {self.TitleRole: item["title"], self.YearRole: item.get("year")}.get(role)
-
-    def roleNames(self):
-        return {self.TitleRole: b"title", self.YearRole: b"year"}
+    FIELDS = [("movieId", "id"), ("title", "title"), ("year", "year"), ("posterPath", "poster_path", "")]
 
     @Slot()
     def refresh(self) -> None:
-        reply = self._manager.get(QNetworkRequest(QUrl(f"{self._base_url()}/movies")))
-        reply.finished.connect(lambda: self._on_reply(reply))
-
-    def _on_reply(self, reply: QNetworkReply) -> None:
-        if reply.error() == QNetworkReply.NetworkError.NoError:
-            body = bytes(reply.readAll().data())
-            try:
-                items = json.loads(body)
-            except json.JSONDecodeError:
-                items = []
-            self.beginResetModel()
-            self._items = [m for m in items if not m.get("has_file")]
-            self.endResetModel()
-        else:
-            self.errorOccurred.emit(reply.errorString())
-        reply.deleteLater()
+        self._fetch("/movies", transform=lambda items: [m for m in items if not m.get("has_file")])
 
 
-class CalendarEpisodesModel(QAbstractListModel):
-    """Missing episodes across every series in the library -- GET /series, then GET
-    /series/{id}/episodes for each, filtered to has_file=false and flattened with the
-    series title attached to each row. A fan-out/fan-in over N+1 requests: fires one
-    episodes request per series, waits for all of them, then builds the combined,
-    date-sorted list in one go."""
+class CalendarEpisodesModel(JsonListModel):
+    """Episodes without a file across every series: GET /series, then one
+    /series/{id}/episodes per series (fan-out, fan-in), flattened with the series title
+    and sorted by air date. `upcoming` marks episodes that haven't aired yet."""
 
-    SeriesTitleRole = Qt.ItemDataRole.UserRole + 1
-    SeasonNumberRole = Qt.ItemDataRole.UserRole + 2
-    EpisodeNumberRole = Qt.ItemDataRole.UserRole + 3
-    TitleRole = Qt.ItemDataRole.UserRole + 4
-    AirDateRole = Qt.ItemDataRole.UserRole + 5
+    FIELDS = [
+        ("episodeId", "id"),
+        ("seriesId", "series_id"),
+        ("seriesTitle", "series_title", ""),
+        ("posterPath", "poster_path", ""),
+        ("seasonNumber", "season_number"),
+        ("episodeNumber", "episode_number"),
+        ("title", "title", ""),
+        ("airDate", "air_date", ""),
+        ("upcoming", "upcoming", False),
+    ]
+    statsChanged = Signal()  # own signal: a notify must belong to the declaring class, and re-declaring the base name crashes PySide
 
-    errorOccurred = Signal(str)
+    missingCount = Property(int, lambda self: sum(1 for e in self._items if not e.get("upcoming")), notify=statsChanged)
+    upcomingCount = Property(int, lambda self: sum(1 for e in self._items if e.get("upcoming")), notify=statsChanged)
 
-    def __init__(self, base_url_provider: Callable[[], str], parent=None):
-        super().__init__(parent)
-        self._items: list[dict] = []
-        self._manager = QNetworkAccessManager(self)
-        self._base_url = base_url_provider
-
-    def rowCount(self, parent=QModelIndex()) -> int:
-        return 0 if parent.isValid() else len(self._items)
-
-    def data(self, index: QModelIndex, role: int):
-        if not index.isValid():
-            return None
-        item = self._items[index.row()]
-        return {
-            self.SeriesTitleRole: item["series_title"],
-            self.SeasonNumberRole: item["season_number"],
-            self.EpisodeNumberRole: item["episode_number"],
-            self.TitleRole: item.get("title") or "",
-            self.AirDateRole: item.get("air_date") or "",
-        }.get(role)
-
-    def roleNames(self):
-        return {
-            self.SeriesTitleRole: b"seriesTitle",
-            self.SeasonNumberRole: b"seasonNumber",
-            self.EpisodeNumberRole: b"episodeNumber",
-            self.TitleRole: b"title",
-            self.AirDateRole: b"airDate",
-        }
+    def _set_items(self, items: list[dict]) -> None:
+        super()._set_items(items)
+        self.statsChanged.emit()
 
     @Slot()
     def refresh(self) -> None:
-        reply = self._manager.get(QNetworkRequest(QUrl(f"{self._base_url()}/series")))
-        reply.finished.connect(lambda: self._on_series_reply(reply))
+        self._seq += 1
+        seq = self._seq
+        self._set_loading(True)
 
-    def _on_series_reply(self, reply: QNetworkReply) -> None:
-        if reply.error() != QNetworkReply.NetworkError.NoError:
-            self.errorOccurred.emit(reply.errorString())
-            reply.deleteLater()
-            return
-        body = bytes(reply.readAll().data())
-        reply.deleteLater()
-        try:
-            series_list = json.loads(body)
-        except json.JSONDecodeError:
-            series_list = []
+        def on_series(status: int, body) -> None:
+            if seq != self._seq:
+                return
+            if status != 200 or not isinstance(body, list):
+                self._set_loading(False)
+                self.errorOccurred.emit(self.api.error_message(status, body))
+                return
+            series_list = body
+            if not series_list:
+                self._set_loading(False)
+                self._set_items([])
+                return
+            pending = {"n": len(series_list)}
+            collected: list[dict] = []
+            today = date.today().isoformat()
 
-        if not series_list:
-            self.beginResetModel()
-            self._items = []
-            self.endResetModel()
-            return
+            def make_handler(series: dict):
+                def on_episodes(st: int, eps) -> None:
+                    if seq != self._seq:
+                        return
+                    if st == 200 and isinstance(eps, list):
+                        for ep in eps:
+                            if not ep.get("has_file"):
+                                air = ep.get("air_date") or ""
+                                collected.append({**ep, "series_title": series["title"], "poster_path": series.get("poster_path") or "",
+                                                  "upcoming": bool(air) and air > today})
+                    pending["n"] -= 1
+                    if pending["n"] == 0:
+                        collected.sort(key=lambda e: (e.get("air_date") or "9999", e["season_number"], e["episode_number"]))
+                        self._set_loading(False)
+                        self._set_items(collected)
+                return on_episodes
 
-        pending = len(series_list)
-        collected: list[dict] = []
+            for series in series_list:
+                self.api.request("GET", f"/series/{series['id']}/episodes", on_done=make_handler(series))
 
-        def on_episodes_reply(series_title: str, ep_reply: QNetworkReply) -> None:
-            nonlocal pending
-            if ep_reply.error() == QNetworkReply.NetworkError.NoError:
-                ep_body = bytes(ep_reply.readAll().data())
-                try:
-                    episodes = json.loads(ep_body)
-                except json.JSONDecodeError:
-                    episodes = []
-                for ep in episodes:
-                    if not ep.get("has_file"):
-                        collected.append({**ep, "series_title": series_title})
-            ep_reply.deleteLater()
-            pending -= 1
-            if pending == 0:
-                collected.sort(key=lambda e: e.get("air_date") or "")
-                self.beginResetModel()
-                self._items = collected
-                self.endResetModel()
-
-        for series in series_list:
-            url = f"{self._base_url()}/series/{series['id']}/episodes"
-            ep_reply = self._manager.get(QNetworkRequest(QUrl(url)))
-            ep_reply.finished.connect(lambda r=ep_reply, t=series["title"]: on_episodes_reply(t, r))
+        self.api.request("GET", "/series", on_done=on_series)

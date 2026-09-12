@@ -2,120 +2,82 @@ import QtQuick
 import QtQuick.Controls as Controls
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
+import "holt"
 
-Kirigami.ScrollablePage {
+// Indexers: one row each with test / delete; the add form lives in a dialog.
+HoltPage {
     id: page
+    objectName: "indexersPage"
     title: "Indexers"
+    padding: Theme.space4
 
-    Component.onCompleted: indexerModel.refresh()
+    Component.onCompleted: {
+        indexerModel.refresh()
+        Controls.ApplicationWindow.window.pageAction = { text: "Add indexer", trigger: function () { addDialog.open() } }
+    }
+    Controls.StackView.onDeactivated: Controls.ApplicationWindow.window.pageAction = null
+    Controls.StackView.onActivated: Controls.ApplicationWindow.window.pageAction = { text: "Add indexer", trigger: function () { addDialog.open() } }
 
-    ListView {
-        id: listView
-        model: indexerModel
+    property var testResults: ({})
 
-        header: ColumnLayout {
-            width: ListView.view.width
-            spacing: Kirigami.Units.largeSpacing
+    Connections {
+        target: indexerModel
+        function onErrorOccurred(message) { banner.showError(message) }
+        function onTestResult(indexerId, ok, message) {
+            var r = page.testResults; r[indexerId] = { ok: ok, message: message }; page.testResults = r
+            banner.show((ok ? "Test OK: " : "Test failed: ") + message, ok ? "positive" : "warning")
+        }
+    }
 
-            // Nested here (not as a page-level sibling of the ListView) because
-            // ListView.header is a Component-typed property: an inline item assigned
-            // to it gets implicitly wrapped in its own Component, which isolates its
-            // ids from the rest of the file. A Connections block outside couldn't see
-            // statusBanner by id -- this is the only scope it's actually visible in.
-            Connections {
-                target: indexerModel
-                function onErrorOccurred(message) {
-                    statusBanner.text = "Error: " + message
-                    statusBanner.type = Kirigami.MessageType.Error
-                    statusBanner.visible = true
-                }
-                function onTestResult(indexerId, ok, message) {
-                    statusBanner.text = (ok ? "Test OK: " : "Test failed: ") + message
-                    statusBanner.type = ok ? Kirigami.MessageType.Positive : Kirigami.MessageType.Warning
-                    statusBanner.visible = true
-                }
+    ColumnLayout {
+        width: page.width - 2 * page.padding
+        spacing: Theme.space3
+
+        PageHeader { title: "Indexers"; meta: indexerModel.count + " configured · Torznab and Newznab" }
+        StatusBanner { id: banner }
+
+        Repeater {
+            model: indexerModel
+            delegate: HoltRow {
+                required property var model
+                thumbWidth: 0
+                readonly property var result: page.testResults[model.indexerId]
+                Text { text: model.name; font.family: Theme.fontCore; font.pixelSize: 14; font.weight: Font.Bold; color: Theme.ink; elide: Text.ElideRight; Layout.fillWidth: true }
+                Meta { text: model.protocol + " · " + model.url; Layout.fillWidth: true }
+                actions: [
+                    Badge { tone: result ? (result.ok ? "available" : "error") : (model.indexerEnabled ? "pending" : "missing"); label: result ? (result.ok ? "reachable" : "failed") : (model.indexerEnabled ? "enabled" : "disabled") },
+                    HoltButton { small: true; text: "Test"; onClicked: indexerModel.testIndexer(model.indexerId) },
+                    HoltButton { kind: "quiet"; small: true; text: "Delete"; onClicked: indexerModel.deleteIndexer(model.indexerId) }
+                ]
             }
-
-            Kirigami.InlineMessage {
-                id: statusBanner
-                Layout.fillWidth: true
-                visible: false
-            }
-
-            Kirigami.FormLayout {
-                Layout.fillWidth: true
-
-                Controls.TextField {
-                    id: nameField
-                    Kirigami.FormData.label: "Name:"
-                }
-                Controls.TextField {
-                    id: urlField
-                    Kirigami.FormData.label: "URL:"
-                    placeholderText: "https://indexer.example/api"
-                }
-                Controls.TextField {
-                    id: apiKeyField
-                    Kirigami.FormData.label: "API key:"
-                    echoMode: TextInput.Password
-                }
-                Controls.ComboBox {
-                    id: protocolField
-                    Kirigami.FormData.label: "Protocol:"
-                    model: ["torznab", "newznab"]
-                }
-                Controls.Button {
-                    text: "Add indexer"
-                    enabled: nameField.text.length > 0 && urlField.text.length > 0
-                    onClicked: {
-                        indexerModel.addIndexer(nameField.text, urlField.text, apiKeyField.text, protocolField.currentText)
-                        nameField.text = ""
-                        urlField.text = ""
-                        apiKeyField.text = ""
-                    }
-                }
-            }
-
-            Kirigami.Separator { Layout.fillWidth: true }
         }
 
-        delegate: Kirigami.SwipeListItem {
-            width: ListView.view.width
-            contentItem: RowLayout {
-                spacing: Kirigami.Units.largeSpacing
-
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: 2
-
-                    Text {
-                        text: name
-                        font.family: Theme.fontCore
-                        font.weight: Font.Bold
-                        font.pixelSize: 13
-                        color: Theme.ink
-                        elide: Text.ElideRight
-                        Layout.fillWidth: true
-                    }
-                    Text {
-                        text: protocol + " — " + url
-                        font.family: Theme.fontMono
-                        font.pixelSize: 10
-                        color: Theme.ink42
-                        elide: Text.ElideRight
-                        Layout.fillWidth: true
-                    }
-                }
-
-                StatusPill {
-                    label: indexerEnabled ? "enabled" : "disabled"
-                    tone: indexerEnabled ? "healthy" : "idle"
-                }
-            }
-            actions: [
-                Kirigami.Action { text: "Test"; onTriggered: indexerModel.testIndexer(indexerId) },
-                Kirigami.Action { text: "Delete"; onTriggered: indexerModel.deleteIndexer(indexerId) }
-            ]
+        EmptyState {
+            visible: !indexerModel.loading && indexerModel.count === 0
+            title: "No indexers yet"
+            body: "Add a Torznab or Newznab endpoint (Jackett, Prowlarr, or a tracker's own API) and automation can start searching."
+            actionText: "Add indexer"
+            onAction: addDialog.open()
         }
+    }
+
+    HoltDialog {
+        id: addDialog
+        title: "Add an indexer"
+        Field { label: "Name"; HoltTextField { id: nameField } }
+        Field { label: "URL"; HoltTextField { id: urlField; placeholderText: "https://indexer.example/api" } }
+        Field { label: "API key"; HoltTextField { id: apiKeyField; echoMode: TextInput.Password } }
+        Field {
+            label: "Protocol"
+            Controls.ComboBox { id: protocolField; model: ["torznab", "newznab"]; font.family: Theme.fontCore }
+        }
+        footer: [
+            HoltButton { kind: "quiet"; text: "Cancel"; onClicked: addDialog.close() },
+            HoltButton {
+                kind: "primary"; text: "Add"
+                enabled: nameField.text.length > 0 && urlField.text.length > 0
+                onClicked: { indexerModel.addIndexer(nameField.text, urlField.text, apiKeyField.text, protocolField.currentText); nameField.text = ""; urlField.text = ""; apiKeyField.text = ""; addDialog.close() }
+            }
+        ]
     }
 }

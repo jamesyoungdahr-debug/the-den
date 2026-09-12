@@ -10,14 +10,19 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
+import os
+
+from api_client import ApiClient
 from PySide6.QtCore import QCoreApplication, QTimer
 
 from models.movie_model import MovieListModel, MovieSearchResultsModel
 
-BASE_URL = "http://127.0.0.1:8686"
+BASE_URL = os.environ.get("DEN_URL", "http://127.0.0.1:8686")
+TOKEN = os.environ.get("DEN_API_TOKEN", "")
+api = ApiClient(BASE_URL, TOKEN, persist=False)
 app = QCoreApplication(sys.argv)
-library = MovieListModel(lambda: BASE_URL)
-search = MovieSearchResultsModel(lambda: BASE_URL)
+library = MovieListModel(api)
+search = MovieSearchResultsModel(api)
 failures = []
 
 

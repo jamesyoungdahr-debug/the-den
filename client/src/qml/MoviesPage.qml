@@ -2,149 +2,102 @@ import QtQuick
 import QtQuick.Controls as Controls
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
+import "holt"
 
-Kirigami.ScrollablePage {
+// The movie library as a poster grid with have/wanted badges; add via a TMDB search
+// dialog (the top bar's primary action), remove for admins.
+HoltPage {
     id: page
+    objectName: "moviesPage"
     title: "Movies"
+    padding: Theme.space4
 
-    Component.onCompleted: movieModel.refresh()
+    property string filter: "all"   // all | missing | have
 
-    ListView {
-        id: listView
-        model: movieModel
+    Component.onCompleted: {
+        movieModel.refresh()
+        if (apiClient.isAdmin) Controls.ApplicationWindow.window.pageAction = { text: "Add movie", trigger: function () { addDialog.open() } }
+    }
+    Controls.StackView.onDeactivated: Controls.ApplicationWindow.window.pageAction = null
+    Controls.StackView.onActivated: if (apiClient.isAdmin) Controls.ApplicationWindow.window.pageAction = { text: "Add movie", trigger: function () { addDialog.open() } }
 
-        header: ColumnLayout {
-            width: ListView.view.width
-            spacing: Kirigami.Units.largeSpacing
+    Connections {
+        target: movieModel
+        function onErrorOccurred(message) { banner.showError(message) }
+    }
+    Connections {
+        target: movieSearchModel
+        function onErrorOccurred(message) { banner.showError("Search error: " + message) }
+    }
 
-            // Nested here, not as a page-level sibling: ListView.header is
-            // Component-typed, so an inline item assigned to it gets implicitly
-            // wrapped in its own Component with its own id scope -- statusBanner
-            // is only visible to things declared inside that same wrapped scope.
-            Connections {
-                target: movieModel
-                function onErrorOccurred(message) {
-                    statusBanner.text = "Error: " + message
-                    statusBanner.type = Kirigami.MessageType.Error
-                    statusBanner.visible = true
-                }
-            }
+    ColumnLayout {
+        width: page.width - 2 * page.padding
+        spacing: Theme.space3
 
-            Connections {
-                target: movieSearchModel
-                function onErrorOccurred(message) {
-                    statusBanner.text = "Search error: " + message
-                    statusBanner.type = Kirigami.MessageType.Error
-                    statusBanner.visible = true
-                }
-            }
+        PageHeader {
+            title: "Movies"
+            meta: movieModel.count + " in the library"
+            Chip { text: "All"; on: page.filter === "all"; onClicked: page.filter = "all" }
+            Chip { text: "Wanted"; on: page.filter === "missing"; onClicked: page.filter = "missing" }
+            Chip { text: "Have"; on: page.filter === "have"; onClicked: page.filter = "have" }
+        }
 
-            Kirigami.InlineMessage {
-                id: statusBanner
-                Layout.fillWidth: true
-                visible: false
-            }
+        StatusBanner { id: banner }
 
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: Kirigami.Units.smallSpacing
-
-                Controls.TextField {
-                    id: searchField
-                    Layout.fillWidth: true
-                    placeholderText: "Search TMDB..."
-                    onAccepted: movieSearchModel.search(text)
-                }
-                Controls.Button {
-                    text: "Search"
-                    onClicked: movieSearchModel.search(searchField.text)
-                }
-            }
-
+        Flow {
+            Layout.fillWidth: true
+            spacing: Theme.space3
             Repeater {
-                id: searchRepeater
-                model: movieSearchModel
-                delegate: Kirigami.SwipeListItem {
-                    Layout.fillWidth: true
-                    contentItem: RowLayout {
-                        spacing: Kirigami.Units.largeSpacing
+                model: movieModel
+                delegate: PosterCard {
+                    visible: page.filter === "all" || (page.filter === "have") === model.hasFile
+                    posterWidth: Theme.posterLg
+                    title: model.title
+                    year: model.year
+                    posterPath: model.posterPath
+                    status: model.hasFile ? "available" : "wanted"
+                    showRating: false
+                    onClicked: Controls.ApplicationWindow.window.openDetail("movie", model.tmdbId)
 
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 2
-                            Text {
-                                text: title
-                                font.family: Theme.fontCore
-                                font.weight: Font.Bold
-                                font.pixelSize: 13
-                                color: Theme.ink
-                                elide: Text.ElideRight
-                                Layout.fillWidth: true
-                            }
-                            Text {
-                                text: year ? String(year) : "-"
-                                font.family: Theme.fontMono
-                                font.pixelSize: 10
-                                color: Theme.ink42
-                            }
-                        }
-
-                        Controls.Button {
-                            text: "Add"
-                            highlighted: true
-                            onClicked: movieModel.addMovie(tmdbId, title, year ? String(year) : "", overview, posterPath)
-                        }
+                    Row {
+                        // bottom-right of the poster, clear of the status badge
+                        anchors { right: parent.right; rightMargin: 6 }
+                        y: Math.round(parent.posterWidth * 1.5) - height - 6
+                        spacing: 4
+                        HoltButton { visible: !model.hasFile; small: true; text: "Releases"; onClicked: Controls.ApplicationWindow.window.push("CandidatesPage.qml", { itemId: model.movieId, heading: model.title }) }
+                        HoltButton { visible: apiClient.isAdmin; small: true; kind: "quiet"; text: "✕"; onClicked: movieModel.deleteMovie(model.movieId) }
                     }
                 }
-            }
-
-            Kirigami.Separator { Layout.fillWidth: true; visible: searchRepeater.count > 0 }
-
-            Kirigami.Heading {
-                text: "Library"
-                level: 3
             }
         }
 
-        delegate: Kirigami.SwipeListItem {
-            width: ListView.view.width
-            contentItem: RowLayout {
-                spacing: Kirigami.Units.largeSpacing
-
-                ColumnLayout {
-                    Layout.fillWidth: true
-                    spacing: 2
-                    Text {
-                        text: title
-                        font.family: Theme.fontCore
-                        font.weight: Font.Bold
-                        font.pixelSize: 13
-                        color: Theme.ink
-                        elide: Text.ElideRight
-                        Layout.fillWidth: true
-                    }
-                    Text {
-                        text: year ? String(year) : "-"
-                        font.family: Theme.fontMono
-                        font.pixelSize: 10
-                        color: Theme.ink42
-                    }
-                }
-
-                StatusPill {
-                    label: hasFile ? "have" : "missing"
-                    tone: hasFile ? "healthy" : "idle"
-                }
-            }
-            actions: [
-                Kirigami.Action {
-                    text: "Find releases"
-                    visible: !hasFile
-                    onTriggered: applicationWindow().pageStack.push(
-                        Qt.resolvedUrl("CandidatesPage.qml"), { itemId: movieId, heading: title })
-                },
-                Kirigami.Action { text: "Remove"; onTriggered: movieModel.deleteMovie(movieId) }
-            ]
+        EmptyState {
+            visible: !movieModel.loading && movieModel.count === 0
+            title: "No movies yet"
+            body: apiClient.isAdmin ? "Add one here or from Discover; automation looks for it on your indexers." : "Ask for something on Discover and it'll show up here once approved."
+            actionText: "Discover"
+            onAction: Controls.ApplicationWindow.window.navigate("discover")
         }
+    }
+
+    HoltDialog {
+        id: addDialog
+        title: "Add a movie"
+        onClosed: { movieSearchModel.clear(); searchField.text = "" }
+        RowLayout {
+            Layout.fillWidth: true
+            HoltTextField { id: searchField; Layout.fillWidth: true; placeholderText: "Search TMDB…"; onAccepted: movieSearchModel.search(text) }
+            HoltButton { text: "Search"; onClicked: movieSearchModel.search(searchField.text) }
+        }
+        Repeater {
+            model: movieSearchModel
+            delegate: HoltRow {
+                required property var model
+                Text { text: model.title; font.family: Theme.fontCore; font.pixelSize: 13; font.weight: Font.Bold; color: Theme.ink; elide: Text.ElideRight; Layout.fillWidth: true }
+                Meta { text: model.year ? String(model.year) : "" }
+                actions: HoltButton { kind: "primary"; small: true; text: "Add"; onClicked: { movieModel.addMovie(model.tmdbId, model.title, model.year ? String(model.year) : "", model.overview, model.posterPath); addDialog.close() } }
+            }
+        }
+        footer: HoltButton { kind: "quiet"; text: "Close"; onClicked: addDialog.close() }
     }
 }

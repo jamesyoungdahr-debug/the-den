@@ -1,62 +1,79 @@
+import os
 import sys
 from pathlib import Path
 
-from PySide6.QtGui import QGuiApplication
+from PySide6.QtCore import QUrl
+from PySide6.QtGui import QGuiApplication, QIcon
 from PySide6.QtQml import QQmlApplicationEngine
+from PySide6.QtQuickControls2 import QQuickStyle
 
 from api_client import ApiClient
 from models.calendar_model import CalendarEpisodesModel, CalendarMoviesModel
 from models.candidates_model import CandidatesModel
-from models.downloads_model import DownloadsModel
+from models.discover_model import DetailController, DiscoverSearchModel, RailModel
 from models.episodes_model import EpisodesModel
 from models.indexer_model import IndexerListModel
 from models.movie_model import MovieListModel, MovieSearchResultsModel
+from models.requests_model import RequestsModel
 from models.series_model import SeriesListModel, SeriesSearchResultsModel
 from models.settings_controller import SettingsController
+from models.torrents_model import TorrentsModel
 from theme import Theme
+
+RAILS = ("trending", "popular-movies", "upcoming-movies", "popular-tv", "on-the-air", "recommended")
+
+
+def build_context(api: ApiClient) -> dict:
+    """Every object QML can reach by name. Shared with the headless tests so a page
+    compiles against exactly what the app gives it."""
+    ctx = {
+        "apiClient": api,
+        "Theme": Theme(),
+        "indexerModel": IndexerListModel(api),
+        "movieModel": MovieListModel(api),
+        "movieSearchModel": MovieSearchResultsModel(api),
+        "candidatesModel": CandidatesModel(api, resource="movies"),
+        "torrentsModel": TorrentsModel(api),
+        "seriesModel": SeriesListModel(api),
+        "seriesSearchModel": SeriesSearchResultsModel(api),
+        "episodesModel": EpisodesModel(api),
+        "episodeCandidatesModel": CandidatesModel(api, resource="episodes"),
+        "missingMoviesModel": CalendarMoviesModel(api),
+        "missingEpisodesModel": CalendarEpisodesModel(api),
+        "settingsController": SettingsController(api),
+        "discoverSearchModel": DiscoverSearchModel(api),
+        "detailController": DetailController(api),
+        "requestsModel": RequestsModel(api),
+    }
+    for rail in RAILS:
+        # trending -> trendingRail, popular-movies -> popularMoviesRail
+        parts = rail.split("-")
+        name = parts[0] + "".join(p.capitalize() for p in parts[1:]) + "Rail"
+        ctx[name] = RailModel(api, rail)
+    return ctx
 
 
 def main() -> None:
+    # Kirigami's desktop style unless the launcher/user picked one already.
+    if not os.environ.get("QT_QUICK_CONTROLS_STYLE"):
+        QQuickStyle.setStyle("org.kde.desktop")
     app = QGuiApplication(sys.argv)
     app.setApplicationName("The Den")
     app.setOrganizationName("the-den")
+    app.setDesktopFileName("the-den-client")
+    logo = Path(__file__).resolve().parents[1] / "assets" / "logo.svg"
+    if logo.exists():
+        app.setWindowIcon(QIcon(str(logo)))
 
     engine = QQmlApplicationEngine()
-    api_client = ApiClient()
-    indexer_model = IndexerListModel(lambda: api_client.baseUrl)
-    movie_model = MovieListModel(lambda: api_client.baseUrl)
-    movie_search_model = MovieSearchResultsModel(lambda: api_client.baseUrl)
-    candidates_model = CandidatesModel(lambda: api_client.baseUrl, resource="movies")
-    downloads_model = DownloadsModel(lambda: api_client.baseUrl)
-    series_model = SeriesListModel(lambda: api_client.baseUrl)
-    series_search_model = SeriesSearchResultsModel(lambda: api_client.baseUrl)
-    episodes_model = EpisodesModel(lambda: api_client.baseUrl)
-    episode_candidates_model = CandidatesModel(lambda: api_client.baseUrl, resource="episodes")
-    missing_movies_model = CalendarMoviesModel(lambda: api_client.baseUrl)
-    missing_episodes_model = CalendarEpisodesModel(lambda: api_client.baseUrl)
-    settings_controller = SettingsController(lambda: api_client.baseUrl)
-    theme = Theme()
-    engine.rootContext().setContextProperty("apiClient", api_client)
-    engine.rootContext().setContextProperty("indexerModel", indexer_model)
-    engine.rootContext().setContextProperty("movieModel", movie_model)
-    engine.rootContext().setContextProperty("movieSearchModel", movie_search_model)
-    engine.rootContext().setContextProperty("candidatesModel", candidates_model)
-    engine.rootContext().setContextProperty("downloadsModel", downloads_model)
-    engine.rootContext().setContextProperty("seriesModel", series_model)
-    engine.rootContext().setContextProperty("seriesSearchModel", series_search_model)
-    engine.rootContext().setContextProperty("episodesModel", episodes_model)
-    engine.rootContext().setContextProperty("episodeCandidatesModel", episode_candidates_model)
-    engine.rootContext().setContextProperty("missingMoviesModel", missing_movies_model)
-    engine.rootContext().setContextProperty("missingEpisodesModel", missing_episodes_model)
-    engine.rootContext().setContextProperty("settingsController", settings_controller)
-    engine.rootContext().setContextProperty("Theme", theme)
+    api = ApiClient()
+    context = build_context(api)
+    for name, obj in context.items():
+        engine.rootContext().setContextProperty(name, obj)
 
-    qml_file = Path(__file__).parent / "qml" / "Main.qml"
-    engine.load(str(qml_file))
-
+    engine.load(QUrl.fromLocalFile(str(Path(__file__).parent / "qml" / "Main.qml")))
     if not engine.rootObjects():
         sys.exit(-1)
-
     sys.exit(app.exec())
 
 

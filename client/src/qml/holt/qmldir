@@ -1,0 +1,22 @@
+module holt
+Avatar 1.0 Avatar.qml
+Badge 1.0 Badge.qml
+Chip 1.0 Chip.qml
+EmptyState 1.0 EmptyState.qml
+Eyebrow 1.0 Eyebrow.qml
+Field 1.0 Field.qml
+GlassPanel 1.0 GlassPanel.qml
+Ground 1.0 Ground.qml
+HoltButton 1.0 HoltButton.qml
+HoltDialog 1.0 HoltDialog.qml
+HoltRow 1.0 HoltRow.qml
+HoltTextField 1.0 HoltTextField.qml
+Meta 1.0 Meta.qml
+PageHeader 1.0 PageHeader.qml
+PosterCard 1.0 PosterCard.qml
+ProgressBar 1.0 ProgressBar.qml
+Rail 1.0 Rail.qml
+RingMark 1.0 RingMark.qml
+Skeleton 1.0 Skeleton.qml
+StatusBanner 1.0 StatusBanner.qml
+HoltPage 1.0 HoltPage.qml

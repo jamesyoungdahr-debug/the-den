@@ -8,13 +8,18 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
+import os
+
+from api_client import ApiClient
 from PySide6.QtCore import QCoreApplication, QTimer
 
 from models.indexer_model import IndexerListModel
 
-BASE_URL = "http://127.0.0.1:8686"
+BASE_URL = os.environ.get("DEN_URL", "http://127.0.0.1:8686")
+TOKEN = os.environ.get("DEN_API_TOKEN", "")
+api = ApiClient(BASE_URL, TOKEN, persist=False)
 app = QCoreApplication(sys.argv)
-model = IndexerListModel(lambda: BASE_URL)
+model = IndexerListModel(api)
 failures = []
 
 
@@ -54,7 +59,7 @@ def step3_verify_added() -> None:
 def step4_test() -> None:
     print("-- step 3: test connection (expected to fail, nothing listening on :9999) --")
     added_id = next(
-        model.data(model.index(i), IndexerListModel.IdRole)
+        model.data(model.index(i), IndexerListModel.IndexerIdRole)
         for i in range(model.rowCount())
         if model.data(model.index(i), IndexerListModel.NameRole) == "Client Test Indexer"
     )
@@ -71,7 +76,7 @@ def step5_delete(added_id: int) -> None:
 
 def step6_verify_deleted(added_id: int) -> None:
     dump_rows("after delete")
-    if any(model.data(model.index(i), IndexerListModel.IdRole) == added_id for i in range(model.rowCount())):
+    if any(model.data(model.index(i), IndexerListModel.IndexerIdRole) == added_id for i in range(model.rowCount())):
         fail("deleted indexer still present")
     print("-- done --")
     if failures:

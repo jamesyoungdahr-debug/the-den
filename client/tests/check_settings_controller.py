@@ -1,10 +1,13 @@
-"""Headless smoke test for SettingsController against a real running backend. Exercises
-load(), a real save() (secrets set for the first time, non-secrets changed), and
-verifies secrets are never echoed back but has_* flips correctly -- plus that saving
-with blank secret fields on a second save leaves the previously-set secret untouched.
-No display needed. Run from src/: `python ../tests/check_settings_controller.py`
+"""Headless smoke test for SettingsController (U4 shape: one `data` map) against a real
+running backend. Exercises load(), a real save() with a changed non-secret and a
+first-time secret, verifies the secret is never echoed back but has_* flips, then
+saves again with the secret blank and checks it was left alone. Restores the changed
+value at the end. No display needed.
+
+    DEN_URL=http://127.0.0.1:8686 DEN_API_TOKEN=... python3 tests/check_settings_controller.py
 """
 
+import os
 import sys
 from pathlib import Path
 
@@ -12,12 +15,17 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from PySide6.QtCore import QCoreApplication, QTimer
 
+from api_client import ApiClient
 from models.settings_controller import SettingsController
 
-BASE_URL = "http://127.0.0.1:8686"
+BASE_URL = os.environ.get("DEN_URL", "http://127.0.0.1:8686")
+TOKEN = os.environ.get("DEN_API_TOKEN", "")
 app = QCoreApplication(sys.argv)
-controller = SettingsController(lambda: BASE_URL)
+api = ApiClient(BASE_URL, TOKEN, persist=False)
+controller = SettingsController(api)
+controller.errorOccurred.connect(lambda m: fail(f"errorOccurred: {m}"))
 failures = []
+original_interval = None
 
 
 def fail(msg: str) -> None:
@@ -26,46 +34,46 @@ def fail(msg: str) -> None:
 
 
 def step1_load() -> None:
-    print("-- step 1: initial load --")
+    print("-- step 1: load --")
     controller.load()
-    QTimer.singleShot(800, step2_verify_defaults)
+    QTimer.singleShot(1000, step2_save)
 
 
-def step2_verify_defaults() -> None:
-    print(f"qbitUrl={controller.qbitUrl!r} hasTmdbApiKey={controller.hasTmdbApiKey} "
-          f"interval={controller.automationIntervalSeconds}")
-    if controller.hasTmdbApiKey:
-        fail("expected hasTmdbApiKey=False on a fresh instance")
-
-    print("-- step 2: save with a real TMDB key + changed qbit URL --")
-    controller.save("real-key-123", "http://192.168.1.50:8080", "admin", "adminadmin", "./m", "./tv", 900, "")
-    QTimer.singleShot(800, step3_verify_saved)
-
-
-def step3_verify_saved() -> None:
-    print(f"after save: qbitUrl={controller.qbitUrl!r} hasTmdbApiKey={controller.hasTmdbApiKey}")
-    if not controller.hasTmdbApiKey:
-        fail("expected hasTmdbApiKey=True after saving a real key")
-    if controller.qbitUrl != "http://192.168.1.50:8080":
-        fail(f"expected qbitUrl to update, got {controller.qbitUrl!r}")
-
-    print("-- step 3: save again with a BLANK tmdb key -- should leave it untouched --")
-    controller.save("", "http://192.168.1.50:8080", "admin", "adminadmin", "./m", "./tv", 900, "")
-    QTimer.singleShot(800, step4_verify_untouched)
+def step2_save() -> None:
+    global original_interval
+    d = controller.data
+    print(f"loaded keys: {len(d)}; has_discord_webhook={d.get('has_discord_webhook')} interval={d.get('automation_interval_seconds')}")
+    if "automation_interval_seconds" not in d or "has_tmdb_api_key" not in d:
+        fail("expected the settings record to include automation_interval_seconds and has_tmdb_api_key")
+    original_interval = d.get("automation_interval_seconds")
+    print("-- step 2: save a changed interval + a first-time Discord webhook --")
+    controller.save({"automation_interval_seconds": 1234, "discord_webhook_url": "https://discord.invalid/hook/test"})
+    QTimer.singleShot(1000, step3_verify)
 
 
-def step4_verify_untouched() -> None:
-    print(f"after blank-secret save: hasTmdbApiKey={controller.hasTmdbApiKey}")
-    if not controller.hasTmdbApiKey:
-        fail("expected hasTmdbApiKey to remain True after a blank-secret save (should not clear it)")
-    print("-- done --")
-    if failures:
-        print(f"{len(failures)} FAILURE(S)")
-        sys.exit(1)
-    print("ALL CHECKS PASSED")
-    app.quit()
+def step3_verify() -> None:
+    d = controller.data
+    print(f"after save: interval={d.get('automation_interval_seconds')} has_discord_webhook={d.get('has_discord_webhook')} webhook_echo={d.get('discord_webhook_url')!r}")
+    if d.get("automation_interval_seconds") != 1234:
+        fail("interval did not update")
+    if not d.get("has_discord_webhook"):
+        fail("has_discord_webhook should be True after saving one")
+    if d.get("discord_webhook_url"):
+        fail("secret must never be echoed back")
+    print("-- step 3: save again with the secret blank; it must be left alone --")
+    controller.save({"automation_interval_seconds": original_interval or 900, "discord_webhook_url": ""})
+    QTimer.singleShot(1000, step4_done)
 
 
-controller.errorOccurred.connect(lambda msg: fail(f"errorOccurred: {msg}"))
+def step4_done() -> None:
+    d = controller.data
+    if not d.get("has_discord_webhook"):
+        fail("blank secret on save must not clear the stored webhook")
+    if d.get("automation_interval_seconds") != (original_interval or 900):
+        fail("interval was not restored")
+    print("PASS" if not failures else f"{len(failures)} failure(s)")
+    app.exit(1 if failures else 0)
+
+
 QTimer.singleShot(0, step1_load)
 sys.exit(app.exec())
