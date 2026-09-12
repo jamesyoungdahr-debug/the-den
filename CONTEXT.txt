@@ -17,7 +17,7 @@ FastAPI + SQLAlchemy/Alembic (SQLite) + Jinja2 + APScheduler media manager with 
 libtorrent client, Discover (TMDB), Plex login + library scan, Requests with quotas, and the
 HoltOS Glass UI. Companion apps: KDE client (the-den-client) and Android app (the-den-android).
 
-LAST TASK: M12 - INDEXER PRESETS + NATIVE TRACKERS + CLOUDFLARE SOLVER (2026-09-12). UNCOMMITTED.
+LAST TASK: M12 - INDEXER PRESETS + NATIVE TRACKERS + CLOUDFLARE SOLVER (2026-09-12). COMMITTED + PUSHED: the-den v0.5.0 (ddf75a0), the-den-client v0.4.4 (3e61ae1), the-den-android v0.5.1 (0786216).
 ------------------------------------------------
 Plan and status: the-den/docs/indexers-plan.md. All code in this task after the first pass was
 drafted by the local LM Studio model through lmstudio-bridge (user rule: ALL code, even
@@ -32,9 +32,9 @@ release signing config (keystore.properties, gitignored), preset picker in Index
 solver field in Settings, PRIVACY.md. Debug build installed on Pixel 9 Pro Fold + Galaxy S25.
 KDE client (uncommitted): indexer_model presets/loadPresets/addIndexer(preset,...),
 IndexersPage preset combo, SettingsPage solver field, check_indexer_model.py updated (passes).
-OPEN IN THIS TASK: KDE app icon fix (main.py QIcon.fromTheme + PKGBUILD assets), library
-header wording ("N titles - M available - K tracked") in Android/web/KDE, then commit+push
-all three repos (the-den 0.5.0, android 0.5.1, client 0.4.4).
+OPEN AFTER THIS TASK: M13 library placement (needs user decisions: move vs hard-link default, Plex file naming), KDE icon + QML + built-in solver verification on the HoltOS box, Android 0.5.1 APK not yet installed on the phones (they dropped off adb), library
+header wording DONE in all three clients.
+Repo status lines above (REPOS AND VERSIONS) are stale: 0.5.0 / 0.4.4 / 0.5.1 now.
 VERIFIED LIVE: Knaben, TPB, Nyaa, LimeTorrents, TorrentDownloads. NOT: YTS (DNS blocked here),
 1337x/EZTV via built-in solver (Cloudflare refuses this network even in a normal browser;
 test on the HoltOS box).
