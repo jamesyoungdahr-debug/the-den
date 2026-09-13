@@ -91,6 +91,20 @@ async def notify_event(db: Session, event: str, message: str, title: str | None 
             pass
 
 
+async def notify_user(db: Session, user, event: str, message: str, title: str | None = None, link: str = "") -> None:
+    """A personal notification straight to one user's own ntfy topic (E9), for request
+    outcomes -- alongside, not instead of, the admin-configured agents notify_event()
+    already fans out to. No-ops cleanly when the user has no topic configured."""
+    if user is None or not user.notify_ntfy_topic:
+        return
+    if not title:
+        title = EVENTS.get(event, event)
+    try:
+        await send("ntfy", {"url": "https://ntfy.sh", "topic": user.notify_ntfy_topic}, title, message, event, link)
+    except Exception:
+        pass
+
+
 async def test_agent(kind: str, config: dict) -> None:
     """Send a test message through an agent; raises so the caller can report the failure."""
     await send(kind, config, "The Den", "Test notification: this agent works.", "test")

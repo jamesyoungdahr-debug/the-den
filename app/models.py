@@ -192,6 +192,7 @@ class User(Base):
     series_limit = Column(Integer, nullable=True)
     limit_days = Column(Integer, nullable=True)
     api_token = Column(String, nullable=True, unique=True)
+    notify_ntfy_topic = Column(String, nullable=True)  # E9: personal ntfy.sh topic for this user's own request outcomes
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     last_login_at = Column(DateTime, nullable=True)
 

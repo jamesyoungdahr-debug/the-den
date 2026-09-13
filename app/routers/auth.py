@@ -25,6 +25,7 @@ def _user_out(user: User) -> dict:
         "id": user.id, "username": user.username, "email": user.email, "avatar_url": user.avatar_url,
         "role": user.role, "is_admin": user.is_admin, "auto_approve": user.auto_approve,
         "plex_linked": user.plex_id is not None, "has_api_token": bool(user.api_token),
+        "notify_ntfy_topic": user.notify_ntfy_topic,
     }
 
 
@@ -228,6 +229,19 @@ def profile_change_password(
     return templates.TemplateResponse("profile.html", {"request": request, "user": user, "new_token": None, "notice": "Password changed."})
 
 
+@router.post("/ui/profile/notifications")
+def profile_notifications(
+    request: Request, notify_ntfy_topic: str = Form(""),
+    user: User | None = Depends(auth.page_user), db: Session = Depends(get_db),
+):
+    if user is None:
+        raise auth.LoginRequired("/ui/profile")
+    user = db.get(User, user.id)
+    user.notify_ntfy_topic = notify_ntfy_topic.strip() or None
+    db.commit()
+    return templates.TemplateResponse("profile.html", {"request": request, "user": user, "new_token": None, "notice": "Notification settings saved.", "quota": requests_service.quota(db, user)})
+
+
 # ---- JSON -------------------------------------------------------------------------
 
 class LoginBody(BaseModel):
@@ -270,3 +284,18 @@ def api_new_token(request: Request, user: User | None = Depends(auth.require_use
     user.api_token = auth.new_api_token()
     db.commit()
     return {"api_token": user.api_token}
+
+
+class NotificationSettingsBody(BaseModel):
+    notify_ntfy_topic: str | None = None
+
+
+@router.post("/api/auth/notifications")
+def api_notification_settings(body: NotificationSettingsBody, user: User | None = Depends(auth.require_user), db: Session = Depends(get_db)):
+    """A personal ntfy.sh topic for this user's own request outcomes (E9)."""
+    if user is None:
+        raise HTTPException(401, "Sign in required")
+    user = db.get(User, user.id)
+    user.notify_ntfy_topic = (body.notify_ntfy_topic or "").strip() or None
+    db.commit()
+    return _user_out(user)

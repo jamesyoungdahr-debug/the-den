@@ -47,6 +47,15 @@
     </div>
 
     <div class="holt-panel">
+      <div class="holt-panel-head"><div class="holt-eyebrow">Notifications</div><div class="holt-meta">{{ 'set' if user.notify_ntfy_topic else 'not set' }}</div></div>
+      <p class="holt-body" style="font-size:13.5px;margin:0 0 var(--holt-space-3)">An ntfy.sh topic just for you -- get a push the moment one of your own requests is approved, declined or available, on top of whatever the server admin has already set up.</p>
+      <form method="post" action="/ui/profile/notifications">
+        <div class="holt-field"><label>ntfy.sh topic</label><input name="notify_ntfy_topic" value="{{ user.notify_ntfy_topic or '' }}" placeholder="e.g. liam-theden-requests"></div>
+        <button type="submit" class="holt-btn holt-btn-secondary">Save</button>
+      </form>
+    </div>
+
+    <div class="holt-panel">
       <div class="holt-panel-head"><div class="holt-eyebrow">Password</div></div>
       <form method="post" action="/ui/profile/password">
         {% if user.password_hash %}<div class="holt-field"><label>Current password</label><input name="current_password" type="password" autocomplete="current-password" required></div>{% endif %}

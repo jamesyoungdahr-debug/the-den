@@ -3,43 +3,61 @@ THE DEN - WORKING CONTEXT
 Kept up to date by Claude at every milestone so a fresh session can resume without
 the chat history. Newest entries at the top of each section. Last updated: 2026-09-13.
 
-PICK UP HERE (2026-09-13, session handoff)
--------------------------------------------
+PICK UP HERE (2026-09-13, session handoff -- PAUSED MID-E9, UNCOMMITTED WORK IN THE TREE)
+-------------------------------------------------------------------------------------------
 Tier 2 (docs/feature-research.md, E1-E10) is being worked through in table order, autonomously, per
-Liam's "just continue until all milestones are done." Done so far this session: E1, E2, E3 (earlier
-session), E4, E5, E6, E7, E8 -- see the DONE entries below for each. All three repos are clean and
-FULLY PUSHED as of this handoff (the-den @ c8a33ca, the-den-client @ 2c71149, the-den-android @
-2d9a162) -- verify with `git log origin/master..HEAD` in each repo before assuming otherwise.
-NEXT UP: E9 (per-user notification settings for request outcomes) -- research already done this
-session (not yet implemented). Key findings to reuse, so the next session doesn't have to re-research:
-  - app/notifier.py's notify_event() broadcasts to every enabled NotificationAgent globally; there is
-    NO per-user targeting today and no "email" kind actually implemented anywhere (KINDS is discord|
-    ntfy|webhook|telegram|pushover only -- no smtplib/email library in requirements.txt either).
-    E9 should therefore be scoped to a per-user ntfy topic only (matches the "no config sprawl"
-    pattern already used this session to drop Trakt/NZBGet/a 3rd usenet client) -- do NOT try to
-    build SMTP email sending from scratch, that's a much bigger separate feature and the doc's
-    "email or ntfy" was written as an either/or, not a mandate for both.
-  - The 4 request-outcome events are request_submitted/request_approved/request_declined/
-    request_available, fired from app/requests_service.py at lines ~99, ~186, ~269, ~293 (grep
-    notify_event in that file to find them precisely, line numbers may have drifted).
-  - Precedent for "nullable per-user override of a global default": User.movie_limit/series_limit/
-    limit_days (nullable Integer columns on User, None = use Settings' global default), merged in
-    requests_service.py's quota() function. Mirror this shape: a nullable User.notify_ntfy_topic
-    column, and a new notifier.notify_user(db, user, event, message, link) helper that sends
-    straight to that topic via the existing send("ntfy", ...) function (no new sending code needed,
-    just new per-user targeting) -- called alongside (not instead of) the existing global
-    notify_event() broadcast at each of the 4 call sites above.
-  - Web: extend app/templates/profile.html (a user's own account page, GET/POST via
-    app/routers/auth.py's /ui/profile routes) with a new field/panel for the ntfy topic, following
-    its existing holt-panel + <form method="post" action="/ui/profile/..."> pattern (the password-
-    change form there is the closest existing example).
-  - Android: no dedicated "my account" screen exists yet for this; PushSection.kt is a *device-level*
-    ntfy config (different concern, client-side, don't confuse with this). A small new field/screen
-    is needed, or extend wherever the Android equivalent of the web profile page is (check MoreScreen/
-    SettingsScreen's own-account area first before assuming a new screen is needed).
-AFTER E9: E10 (backup/restore of the SQLite DB + settings export, server + web only per the
-  feature-research.md surfaces column) is the last Tier 2 item. Once E10 is done, all of E1-E10 are
-  complete and Tier 2 as a whole can be marked done in feature-research.md's header/summary section.
+Liam's "just continue until all milestones are done." Done and pushed so far this session: E1, E2,
+E3 (earlier session), E4, E5, E6, E7, E8 -- see the DONE entries below for each.
+
+SESSION PAUSED BY LIAM MID-E9, ON HIS EXPLICIT REQUEST: "update the logs and leave the in progress
+edits as is." The working tree in C:\projects\theden (the-den server repo only) currently has
+UNCOMMITTED, UNTESTED edits toward E9 (per-user ntfy topic for request outcomes) -- do NOT assume
+these are correct or finished; they have not been run against a migration, not built, not tested,
+not reviewed end-to-end. The other two repos (the-den-client, the-den-android) have no uncommitted
+changes. Exact `git status --short` in the-den at pause time:
+    M app/models.py                                        (User.notify_ntfy_topic column added)
+    M app/notifier.py                                       (new notify_user() function added)
+    M app/requests_service.py                         (notify_user() wired into 3 of 4 call sites:
+                                                         request_available/approved/declined -- NOT
+                                                         request_submitted, deliberately, since that
+                                                         event is admin-facing not requester-facing)
+    M app/routers/auth.py                    (_user_out() exposes notify_ntfy_topic; new POST
+                                               /ui/profile/notifications web route; new POST
+                                               /api/auth/notifications JSON route for Android)
+    M app/templates/profile.html                    (new "Notifications" panel with the ntfy-topic
+                                                      field, following the existing password-panel's
+                                                      holt-panel + form pattern)
+    ?? migrations/versions/e8f9a0b1c2d3_notify_ntfy_topic.py   (new migration, revises d7e8f9a0b1c2,
+                                                                 adds users.notify_ntfy_topic)
+NEXT STEPS TO FINISH E9 (nothing below has been done yet -- do all of it before committing):
+  1. Run the migration round-trip against the test DB (upgrade/downgrade/upgrade) -- see the
+     e*_migrate.sh pattern used for every prior E-milestone this session, in the scratchpad dir of
+     whichever session did this (a fresh session should just write a new one, same pattern: upgrade,
+     downgrade -1, upgrade again, checking `alembic current` after each step).
+  2. `python -c "import app.main"` to confirm no import errors, then restart the test server
+     (WSL, port 8687, see CONTEXT.txt's dev-environment notes below) and hit /api/auth/me and
+     /ui/profile to confirm notify_ntfy_topic round-trips through both the JSON and HTML paths.
+  3. A DB-level smoke test of notifier.notify_user(): no topic configured -> no-op (mock send() and
+     assert it's never called); topic configured -> mock send() and assert it's called with kind=
+     "ntfy", the right topic, and the right event/message/link for each of the 3 wired call sites.
+  4. Android: TheDenApi.kt's Session/user response model needs `notify_ntfy_topic`, plus a new
+     endpoint for POST /api/auth/notifications. Then a small field/section needs to go somewhere in
+     MoreScreen.kt's account panel (the account header + PushSection() area, AdminScreens.kt) -- NOT
+     inside PushSection() itself, that's a different, device-level concern (which ntfy server+topic
+     THIS PHONE subscribes to, vs. this new feature which is which topic THE SERVER pushes the
+     user's own request outcomes to). No KDE for E9 (feature-research.md's surfaces column is
+     "server, web (profile), Android" -- no KDE listed).
+  5. Once verified, commit (the-den server first, then Android), push both, then update CONTEXT.txt/
+     ROADMAP.md/docs/feature-research.md's E9 row to done (M31), following the exact pattern of every
+     prior E-milestone's docs commit this session -- read one of those commits' diffs for the format.
+  6. Then E10 (backup/restore of the SQLite DB + settings export, server + web only per
+     feature-research.md's surfaces column) is the last Tier 2 item. No research has been done on E10
+     yet this session -- start fresh with a research agent the same way every other E-item did.
+  7. Once E10 is done, all of E1-E10 are complete; consider whether feature-research.md's own header/
+     summary section should be updated to reflect that Tier 2 as a whole is done.
+IF STARTING A FRESH SESSION: read the uncommitted diffs first (`git diff` in C:\projects\theden)
+  before writing any more code, to confirm they still look right and match this description --
+  don't just trust this summary blindly, verify against the actual diff.
 STANDING RULE (2026-09-13, learned the hard way): push to origin after EVERY milestone commit, not
   just at natural stopping points -- see the NOTE below about the rm -rf incident. Never let more than
   one commit sit unpushed. Use Windows git via the Bash tool for push (WSL git hangs indefinitely on
