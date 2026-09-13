@@ -60,6 +60,16 @@ NOTE 2026-09-13: this repo (the-den server only) suffered an accidental `rm -rf`
   file change from the diffs already verified earlier in the same session; all four milestones' smoke tests were re-run and passed identically
   post-recovery. Recorded here as a standing lesson: push to origin more often, not just at natural stopping points, so local-only commits are never
   the sole copy of a session's work for long.
+DONE 2026-09-13: E7 - USENET VIA SABNZBD (DONE, server + web only, per feature-research.md's surfaces column). Scoped as integration with an
+  existing SABnzbd instance (URL + API key, mirroring the FlareSolverr precedent) rather than an in-process NZB downloader -- the torrent engine
+  isn't a generic abstraction and info_hash is threaded deep through the download pipeline, so building a from-scratch usenet client would have
+  meant writing an article-fetch/repair/unrar pipeline with no equivalent to libtorrent to lean on. Release.protocol (torznab|newznab) flows from
+  Indexer.protocol through candidates.scored_candidates and GrabRequest to every grab call site (manual and automatic). DownloadRecord gained
+  download_client ("torrent"|"sabnzbd"); info_hash is reused as the generic client-key column. app/sabnzbd.py is a thin httpx client; three small
+  dispatch helpers in download_check.py (_status/_files/_remove) let check_and_import/fail_download/reap_seeded work against either client without
+  duplicating logic. Verified: migration round-trip, a DB-level smoke test of the full grab->check->import->reap pipeline against a mocked SABnzbd
+  client, a live settings save/read round-trip, and confirmed the existing torrent path still works after the download_check.py rewrite. the-den
+  commit 6d4d6fd (untagged).
 TIER 1 STATUS: M15 notifications, M16 health/stats, M17 custom formats, M18 upgrades, M19 failed downloads, M20 season packs, M21 Android push are
   DONE and pushed (server 0.6.0 -> 0.6.6, client 0.4.5 -> 0.4.10, android 0.5.2 -> 0.6.0, each tagged). Remaining: M14 shakedown on the HoltOS box
   (user); no 1.0.0 planned, the server stays on 0.x (Liam, 2026-09-13). Verification so far is API smokes, fake-engine probes, the KDE harness, Android JVM tests and builds; the local-swarm

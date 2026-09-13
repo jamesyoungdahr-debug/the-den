@@ -35,6 +35,7 @@ Deploy target: native systemd service on Arch Linux (no Docker).
 - [x] M25 -- Import lists (done 2026-09-13, E1 in docs/feature-research.md): auto-add movies/series from a TMDB list or a Plex watchlist on a schedule, with an Import Lists panel/section on Settings on the web, KDE and Android
 - [x] M26 -- Root folders (done 2026-09-13, E2 in docs/feature-research.md): named library folders per media type with a default per type, wired into every import path, with a Root Folders panel/section on Settings on the web, KDE and Android
 - [x] M27 -- Rename existing files (done 2026-09-13, E4 in docs/feature-research.md): a preview/confirm page diffs the library against the current Plex naming convention and fixes filenames in place, server and web only (no KDE/Android for this one, per feature-research.md's surfaces column)
+- [x] M28 -- Usenet via SABnzbd (done 2026-09-13, E7 in docs/feature-research.md): integrates with an existing SABnzbd install (URL + API key) rather than building an in-process NZB downloader; release protocol flows from the indexer through scoring to every grab call site so torrent and usenet releases share the same automation pipeline, server and web only
 - [ ] M14 -- Tier 1 shakedown on the HoltOS box (user); defects fixed as 0.6.x -- see [docs/tier1-plan.md](docs/tier1-plan.md)
 - [ ] UI redesign track ("HoltOS Glass": left sidebar shell, glass/blur surfaces, poster-first pages, across web + KDE + Android) -- planned, see [docs/ui-redesign-plan.md](docs/ui-redesign-plan.md); sequenced ahead of M11's pages
 
