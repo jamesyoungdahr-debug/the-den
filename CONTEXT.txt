@@ -10,6 +10,13 @@ see its DONE entry below. feature-research.md's summary now notes that everythin
 real-world shakedown has shipped.
 
 NEXT, in order:
+  0. The next body of work is docs/connect-secure-plan.md (M33 to M48, planned 2026-09-13 at Liam's request):
+     always-on sign-in with a first-run setup, server identity and LAN discovery, HTTPS, UPnP remote access via
+     requesthome.asuscomm.com (Cloudflare DNS later), device tokens, passkeys, the Android and KDE find /
+     remember / switch work, then the Tier 3 queue. Server port: 40204 (Liam). Commits: commit each verified
+     milestone locally and do NOT push until Liam says so (Liam, 2026-09-13; this overrides the push rule below
+     for this work), and write a git bundle of each repo outside the working trees after every commit.
+     app/config.py (WEB_HOST/WEB_PORT/SERVER_NAME) and app/discovery.py are drafted for M34, not yet reviewed.
   1. (DONE 2026-09-13) E6 gap closed: subtitle settings on Android 0.6.8 and KDE 0.4.16, see the DONE
      entry "E6 GAP" below.
   2. (DONE 2026-09-13) Plex bug: /api/plex/servers and /api/plex/sections 500 on a rejected token --
