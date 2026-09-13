@@ -36,7 +36,10 @@ async def api_servers(db: Session = Depends(get_db)):
 @router.get("/api/plex/sections", dependencies=[Depends(auth.require_admin)])
 async def api_sections(machine_id: str, db: Session = Depends(get_db)):
     token = _owner_token(db)
-    servers = await plex.list_servers(token)
+    try:
+        servers = await plex.list_servers(token)
+    except plex.PlexError as exc:
+        raise HTTPException(502, str(exc))
     server = next((s for s in servers if s.machine_id == machine_id), None)
     if server is None:
         raise HTTPException(404, "That server isn't visible to the connected Plex account")

@@ -129,12 +129,21 @@ async def get_account(token: str) -> Account:
 # ---- servers and access ----------------------------------------------------------
 
 async def list_servers(token: str) -> list[Server]:
-    async with httpx.AsyncClient(timeout=20) as client:
-        resp = await client.get(
-            f"{config.PLEX_TV_URL}/api/v2/resources", params={"includeHttps": "1", "includeRelay": "0"}, headers=_headers(token)
-        )
-        resp.raise_for_status()
-        resources = resp.json()
+    """Servers the token can see. Raises PlexError (never a raw httpx error) so routes can
+    turn a rejected token or an unreachable plex.tv into a clean message."""
+    try:
+        async with httpx.AsyncClient(timeout=20) as client:
+            resp = await client.get(
+                f"{config.PLEX_TV_URL}/api/v2/resources", params={"includeHttps": "1", "includeRelay": "0"}, headers=_headers(token)
+            )
+            if resp.status_code == 401:
+                raise PlexError("Plex rejected the saved token; reconnect the Plex account in Settings")
+            resp.raise_for_status()
+            resources = resp.json()
+    except httpx.HTTPError as exc:
+        raise PlexError(f"Could not list servers from plex.tv: {exc}") from exc
+    except ValueError as exc:
+        raise PlexError(f"plex.tv returned an unreadable server list: {exc}") from exc
     servers = []
     for r in resources:
         if "server" not in str(r.get("provides", "")):
