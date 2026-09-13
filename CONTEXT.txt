@@ -3,7 +3,73 @@ THE DEN - WORKING CONTEXT
 Kept up to date by Claude at every milestone so a fresh session can resume without
 the chat history. Newest entries at the top of each section. Last updated: 2026-09-13.
 
-PICK UP HERE (2026-09-13, Tier 2 complete: E1-E10 all done and pushed)
+PICK UP HERE (2026-09-13 evening: the project moved to Liam's HoltOS laptop, Linux)
+-------------------------------------------------------------------------------------------
+Work no longer happens on the Windows machine (C:\projects, WSL Ubuntu). The three repos were cloned fresh from
+GitHub into /home/liam/Projects/theden/the-den, the-den-client and the-den-android on Liam's HoltOS 0.0.4-alpha
+laptop (Arch based, KDE Plasma on Wayland). The paths, venvs and scripts in the older sections below describe the
+Windows machine and have not been re-verified here.
+
+WHAT THIS MACHINE HAS (checked 2026-09-13):
+  - Python 3.14.7, libtorrent-rasterbar 2.1.1 (the Python bindings import), chromium, sqlite, PySide6 6.11.2,
+    Kirigami, qqc2-desktop-style, ttf-nunito, ttf-jetbrains-mono, yay, and /dev/kvm for an Android emulator.
+  - Missing: a the-den dev venv, JDK 17, the Android SDK and adb. jdk17-openjdk and android-tools are in the extra
+    repo and need Liam's sudo. zeroconf, acme and webauthn go into the venv for M34, M35 and M38 (webauthn is not
+    in the Arch repos).
+  - HoltOS installed The Den v0.7.0 as the-den.service on 127.0.0.1:8686 (/opt/the-den, database under
+    /var/lib/the-den) and the KDE client v0.4.16 in /opt/the-den-client. Nobody has finished its /setup page yet.
+
+LOST IN THE MOVE (these only existed on the Windows machine and were never committed):
+  - app/discovery.py, the M34 draft. M34 has to write it again.
+  - The 72-check e2e (scratchpad m11g/full.sh), start_dev_plex.sh and the other scratchpad helper scripts.
+  - tests/e2e_notifications.sh still hardcodes /mnt/c/projects/theden and ~/.venvs/the-den.
+
+URGENT BUG FOUND ON THE LIVE INSTALL: app/torrent/engine.py reads torrent_status.paused (lines 303 and 438) and
+  torrent_status.auto_managed (line 308). libtorrent 2.1.1 removed both attributes, so the engine loop raises
+  AttributeError about once a second (about 10,000 times in the first two hours after boot), seed limits never run,
+  and /ui/downloads returns 500. The old WSL box had Ubuntu's libtorrent 2.0, which still had them. Fix: test
+  st.flags against lt.torrent_flags.paused and lt.torrent_flags.auto_managed instead. Verify with
+  tests/local_swarm.py on libtorrent 2.1.1.
+
+NEXT, in order:
+  1. Set up this machine. Liam needs to pick a backup folder for the git bundles and run
+     `sudo pacman -S --needed jdk17-openjdk android-tools`. Then: the-den venv with --system-site-packages, a dev
+     backend on 8687 and a test backend on 8688 (the installed copy owns 8686), Liam finishes /setup on the dev
+     instance and makes an admin token, rebuild the lost e2e and mock Plex scripts inside tests/, install the Android
+     SDK cmdline-tools (platform 35, build-tools 35.0.0) under ~/Android/Sdk, run the KDE tests/run_all.sh natively,
+     and update README and HANDOFF paths.
+  2. The libtorrent 2.1 fix, released together with M33 as the-den v0.8.0a so the HoltOS updater installs it here.
+  3. M34 (docs/connect-secure-plan.md): rewrite app/discovery.py and make deploy/the-den.service use WEB_HOST and
+     WEB_PORT instead of the hardcoded 127.0.0.1:8686.
+  4. M37 device tokens can go before M35 while Liam answers the router questions (ports 80 and 443, NAT loopback,
+     device approval).
+  5. M35 HTTPS, M36 UPnP, M38 passkeys, M39 Android, M40 KDE, then the M14 shakedown, Tier 3 (M41-M47) and M48
+     Cloudflare DNS.
+
+LIVE TESTING THROUGH THE HOLTOS UPDATER (Liam, 2026-09-13): push a tagged release of the-den or the-den-client and
+  the HoltOS updater (/usr/local/bin/holtos-update-apply) installs the newest v* tag here from the GitHub tarball. For
+  the server it installs the pip requirements, runs alembic upgrade head, restarts the service and waits for
+  http://127.0.0.1:8686. /etc/holtos/updates.conf has AUTO_INSTALL=apps, so the updater's 6-hour timer installs any new
+  tag without asking: only tag tested work. Android is not covered and is installed over adb.
+  Versioning (Liam): small jumps, a letter added to the version already in the repo files, starting with the-den
+  v0.8.0a, client v0.5.0a and Android versionName 0.7.0a with versionCode 23, then b, c and so on. Git's version sort
+  ranks v0.8.0a above v0.8.0 but pacman's vercmp ranks it below, so never tag the plain base once letters exist (go
+  to v0.8.1a). After z, move to the next patch number, because aa sorts before b. No -rc1 or .1 suffixes. The-den's
+  PKGBUILD pkgver still says 0.7.0.
+  HoltOS port fix: holtos-update-apply hardcodes 8686 at lines 464 (the-den.desktop Exec), 517 (the post-update wait)
+  and 529 (the "up" message). M34 moves WEB_PORT to 40204, so the HoltOS agent was asked to fix this in its urgent
+  patch (read the port from /etc/the-den/the-den.env, probe /health, try https with -k for M35). Confirm it landed
+  before tagging M34.
+
+LOCAL MODELS ON THIS MACHINE: two user-scope MCP servers in ~/.claude.json run ~/.claude/mcp-servers/lmstudio_mcp.py
+  (stdlib only; tools list_models, chat and run_coding_task; writes are sandboxed to /home/liam/Projects; the result
+  includes a real unified diff). lmstudio-bridge is the 4090 on LiamPC at http://192.168.0.152:1234
+  (qwen2.5-coder-32b-instruct at 14,592 context, which prints tool calls as text that the bridge parses;
+  qwen3-coder-30b-a3b also worked when loaded). lmstudio-4080super is http://192.168.0.39:1234 (qwen/qwen3.5-9b at
+  92,672 context; use it for big files like this one). Machine-wide rules for every session are in
+  ~/.claude/CLAUDE.md.
+
+PREVIOUS PICK UP HERE (2026-09-13, Tier 2 complete: E1-E10 all done and pushed)
 -------------------------------------------------------------------------------------------
 Tier 2 (docs/feature-research.md, E1-E10) is finished; E10 (backup/restore, M32) was the last item,
 see its DONE entry below. feature-research.md's summary now notes that everything except the N9
@@ -31,11 +97,11 @@ NEXT, in order:
   4. M14 shakedown on the HoltOS box is Liam's. Tagging a release waits for his "push and tag" (last
      tagged 2026-09-13: the-den v0.7.0, client v0.4.16, android v0.6.8; PKGBUILD pkgver now matches).
 
-STANDING RULE (2026-09-13, learned the hard way): push to origin after EVERY milestone commit, not
-  just at natural stopping points -- see the NOTE below about the rm -rf incident. Never let more than
-  one commit sit unpushed. Use Windows git via the Bash tool for push (WSL git hangs indefinitely on
-  a credential prompt with no helper configured -- do not use `wsl git push`, it will hang for the
-  full session if not caught).
+STANDING RULE (updated 2026-09-13 evening; supersedes every older push rule in this file): commit each
+  verified milestone locally and do not push until Liam says so. The one exception is a tagged release pushed for
+  live testing through the HoltOS updater (see PICK UP HERE). After every commit, write a git bundle of each repo
+  outside the working trees once Liam picks the backup folder. Git now runs natively on Linux, so the old WSL
+  credential-prompt hang no longer applies.
 
 BRIDGE NOTE (2026-09-13, corrected later the same day): run_coding_task never wrote a file during
   E9's finish because the model then loaded on the 4090, qwen2.5-coder-32b-instruct, does not make
@@ -314,6 +380,11 @@ RECENTLY COMPLETED MILESTONES
 
 RULES AND DECISIONS TO REMEMBER
 -------------------------------
+- Liam, 2026-09-13 evening: the local models write ALL text in these repos (code, docs and this file). Claude
+  plans, writes specs, reviews each real diff, tests and commits. Security-sensitive code is no exception; Claude
+  reviews it line by line. If a unit fails twice on both GPUs, ask Liam instead of writing it.
+- Liam, 2026-09-13 evening: push only when Liam says so, or as a tagged test release for the HoltOS updater (see
+  PICK UP HERE for the lettered version scheme). This replaces the push-and-tag rule below.
 - Claude never types API keys/tokens into fields or files. The user pasted the TMDB key into
   app/config.py themselves and approved committing it (non-commercial use).
 - Plex owner token stays server-side. The thumb proxy accepts ?api_key= on purpose because <img>

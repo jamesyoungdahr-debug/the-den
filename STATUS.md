@@ -18,6 +18,8 @@ two loopback-swarm gotchas that cost the most debugging time.
 
 ## Currently working on
 
+**Session handoff note (2026-09-13, evening):** work moved from the Windows machine to Liam's HoltOS laptop (Linux), where the repos are in `/home/liam/Projects/theden/`. Read `CONTEXT.txt` "PICK UP HERE" first. The HoltOS-installed v0.7.0 showed a real bug: `app/torrent/engine.py` still reads `torrent_status.paused` and `.auto_managed`, which libtorrent 2.1.1 removed, so the engine loop errors about once a second, seed limits never run and `/ui/downloads` returns 500. That fix ships first, together with M33, as v0.8.0a through the HoltOS updater. M34 comes next; its uncommitted `app/discovery.py` draft was lost with the Windows machine and has to be written again.
+
 **M23 -- manual import for unmatched downloads (2026-09-13).** Downloads The Den couldn't fully place -- a movie or episode grab with no video, a season pack with leftover files, or a torrent added by hand with no target -- land in one queue with two actions per leftover file: assign it to a title, or import it as-is under its own name. Server 0.6.9, client 0.4.12, android 0.6.2. The first Tier 2 milestone (E3 in `docs/feature-research.md`).
 
 **M22 -- Discover grouped and paged (2026-09-13).** Discover now separates movies from series (a Movies group and a Series group, with an All / Movies / Series filter in the apps), adds trending and top-rated rails for each, and every rail has a "View more" that opens the full TMDB list as a paged grid (`/discover/rail/{key}?page=N` on the web, `GET /api/discover/{rail}?page=N` for the apps, 20 cards a page, Load more appends). Server 0.6.7, client 0.4.11, android 0.6.1.
