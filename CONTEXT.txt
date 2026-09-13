@@ -42,7 +42,8 @@ NEXT, in order:
      torrent_status.flags for paused and auto_managed, and drops torrent_status.states.allocating, a fourth break the
      live install never reached. Verified 11/11 on libtorrent 2.1.1 against tests/local_swarm.py: .torrent and magnet
      downloads, pause, resume, queued, seed limits enforced by the background loop, done, restart restore, and no loop
-     errors. Ships with M33 as the-den v0.8.0a once Liam says go.
+     errors. RELEASED 2026-09-13 with M33 as the-den v0.8.0a (e9104bd), alongside the-den-client v0.5.0a
+     (e29b06a). Both tags are pushed; the HoltOS updater installs them within 6 hours, or at once from Install now.
   3. M34 (docs/connect-secure-plan.md): rewrite app/discovery.py and make deploy/the-den.service use WEB_HOST and
      WEB_PORT instead of the hardcoded 127.0.0.1:8686.
   4. M37 device tokens can go before M35 while Liam answers the router questions (ports 80 and 443, NAT loopback,
