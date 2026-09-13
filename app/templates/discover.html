@@ -7,7 +7,7 @@
     <div class="holt-body">Add one in Settings → Library, or set <code>TMDB_API_KEY</code>. Your library still works without it.</div>
     {% if is_admin %}<a class="holt-btn holt-btn-primary holt-btn-sm" href="/ui/settings#library">Open Settings</a>{% endif %}
   </div>
-  {% elif errors|length == 5 %}
+  {% elif errors|length >= 5 %}
   <div class="holt-message holt-message-warning">TMDB didn't answer just now. Your library below still works; Discover will retry on the next visit.</div>
   {% endif %}
 
@@ -28,11 +28,23 @@
   {% endif %}
 
   {{ rail("Recommended for you", recommended, "based on what you've added") }}
-  {{ rail("Trending this week", rails.trending) }}
-  {{ rail("Popular movies", rails.popular_movies) }}
-  {{ rail("Upcoming movies", rails.upcoming_movies) }}
-  {{ rail("Popular series", rails.popular_tv) }}
-  {{ rail("On the air", rails.on_the_air, "series with new episodes this week") }}
+  {{ rail("Trending this week", rails["trending"], "movies and series", "/discover/rail/trending") }}
+
+  <section class="holt-section">
+    <div class="holt-page-head">
+      <div><div class="holt-eyebrow">Movies</div><h2 class="holt-page-title">Movies</h2></div>
+      <div class="holt-toolbar"><a class="holt-chip" href="/library">Your movies</a></div>
+    </div>
+  </section>
+  {% for key, title, subtitle, items in movie_rails %}{{ rail(title, items, subtitle or None, "/discover/rail/" ~ key) }}{% endfor %}
+
+  <section class="holt-section">
+    <div class="holt-page-head">
+      <div><div class="holt-eyebrow">Series</div><h2 class="holt-page-title">Series</h2></div>
+      <div class="holt-toolbar"><a class="holt-chip" href="/tv">Your series</a></div>
+    </div>
+  </section>
+  {% for key, title, subtitle, items in tv_rails %}{{ rail(title, items, subtitle or None, "/discover/rail/" ~ key) }}{% endfor %}
 
   {% if stats.movies or stats.series %}
   <section class="holt-section">

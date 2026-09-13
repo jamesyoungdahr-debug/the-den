@@ -18,10 +18,10 @@
 </a>
 {%- endmacro %}
 
-{% macro rail(title, items, meta=None) -%}
+{% macro rail(title, items, meta=None, more=None) -%}
 {% if items %}
 <section class="holt-section">
-  <div class="holt-rail-head"><div class="holt-eyebrow">{{ title }}</div>{% if meta %}<div class="holt-meta">{{ meta }}</div>{% endif %}</div>
+  <div class="holt-rail-head"><div class="holt-eyebrow">{{ title }}</div>{% if meta %}<div class="holt-meta">{{ meta }}</div>{% endif %}{% if more %}<a class="holt-chip" href="{{ more }}">View more ›</a>{% endif %}</div>
   <div class="holt-rail">{% for item in items %}{{ card(item) }}{% endfor %}</div>
 </section>
 {% endif %}

@@ -107,24 +107,40 @@ async def search_multi(query: str, api_key: str) -> list[dict]:
 
 # ---- rails ---------------------------------------------------------------------------
 
-async def trending(api_key: str, window: str = "week") -> list[dict]:
-    return _cards(await _get(f"/trending/all/{window}", api_key))
+async def trending(api_key: str, window: str = "week", page: int = 1) -> list[dict]:
+    return _cards(await _get(f"/trending/all/{window}", api_key, {"page": page}))
 
 
-async def popular_movies(api_key: str) -> list[dict]:
-    return _cards(await _get("/movie/popular", api_key), "movie")
+async def trending_movies(api_key: str, page: int = 1) -> list[dict]:
+    return _cards(await _get("/trending/movie/week", api_key, {"page": page}), "movie")
 
 
-async def upcoming_movies(api_key: str) -> list[dict]:
-    return _cards(await _get("/movie/upcoming", api_key), "movie")
+async def trending_tv(api_key: str, page: int = 1) -> list[dict]:
+    return _cards(await _get("/trending/tv/week", api_key, {"page": page}), "tv")
 
 
-async def popular_tv(api_key: str) -> list[dict]:
-    return _cards(await _get("/tv/popular", api_key), "tv")
+async def popular_movies(api_key: str, page: int = 1) -> list[dict]:
+    return _cards(await _get("/movie/popular", api_key, {"page": page}), "movie")
 
 
-async def on_the_air(api_key: str) -> list[dict]:
-    return _cards(await _get("/tv/on_the_air", api_key), "tv")
+async def upcoming_movies(api_key: str, page: int = 1) -> list[dict]:
+    return _cards(await _get("/movie/upcoming", api_key, {"page": page}), "movie")
+
+
+async def top_rated_movies(api_key: str, page: int = 1) -> list[dict]:
+    return _cards(await _get("/movie/top_rated", api_key, {"page": page}), "movie")
+
+
+async def popular_tv(api_key: str, page: int = 1) -> list[dict]:
+    return _cards(await _get("/tv/popular", api_key, {"page": page}), "tv")
+
+
+async def on_the_air(api_key: str, page: int = 1) -> list[dict]:
+    return _cards(await _get("/tv/on_the_air", api_key, {"page": page}), "tv")
+
+
+async def top_rated_tv(api_key: str, page: int = 1) -> list[dict]:
+    return _cards(await _get("/tv/top_rated", api_key, {"page": page}), "tv")
 
 
 # ---- details ---------------------------------------------------------------------------

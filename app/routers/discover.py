@@ -90,9 +90,8 @@ def _decorate(items: list[dict], db: Session) -> list[dict]:
 
 async def _rails(api_key: str) -> tuple[dict[str, list[dict]], list[str]]:
     """Fetch every home rail at once; a failing rail is reported, not fatal."""
-    names = ["trending", "popular_movies", "upcoming_movies", "popular_tv", "on_the_air"]
-    calls = [tmdb.trending(api_key), tmdb.popular_movies(api_key), tmdb.upcoming_movies(api_key), tmdb.popular_tv(api_key), tmdb.on_the_air(api_key)]
-    results = await asyncio.gather(*calls, return_exceptions=True)
+    names = list(RAILS)
+    results = await asyncio.gather(*(RAILS[name][3](api_key) for name in names), return_exceptions=True)
     rails: dict[str, list[dict]] = {}
     errors: list[str] = []
     for name, result in zip(names, results):
@@ -144,6 +143,8 @@ async def discover_home(request: Request, db: Session = Depends(get_db)):
     for name in rails:
         rails[name] = [idx.stamp(i) for i in rails[name]]
     hero = next((i for i in rails.get("trending", []) if i.get("backdrop_path")), None)
+    movie_rails = [(key, spec[0], spec[1], rails.get(key, [])) for key, spec in RAILS.items() if spec[2] == "movie"]
+    tv_rails = [(key, spec[0], spec[1], rails.get(key, [])) for key, spec in RAILS.items() if spec[2] == "tv"]
     stats = {
         "movies": len(idx.movies),
         "series": db.query(Series).count(),
@@ -154,7 +155,7 @@ async def discover_home(request: Request, db: Session = Depends(get_db)):
         "discover.html",
         {
             "request": request, "rails": rails, "errors": errors, "hero": hero, "recommended": recommended,
-            "stats": stats, "has_key": bool(api_key), "active_nav": "discover",
+            "stats": stats, "has_key": bool(api_key), "active_nav": "discover", "movie_rails": movie_rails, "tv_rails": tv_rails,
         },
     )
 
@@ -174,6 +175,31 @@ async def discover_search(request: Request, q: str = "", type: str = "all", db: 
     return templates.TemplateResponse(
         "discover_search.html",
         {"request": request, "query": q, "type": type, "results": results, "error": error, "active_nav": "discover"},
+    )
+
+
+@router.get("/discover/rail/{rail}", response_class=HTMLResponse, dependencies=USER)
+async def discover_rail(request: Request, rail: str, page: int = 1, db: Session = Depends(get_db)):
+    """One rail as a full paged grid ("View more" from the home page)."""
+    spec = RAILS.get(rail)
+    if spec is None:
+        raise HTTPException(404, "Unknown rail")
+    title, subtitle, kind, call = spec
+    api_key = settings_module.effective(db).tmdb_api_key
+    page = max(1, min(page, 500))
+    results: list[dict] = []
+    error = None
+    if not api_key:
+        error = "Discover needs a TMDB key (Settings > Library)."
+    else:
+        try:
+            results = _decorate(await call(api_key, page=page), db)
+        except Exception as exc:
+            error = f"TMDB didn't answer: {exc}"
+    return templates.TemplateResponse(
+        "discover_rail.html",
+        {"request": request, "rail_key": rail, "title": title, "subtitle": subtitle, "kind": kind, "page": page,
+         "results": results, "has_more": len(results) >= 20, "error": error, "active_nav": "discover"},
     )
 
 
@@ -295,10 +321,19 @@ async def add_tv_from_discover(tmdb_id: int, db: Session = Depends(get_db)):
 
 # ---- JSON -----------------------------------------------------------------------------
 
-_RAIL_CALLS = {
-    "trending": tmdb.trending, "popular-movies": tmdb.popular_movies, "upcoming-movies": tmdb.upcoming_movies,
-    "popular-tv": tmdb.popular_tv, "on-the-air": tmdb.on_the_air,
+# rail key -> (title, subtitle, kind, tmdb call). kind ("all" | "movie" | "tv") groups the home page.
+RAILS = {
+    "trending": ("Trending this week", "movies and series", "all", tmdb.trending),
+    "trending-movies": ("Trending movies", "this week on TMDB", "movie", tmdb.trending_movies),
+    "popular-movies": ("Popular movies", "", "movie", tmdb.popular_movies),
+    "upcoming-movies": ("Upcoming movies", "in cinemas soon", "movie", tmdb.upcoming_movies),
+    "top-rated-movies": ("Top rated movies", "all time, by TMDB votes", "movie", tmdb.top_rated_movies),
+    "trending-tv": ("Trending series", "this week on TMDB", "tv", tmdb.trending_tv),
+    "popular-tv": ("Popular series", "", "tv", tmdb.popular_tv),
+    "on-the-air": ("On the air", "series with new episodes this week", "tv", tmdb.on_the_air),
+    "top-rated-tv": ("Top rated series", "all time, by TMDB votes", "tv", tmdb.top_rated_tv),
 }
+_RAIL_CALLS = {key: spec[3] for key, spec in RAILS.items()}
 
 
 @router.get("/api/discover/recommended", dependencies=[Depends(auth.require_user)])
@@ -330,9 +365,9 @@ async def api_tv(request: Request, tmdb_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/api/discover/{rail}", dependencies=[Depends(auth.require_user)])
-async def api_rail(rail: str, db: Session = Depends(get_db)):
+async def api_rail(rail: str, page: int = 1, db: Session = Depends(get_db)):
     call = _RAIL_CALLS.get(rail)
     if call is None:
         raise HTTPException(404, f"Unknown rail; one of {', '.join(_RAIL_CALLS)}, recommended")
     api_key = settings_module.effective(db).tmdb_api_key
-    return _decorate(await call(api_key), db)
+    return _decorate(await call(api_key, page=max(1, min(page, 500))), db)

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% from "_cards.html" import card %}
+{% block title_suffix %} — {{ title }}{% endblock %}
+{% block content %}
+  <div class="holt-page-head">
+    <div>
+      <div class="holt-eyebrow">{{ 'Movies' if kind == 'movie' else 'Series' if kind == 'tv' else 'Discover' }}</div>
+      <h1 class="holt-page-title">{{ title }}</h1>
+      <div class="holt-meta">{% if subtitle %}{{ subtitle }} · {% endif %}page {{ page }} · titles in your library are marked</div>
+    </div>
+    <div class="holt-toolbar">
+      <a class="holt-chip" href="/">‹ Discover</a>
+      {% if page > 1 %}<a class="holt-chip" href="/discover/rail/{{ rail_key }}?page={{ page - 1 }}">‹ Previous</a>{% endif %}
+      {% if has_more %}<a class="holt-chip is-on" href="/discover/rail/{{ rail_key }}?page={{ page + 1 }}">Next ›</a>{% endif %}
+    </div>
+  </div>
+
+  {% if error %}<div class="holt-message holt-message-warning">{{ error }}</div>{% endif %}
+
+  {% if results %}
+  <div class="holt-grid">{% for item in results %}{{ card(item) }}{% endfor %}</div>
+  <div class="holt-toolbar" style="justify-content:center;margin-top:16px">
+    {% if page > 1 %}<a class="holt-chip" href="/discover/rail/{{ rail_key }}?page={{ page - 1 }}">‹ Previous</a>{% endif %}
+    {% if has_more %}<a class="holt-chip is-on" href="/discover/rail/{{ rail_key }}?page={{ page + 1 }}">Load more ›</a>{% endif %}
+  </div>
+  {% else %}
+  <div class="holt-empty holt-panel"><div class="holt-empty-title">Nothing here</div><div class="holt-body">TMDB returned no more titles for this list.</div></div>
+  {% endif %}
+{% endblock %}

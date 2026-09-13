@@ -17,6 +17,9 @@ restores torrents from resume data. See ROADMAP.md's M10 section for the details
 two loopback-swarm gotchas that cost the most debugging time.
 
 ## Currently working on
+
+**M22 -- Discover grouped and paged (2026-09-13).** Discover now separates movies from series (a Movies group and a Series group, with an All / Movies / Series filter in the apps), adds trending and top-rated rails for each, and every rail has a "View more" that opens the full TMDB list as a paged grid (`/discover/rail/{key}?page=N` on the web, `GET /api/discover/{rail}?page=N` for the apps, 20 cards a page, Load more appends). Server 0.6.7, client 0.4.11, android 0.6.1.
+
 **M21 -- Android search from Detail, push, deep links (2026-09-13).** Every notification the server sends now carries a `theden://` deep link (ntfy `Click` header, webhook `link` field). The Android app (0.6.0) subscribes to the ntfy topic itself from a foreground service, shows each event on its own notification channel, opens the linked request, download or title when tapped, and lets admins open Releases from a tracked movie or season on Detail. Plan: `docs/tier1-plan.md`.
 
 **M20 -- season packs and season actions (2026-09-13).** Multi-file torrents import
