@@ -17,10 +17,20 @@ FastAPI + SQLAlchemy/Alembic (SQLite) + Jinja2 + APScheduler media manager with 
 libtorrent client, Discover (TMDB), Plex login + library scan, Requests with quotas, and the
 HoltOS Glass UI. Companion apps: KDE client (the-den-client) and Android app (the-den-android).
 
-LAST TASK: M20 - SEASON PACKS (2026-09-13). the-den v0.6.5, client v0.4.10, android v0.5.7. Plan: docs/tier1-plan.md (M14 shakedown is the user's; M21 Android search + push is next for Claude). Android 0.5.7 APK built, not yet installed on the phones. Not done: local-swarm e2e for M18-M20. Local models: both restarted with 32k context; the 4080 (rnj-1) did most of M19/M20 reliably on files under ~200 lines; the 4090 (qwen3-coder) passes tiny probes but times out on most real files, works sometimes on ~100-line files.
-  Previous: M17 custom formats done (the-den v0.6.2, client v0.4.7, android v0.5.4). Plan: docs/tier1-plan.md. Local-model workflow: the 4090 runs
-  qwen3-coder-30b-a3b (32k ctx), the 4080 runs essentialai/rnj-1 (32k ctx); both edit files themselves via run_coding_task; whole-file rewrites over
-  ~300 lines time out, so add big markup as Jinja partials / new files and keep long-file edits for Claude after two failures.
+LAST TASK: M20 - SEASON PACKS (2026-09-13). the-den v0.6.5, client v0.4.10, android v0.5.7. Plan: docs/tier1-plan.md.
+TIER 1 STATUS: M15 notifications, M16 health/stats, M17 custom formats, M18 upgrades, M19 failed downloads, M20 season packs are DONE and pushed
+  (server 0.6.0 -> 0.6.5, client 0.4.5 -> 0.4.10, android 0.5.2 -> 0.5.7, each tagged). Remaining: M21 Android search + ntfy push + deep links
+  (Claude, next), M14 shakedown on the HoltOS box (user). Verification so far is API smokes, fake-engine probes, the KDE harness and Android builds;
+  the local-swarm e2e for M18-M20 (upgrade swap, seeder disappears, 3-file pack) has not been run. Android 0.5.7 APK built, not yet installed on
+  the phones (wireless-debug ports change; re-pair when needed).
+LOCAL-MODEL WORKFLOW (user rule: all code is written by the local models, which edit files themselves via lmstudio-bridge run_coding_task; Claude
+  specs, reviews the git diff, tests, commits): the 4090 runs qwen3-coder-30b-a3b, the 4080 runs essentialai/rnj-1, both at 32k context.
+  Findings: the 4080 is reliable on files under ~200 lines and needs an occasional one-line fix round; the 4090 passes tiny probes and mid-size
+  files but times out on many real units even after a restart. Both return nothing or time out on whole-file rewrites over ~250-300 lines
+  (app/routers/ui.py, app/templates/downloads.html, TheDenApi.kt, LibraryScreens.kt, AdminScreens.kt), so those edits were made by Claude after
+  the failed rounds, as recorded in each commit. Mitigations: new code goes in new files or Jinja partials; long files get only tiny targeted
+  edits; one unit per machine at a time; always give an idempotence guard ("if already present, leave unchanged") because timed-out tasks can
+  still land later.
 ------------------------------------------------
 Plan and status: the-den/docs/indexers-plan.md. All code in this task after the first pass was
 drafted by the local LM Studio model through lmstudio-bridge (user rule: ALL code, even
