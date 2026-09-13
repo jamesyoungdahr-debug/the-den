@@ -16,7 +16,9 @@ NEXT, in order:
      remember / switch work, then the Tier 3 queue. Server port: 40204 (Liam). Commits: commit each verified
      milestone locally and do NOT push until Liam says so (Liam, 2026-09-13; this overrides the push rule below
      for this work), and write a git bundle of each repo outside the working trees after every commit.
-     app/config.py (WEB_HOST/WEB_PORT/SERVER_NAME) and app/discovery.py are drafted for M34, not yet reviewed.
+     Progress: M33 done and pushed 2026-09-13 (Liam said push). Next is M34: review app/config.py's WEB_HOST/WEB_PORT/
+     SERVER_NAME (committed with M33, unused so far) and app/discovery.py (uncommitted draft; it still calls the removed
+     auth.required(), drop its "auth" TXT record).
   1. (DONE 2026-09-13) E6 gap closed: subtitle settings on Android 0.6.8 and KDE 0.4.16, see the DONE
      entry "E6 GAP" below.
   2. (DONE 2026-09-13) Plex bug: /api/plex/servers and /api/plex/sections 500 on a rejected token --
@@ -55,9 +57,9 @@ BRIDGE NOTE (2026-09-13, corrected later the same day): run_coding_task never wr
 
 REPOS AND VERSIONS
 ------------------
-- the-den            C:\projects\theden             github.com/jamesyoungdahr-debug/the-den        v0.7.0 (commit ff5fc9d, tagged; stays 0.x -- see "no 1.0.0 yet" below)
-- the-den-client     C:\projects\the-den-client     (KDE, PySide6/Kirigami)                         v0.4.16 (commit f410c6f, tagged)
-- the-den-android    C:\projects\the-den-android    (Kotlin/Compose)                                v0.6.8 (commit 4de2bfe, tagged)
+- the-den            C:\projects\theden             github.com/jamesyoungdahr-debug/the-den        v0.7.0 tagged (ff5fc9d); master now carries M33, untagged, on the 0.8.0 track (stays 0.x -- see "no 1.0.0 yet" below)
+- the-den-client     C:\projects\the-den-client     (KDE, PySide6/Kirigami)                         v0.5.0 (M33, untagged; v0.4.16 tagged at f410c6f)
+- the-den-android    C:\projects\the-den-android    (Kotlin/Compose)                                v0.7.0 (M33, untagged; v0.6.8 tagged at 4de2bfe)
 - Rule: the-den and the-den-client stay SEPARATE repos and SEPARATE packages; the HoltOS updater tracks both.
 - Git identity for commits: user.name Liam, user.email jamesyoungdahr@gmail.com (set locally in all three repos).
 
@@ -70,6 +72,19 @@ HoltOS Glass UI. Companion apps: KDE client (the-den-client) and Android app (th
 LAST TASK: M22 - DISCOVER GROUPED (MOVIES / SERIES) AND PAGED "VIEW MORE" (2026-09-13, done, tagged). the-den v0.6.7, client v0.4.11, android v0.6.1. Tier 1 plan:
   docs/tier1-plan.md; Tier 2 candidates: docs/feature-research.md (E1-E10). M22 was the first post-Tier-1 item (Liam's request), rails in
   app/routers/discover.py RAILS, tmdb.* take page=.
+DONE 2026-09-13: M33 - SIGN-IN ALWAYS REQUIRED, FIRST-RUN SETUP (DONE; server f777a75, client 0.5.0, android 0.7.0; untagged).
+  Server: no anonymous admin and no AUTH_REQUIRED; app/auth.py's guards always answer 401 or send to /login.
+  app/setup_state.py plus a gate in app/main.py's middleware serve only /health, /setup*, /login*, /logout and static
+  files until an admin exists and setup step 2 (/setup/server: server name + library folders) is saved; browsers go to
+  /setup, apps get 503 "setup required". /health gains setup_complete. Migration f9a0b1c2d3e4 drops settings.auth_required
+  and adds server_name and setup_completed_at. Settings > Accounts is gone. Existing installs finish step 2 once.
+  Clients: the anonymous paths are gone and both show "This server hasn't been set up yet" for an unfinished server.
+  Claude wrote the security units (auth.py, setup_state.py, the gate, routers/auth.py, the sign-in switch removals in
+  plex.py/api_settings.py/ui.py) and the Android AdminScreens.kt brace fix after two failed handoffs; the local models
+  wrote everything else. Verified: a 41-check server smoke (migration round-trip, fresh-install gate, both setup steps,
+  401s, token auth, an upgraded install finished only by its admin), the notifications e2e with a token (test DB migrated,
+  backup ~/the-den-test/den.db.pre-m33, admin token in ~/the-den-test/e2e-token.txt), KDE run_all.sh green plus a headless
+  setup-required check, Android build and unit tests 10/10. Not checked: Android's setup-required message on a real screen.
 DONE 2026-09-13: E6 GAP - SUBTITLE SETTINGS ON KDE AND ANDROID (DONE). Closes the gap E6 left (its surfaces column asked
   for settings on every surface; only the web had them). Android 0.6.8 (commit 27a927d): a Subtitles section on Settings
   (OpenSubtitles API key as a secret + languages); SettingsViewModel only sends the key when typed. KDE 0.4.16 (commit
