@@ -69,7 +69,7 @@ DONE 2026-09-13: PLEX 401 FIX (server only). app/plex.py list_servers now raises
   routes, good token -> 200 servers + sections, plex.tv unreachable -> JSON 502, no tracebacks in the log.
   Claude wrote both code edits itself after two failed run_coding_task handoffs on each file (the 4090 model hit
   max_iterations, claimed it had no access to C:\projects, and once wrote a placeholder file into the wrong repo,
-  C:\Users\Liam\OpenJarvis\src\openjarvis\connectors\plex.py -- untracked, not yet removed). The 4090 model drafted
+  C:\Users\Liam\OpenJarvis\src\openjarvis\connectors\plex.py -- untracked; deleted with Liam's OK). The 4090 model drafted
   this entry but put it at the end of the file; after two failed fix rounds (4090 empty reply, 4080 timeout) Claude
   moved it here. Commit dc2ee00 touched only those two files; E10 was committed separately in 33edfc7.
 DONE 2026-09-13: E10 - BACKUP AND RESTORE (DONE, M32, server + web only per feature-research.md's surfaces column).
