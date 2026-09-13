@@ -79,14 +79,18 @@ DEV ENVIRONMENT ON THIS MACHINE (set up 2026-09-13):
     then pip install -r requirements.txt.
   - Dev backend: 127.0.0.1:8687, data in ~/the-den-dev (den.db, state, downloads, movies, tv), torrent port 6893,
     log ~/the-den-dev/server.log.
-  - Test backend: 127.0.0.1:8688, data in ~/the-den-test, torrent port 6894, log ~/the-den-test/server.log.
+  - Test backend: 127.0.0.1:8688 is the KDE client's fixture backend, built by the-den-client's
+    tests/fixture_backend.sh: a copy of the dev database (for its users and tokens) seeded with movie 1, series 1
+    and a mock indexer, backed by mock TVmaze on 8085 and mock Torznab on 8082. Data and logs are in ~/the-den-test,
+    which each run wipes; torrent port 6894. The KDE tests/run_all.sh is 12/12 against it.
   - Start each from the repo root with DATABASE_URL, STATE_DIR, DOWNLOADS_ROOT, MOVIES_ROOT, TV_ROOT, TORRENT_PORT,
     WEB_HOST and WEB_PORT exported, run ~/.venvs/the-den/bin/python -m alembic upgrade head, then
     setsid nohup ~/.venvs/the-den/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port <port>.
     Neither has finished /setup yet; Liam does that and makes an admin token.
   - Local swarm: SWARM_DIR=~/the-den-swarm ~/.venvs/the-den/bin/python -m uvicorn tests.local_swarm:app --port 8083,
     seeding on 6891. Releases are numbered from 1 (/download/1.torrent, /magnet/1).
-  - Ports already taken: 8686 and 6881 by the HoltOS-installed copy, 8083 and 6891 by the swarm.
+  - Ports already taken: 8686 and 6881 by the HoltOS-installed copy, 8083 and 6891 by the swarm, 8085 and 8082 by
+    the fixture mocks.
   - Offline tests pass here: tests/test_formats.py, tests/test_importer.py and tests/test_native_indexers.py.
   - Gotcha: from app.torrent import engine gives the shared TorrentEngine instance, not the module. Scripts that
     need EngineConfig or TorrentEngine should import the module and use sys.modules["app.torrent.engine"].
