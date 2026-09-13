@@ -82,6 +82,6 @@ async def grab_movie(movie_id: int, payload: GrabRequest, db: Session = Depends(
     if not movie:
         raise HTTPException(404, "Movie not found")
     try:
-        return await do_grab_movie(db, movie, payload.download_url, payload.release_title)
+        return await do_grab_movie(db, movie, payload.download_url, payload.release_title, protocol=payload.protocol)
     except Exception as exc:
         raise HTTPException(502, f"Failed to send to download client: {exc}")

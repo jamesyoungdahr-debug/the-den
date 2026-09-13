@@ -1,11 +1,13 @@
-"""Advance one DownloadRecord against the built-in torrent engine, importing it when
-done -- and, separately, clean up torrents that have finished their seeding duty."""
+"""Advance one DownloadRecord against its download client (the built-in torrent
+engine, or an external SABnzbd for usenet releases, E7), importing it when done --
+and, separately, clean up downloads that have finished their seeding duty."""
 
 import json
 from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
 from sqlalchemy.orm import Session
 
-from app import blocklist, history, importer, root_folders, settings as settings_module
+from app import blocklist, history, importer, root_folders, sabnzbd, settings as settings_module
 from app.models import DownloadRecord, Episode, Movie, Series
 from app.notifier import notify_event
 from app.torrent import engine
@@ -21,15 +23,44 @@ def _utc(dt: datetime | None) -> datetime | None:
     return dt.replace(tzinfo=timezone.utc) if dt is not None and dt.tzinfo is None else dt
 
 
+async def _status(db: Session, record: DownloadRecord):
+    """The record's status from whichever client owns it, normalized to the same
+    attributes app.torrent.engine.TorrentStatus has (only the ones read below).
+    Usenet has no seed/peer concept, so num_seeds/download_rate are set to a
+    non-zero sentinel to keep the torrent-only stall check from misfiring on it."""
+    if record.download_client == "sabnzbd":
+        s = settings_module.effective(db)
+        d = await sabnzbd.status(s.sabnzbd_url, s.sabnzbd_api_key, record.info_hash)
+        if d is None:
+            return None
+        return SimpleNamespace(state=d["state"], progress=d["progress"], is_finished=d["is_finished"], error=d["error"], num_seeds=1, download_rate=1)
+    return engine.status(record.info_hash)
+
+
+async def _files(db: Session, record: DownloadRecord):
+    if record.download_client == "sabnzbd":
+        s = settings_module.effective(db)
+        return await sabnzbd.files(s.sabnzbd_url, s.sabnzbd_api_key, record.info_hash)
+    return engine.files(record.info_hash)
+
+
+async def _remove(db: Session, record: DownloadRecord, delete_files: bool = True) -> None:
+    if record.download_client == "sabnzbd":
+        s = settings_module.effective(db)
+        await sabnzbd.remove(s.sabnzbd_url, s.sabnzbd_api_key, record.info_hash, delete_files=delete_files)
+    else:
+        engine.remove(record.info_hash, delete_files=delete_files)
+
+
 async def fail_download(db: Session, record: DownloadRecord, reason: str, blocklist_days: int | None = 30) -> None:
-    """Give up on a download: blocklist the release, remove the torrent and its data, mark
-    the record failed and notify. The next automation cycle searches again."""
+    """Give up on a download: blocklist the release, remove it from its client and its
+    data, mark the record failed and notify. The next automation cycle searches again."""
     s = settings_module.effective(db)
     if record.status != "failed":
         blocklist.add(db, record, reason, days=blocklist_days)
     if record.info_hash:
         try:
-            engine.remove(record.info_hash, delete_files=True)
+            await _remove(db, record, delete_files=True)
         except Exception:
             pass
     record.status = "failed"
@@ -40,7 +71,7 @@ async def fail_download(db: Session, record: DownloadRecord, reason: str, blockl
 
 
 async def check_and_import(db: Session, record: DownloadRecord) -> None:
-    """Refresh record.status from the engine and import the file once it's finished.
+    """Refresh record.status from its client and import the file once it's finished.
     Mutates + commits record."""
     if record.status in TERMINAL_STATUSES:
         return
@@ -50,11 +81,11 @@ async def check_and_import(db: Session, record: DownloadRecord) -> None:
         db.commit()
         return
 
-    st = engine.status(record.info_hash)
+    st = await _status(db, record)
     now = datetime.now(timezone.utc)
     if st is None:
-        record.status = "failed"  # removed from the engine, or its state was lost
-        record.failure_reason = record.failure_reason or "gone from the engine"
+        record.status = "failed"  # removed from the client, or its state was lost
+        record.failure_reason = record.failure_reason or "gone from the download client"
         db.commit()
         return
     if st.progress > (record.last_progress or 0.0) or record.last_progress_at is None:
@@ -81,7 +112,7 @@ async def check_and_import(db: Session, record: DownloadRecord) -> None:
 
 async def _import(db: Session, record: DownloadRecord) -> None:
     s = settings_module.effective(db)
-    files = engine.files(record.info_hash)
+    files = await _files(db, record)
     done = {}
     imported = False
     if not record.movie_id and not record.episode_id and not (record.series_id and record.season_number is not None):
@@ -154,18 +185,24 @@ async def _import(db: Session, record: DownloadRecord) -> None:
         await notify_event(db, event, f"{prefix}: {what}", legacy_discord_url=s.discord_webhook_url, link="theden://downloads")
 
 
-def reap_seeded(db: Session) -> int:
-    """Remove torrents (data included) once they're both imported into the library and
-    past their seeding limits -- the engine parks those as "done". Torrents the user
-    added by hand (no record) and anything still seeding are left alone."""
+async def reap_seeded(db: Session) -> int:
+    """Remove finished downloads (data included) once they're both imported into the
+    library and past their seeding limits (torrent) or already in SABnzbd's history
+    (usenet has no seeding phase, so a finished+imported record is reaped immediately).
+    Downloads the user added by hand (no record) and anything still active are left alone."""
     reaped = 0
     records = db.query(DownloadRecord).filter(
         DownloadRecord.status == "imported", DownloadRecord.info_hash.isnot(None), DownloadRecord.unmatched_files.is_(None)
     ).all()
     for record in records:
-        st = engine.status(record.info_hash)
-        if st is not None and st.state == "done":
-            engine.remove(record.info_hash, delete_files=True)
+        if record.download_client == "sabnzbd":
+            st = await _status(db, record)
+            done = st is not None and st.is_finished
+        else:
+            st = engine.status(record.info_hash)
+            done = st is not None and st.state == "done"
+        if done:
+            await _remove(db, record, delete_files=True)
             if record.movie_id or record.episode_id or record.series_id:
                 history.record(db, "removed", record.release_title, movie_id=record.movie_id, episode_id=record.episode_id, series_id=record.series_id, season_number=record.season_number, message="seeding finished, removed from client")
             reaped += 1

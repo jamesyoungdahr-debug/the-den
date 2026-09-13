@@ -17,6 +17,7 @@ class Release:
     title: str
     download_url: str
     indexer_name: str
+    protocol: str = "torznab"
     size: int | None = None
     seeders: int | None = None
     peers: int | None = None
@@ -32,7 +33,7 @@ def _attr_map(item: ET.Element) -> dict[str, str]:
     return attrs
 
 
-def _parse_items(xml_bytes: bytes, indexer_name: str) -> list[Release]:
+def _parse_items(xml_bytes: bytes, indexer_name: str, protocol: str = "torznab") -> list[Release]:
     root = ET.fromstring(xml_bytes)
     releases = []
     for item in root.iter("item"):
@@ -45,6 +46,7 @@ def _parse_items(xml_bytes: bytes, indexer_name: str) -> list[Release]:
                 title=title,
                 download_url=download_url,
                 indexer_name=indexer_name,
+                protocol=protocol,
                 # `or ""` (not `.get(x, "")`): a <torznab:attr name="x"/> with no
                 # value attribute stores None for a *present* key, which the ", \"\""
                 # default doesn't cover -- only an absent key would fall back to it.
@@ -69,11 +71,11 @@ async def test_connection(url: str, api_key: str | None) -> dict:
         return {"ok": True, "server_title": server.attrib.get("title") if server is not None else None}
 
 
-async def search(url: str, api_key: str | None, query: str, indexer_name: str) -> list[Release]:
+async def search(url: str, api_key: str | None, query: str, indexer_name: str, protocol: str = "torznab") -> list[Release]:
     params = {"t": "search", "q": query}
     if api_key:
         params["apikey"] = api_key
     async with httpx.AsyncClient(timeout=15) as client:
         resp = await client.get(url, params=params)
         resp.raise_for_status()
-        return _parse_items(resp.content, indexer_name)
+        return _parse_items(resp.content, indexer_name, protocol)

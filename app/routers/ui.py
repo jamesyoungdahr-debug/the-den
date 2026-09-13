@@ -557,6 +557,7 @@ def ui_settings(request: Request, db: Session = Depends(get_db)):
             "has_tmdb_api_key": bool(row.tmdb_api_key),
             "has_discord_webhook": bool(row.discord_webhook_url),
             "has_opensubtitles_api_key": bool(row.opensubtitles_api_key),
+            "has_sabnzbd_api_key": bool(row.sabnzbd_api_key),
             "state_dir": config.STATE_DIR,
             "saved": request.query_params.get("saved") == "1",
             "notice": request.query_params.get("notice"),
@@ -599,12 +600,15 @@ def ui_save_settings(
     import_list_interval_minutes: str = Form(""),
     opensubtitles_api_key: str = Form(""),
     subtitle_languages: str = Form(""),
+    sabnzbd_url: str = Form(""),
+    sabnzbd_api_key: str = Form(""),
     db: Session = Depends(get_db),
 ):
     row = settings_module.get_row(db)
     old = settings_module.effective(db)
     row.flaresolverr_url = flaresolverr_url.strip() or None
     row.subtitle_languages = subtitle_languages.strip() or None
+    row.sabnzbd_url = sabnzbd_url.strip() or None
     row.import_list_interval_minutes = _int_or_none(import_list_interval_minutes)
     row.request_movie_limit = _int_or_none(request_movie_limit)
     row.request_series_limit = _int_or_none(request_series_limit)
@@ -617,6 +621,8 @@ def ui_save_settings(
         row.discord_webhook_url = discord_webhook_url
     if opensubtitles_api_key:
         row.opensubtitles_api_key = opensubtitles_api_key
+    if sabnzbd_api_key:
+        row.sabnzbd_api_key = sabnzbd_api_key
 
     # Non-secret fields: always take the submitted value (blank means "use the default").
     row.movies_root = movies_root or None

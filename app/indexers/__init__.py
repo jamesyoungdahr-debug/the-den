@@ -34,7 +34,8 @@ async def search_one(indexer: Indexer, query: str, solver_url: str = "") -> list
     impl = implementation_of(indexer)
     if impl in NATIVES:
         return await NATIVES[impl].search(Fetcher(solver_url), indexer.url or NATIVES[impl].url, query)
-    return await torznab.search(indexer.url, indexer.api_key, query, indexer.name)
+    protocol = "newznab" if indexer.protocol == "newznab" else "torznab"
+    return await torznab.search(indexer.url, indexer.api_key, query, indexer.name, protocol)
 
 
 def _record(db: Session, indexer_id: int, ok: bool, ms: int, error: str | None) -> None:

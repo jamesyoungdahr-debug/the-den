@@ -35,6 +35,8 @@ class EffectiveSettings:
     import_list_interval_minutes: int
     opensubtitles_api_key: str
     subtitle_languages: list[str]
+    sabnzbd_url: str
+    sabnzbd_api_key: str
     request_movie_limit: int
     request_series_limit: int
     request_limit_days: int
@@ -99,6 +101,8 @@ def effective(db: Session) -> EffectiveSettings:
         import_list_interval_minutes=_pick(row.import_list_interval_minutes, config.IMPORT_LIST_INTERVAL_MINUTES),
         opensubtitles_api_key=_pick(row.opensubtitles_api_key, config.OPENSUBTITLES_API_KEY),
         subtitle_languages=[lang.strip() for lang in _pick(row.subtitle_languages, config.SUBTITLE_LANGUAGES).split(",") if lang.strip()],
+        sabnzbd_url=_pick(row.sabnzbd_url, config.SABNZBD_URL),
+        sabnzbd_api_key=_pick(row.sabnzbd_api_key, config.SABNZBD_API_KEY),
         request_movie_limit=_pick(row.request_movie_limit, config.REQUEST_MOVIE_LIMIT),
         request_series_limit=_pick(row.request_series_limit, config.REQUEST_SERIES_LIMIT),
         request_limit_days=_pick(row.request_limit_days, config.REQUEST_LIMIT_DAYS),

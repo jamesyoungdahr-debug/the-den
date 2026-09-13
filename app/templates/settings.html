@@ -17,6 +17,7 @@
     <nav class="den-settings-index holt-glass">
       <a href="#library">Library</a>
       <a href="#torrent">Torrent client</a>
+      <a href="#usenet">Usenet</a>
       <a href="#automation">Automation</a>
       <a href="#subtitles">Subtitles</a>
       <a href="#requests">Requests</a>
@@ -58,6 +59,19 @@
           <div class="holt-field"><label>Seed time limit (minutes, 0 = none)</label><input type="number" name="seed_time_limit_minutes" value="{{ s.seed_time_limit_minutes }}" min="0"></div>
         </div>
         <div class="holt-meta" style="margin-top: var(--holt-space-2)">Once an imported torrent hits either limit it's stopped, and the next automation cycle removes it along with its downloaded files. The library keeps its copy.</div>
+      </section>
+
+      <section class="holt-panel" id="usenet">
+        <div class="holt-panel-head"><div class="holt-eyebrow">Usenet</div><div class="holt-meta">SABnzbd</div></div>
+        <div class="holt-field">
+          <label>SABnzbd URL</label>
+          <input type="url" name="sabnzbd_url" value="{{ s.sabnzbd_url }}" placeholder="http://127.0.0.1:8080">
+        </div>
+        <div class="holt-field">
+          <label>SABnzbd API key {{ "· currently set" if has_sabnzbd_api_key else "· not set" }}</label>
+          <input type="password" name="sabnzbd_api_key" placeholder="leave blank to keep current value" autocomplete="off">
+          <div class="holt-meta">The Den doesn't run its own usenet downloader; it sends NZBs to an existing SABnzbd install, the same way it uses FlareSolverr. Find the key in SABnzbd's Settings → General.</div>
+        </div>
       </section>
 
       <section class="holt-panel" id="subtitles">

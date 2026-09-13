@@ -129,6 +129,8 @@ class Settings(Base):
     import_list_interval_minutes = Column(Integer, nullable=True)
     opensubtitles_api_key = Column(String, nullable=True)
     subtitle_languages = Column(String, nullable=True)  # comma-separated language codes, e.g. "en,es"
+    sabnzbd_url = Column(String, nullable=True)
+    sabnzbd_api_key = Column(String, nullable=True)
     plex_last_scan_at = Column(DateTime, nullable=True)
     plex_last_scan_result = Column(String, nullable=True)
     # Request quotas (M11g): how many movies / series a non-admin may request per window.
@@ -154,10 +156,12 @@ class DownloadRecord(Base):
     season_number = Column(Integer, nullable=True)
     release_title = Column(String, nullable=False)
     download_url = Column(String, nullable=False)
-    # Key into the built-in torrent engine (app/torrent). Null only for records that
-    # predate it (they were tracked in an external qBittorrent) -- those can't be
-    # advanced any more and get marked failed on their next check.
+    # Key into the download client named by download_client below: an info-hash for the
+    # built-in torrent engine (app/torrent), or an nzo_id for SABnzbd (E7). Null only for
+    # records that predate the torrent engine (they were tracked in an external
+    # qBittorrent) -- those can't be advanced any more and get marked failed on their next check.
     info_hash = Column(String, nullable=True, index=True)
+    download_client = Column(String, nullable=False, default="torrent")  # torrent | sabnzbd
     status = Column(String, nullable=False, default="queued")  # queued|downloading|completed|imported|failed
     quality = Column(String, nullable=True)  # parsed from release_title when grabbed
     score = Column(Integer, nullable=False, default=0)  # custom-format score when grabbed

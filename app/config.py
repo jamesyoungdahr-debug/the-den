@@ -54,6 +54,10 @@ IMPORT_LIST_INTERVAL_MINUTES = int(os.environ.get("IMPORT_LIST_INTERVAL_MINUTES"
 # E6: subtitles (OpenSubtitles, anonymous API key -- no OAuth needed for search/download).
 OPENSUBTITLES_API_KEY = os.environ.get("OPENSUBTITLES_API_KEY", "")
 SUBTITLE_LANGUAGES = os.environ.get("SUBTITLE_LANGUAGES", "")
+
+# E7: usenet, via an existing SABnzbd install (The Den doesn't run its own NZB client).
+SABNZBD_URL = os.environ.get("SABNZBD_URL", "")
+SABNZBD_API_KEY = os.environ.get("SABNZBD_API_KEY", "")
 PLEX_SCAN_INTERVAL_MINUTES = int(os.environ.get("PLEX_SCAN_INTERVAL_MINUTES", "30"))
 
 # Request quotas for non-admin users (M11g); 0 = unlimited. Overridable in Settings and per user.

@@ -40,7 +40,7 @@ async def _search_and_grab_movie(db: Session, movie: Movie, profile: QualityProf
     if not best:
         return False
     try:
-        await grab_movie(db, movie, best["download_url"], best["title"], score=best["score"])
+        await grab_movie(db, movie, best["download_url"], best["title"], score=best["score"], protocol=best["protocol"])
         return True
     except Exception:
         return False  # a dead download link shouldn't stop the cycle; next run retries
@@ -53,7 +53,7 @@ async def _search_and_grab_episode(db: Session, episode: Episode, series: Series
     if not best:
         return False
     try:
-        await grab_episode(db, episode, best["download_url"], best["title"], score=best["score"])
+        await grab_episode(db, episode, best["download_url"], best["title"], score=best["score"], protocol=best["protocol"])
         return True
     except Exception:
         return False  # a dead download link shouldn't stop the cycle; next run retries
@@ -66,7 +66,7 @@ async def _search_and_grab_season(db: Session, series: Series, season_number: in
     if not best:
         return False
     try:
-        await grab_season(db, series, season_number, best["download_url"], best["title"], score=best["score"])
+        await grab_season(db, series, season_number, best["download_url"], best["title"], score=best["score"], protocol=best["protocol"])
         return True
     except Exception:
         return False
@@ -80,7 +80,7 @@ async def _advance_downloads(db: Session) -> None:
         except Exception:
             pass  # one bad download shouldn't stop the rest of the cycle
     try:
-        reap_seeded(db)
+        await reap_seeded(db)
     except Exception:
         pass
 
@@ -106,7 +106,7 @@ async def _upgrade_titles(db: Session) -> None:
         best = next((c for c in candidates if c["is_best"]), None)
         if best and beats_current(best["quality"], best["score"], movie.file_quality, movie.file_score, profile):
             try:
-                await grab_movie(db, movie, best["download_url"], best["title"], score=best["score"], upgrade=True)
+                await grab_movie(db, movie, best["download_url"], best["title"], score=best["score"], upgrade=True, protocol=best["protocol"])
             except Exception:
                 pass
 
@@ -125,7 +125,7 @@ async def _upgrade_titles(db: Session) -> None:
         best = next((c for c in candidates if c["is_best"]), None)
         if best and beats_current(best["quality"], best["score"], episode.file_quality, episode.file_score, profile):
             try:
-                await grab_episode(db, episode, best["download_url"], best["title"], score=best["score"], upgrade=True)
+                await grab_episode(db, episode, best["download_url"], best["title"], score=best["score"], upgrade=True, protocol=best["protocol"])
             except Exception:
                 pass
 

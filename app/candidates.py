@@ -51,6 +51,7 @@ async def scored_candidates(db: Session, query: str, profile: QualityProfile | N
             "title": r.title,
             "download_url": r.download_url,
             "indexer_name": r.indexer_name,
+            "protocol": r.protocol,
             "size": r.size,
             "seeders": r.seeders,
             "peers": r.peers,

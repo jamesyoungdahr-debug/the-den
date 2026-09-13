@@ -101,7 +101,7 @@ async def grab_episode(episode_id: int, payload: GrabRequest, db: Session = Depe
     if not episode:
         raise HTTPException(404, "Episode not found")
     try:
-        return await do_grab_episode(db, episode, payload.download_url, payload.release_title)
+        return await do_grab_episode(db, episode, payload.download_url, payload.release_title, protocol=payload.protocol)
     except Exception as exc:
         raise HTTPException(502, f"Failed to send to download client: {exc}")
 
@@ -130,7 +130,7 @@ async def season_candidates_route(series_id: int, season_number: int, db: Sessio
 async def grab_season(series_id: int, season_number: int, payload: GrabRequest, db: Session = Depends(get_db)):
     series, _ = _season(db, series_id, season_number)
     try:
-        return await do_grab_season(db, series, season_number, payload.download_url, payload.release_title)
+        return await do_grab_season(db, series, season_number, payload.download_url, payload.release_title, protocol=payload.protocol)
     except Exception as exc:
         raise HTTPException(502, f"Failed to send to download client: {exc}")
 

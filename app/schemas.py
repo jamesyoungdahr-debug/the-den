@@ -60,6 +60,7 @@ class MovieOut(MovieCreate):
 class GrabRequest(BaseModel):
     download_url: str
     release_title: str
+    protocol: str = "torznab"  # torznab (torrent) | newznab (usenet, via SABnzbd)
 
 
 class DownloadRecordOut(BaseModel):

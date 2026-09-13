@@ -53,6 +53,10 @@ class SettingsUpdate(BaseModel):
     # list of ISO 639-1 codes, e.g. "en,es".
     opensubtitles_api_key: str | None = None
     subtitle_languages: str | None = None
+    # SABnzbd (E7); The Den doesn't run its own usenet downloader, it sends NZBs to an
+    # existing SABnzbd install the same way FlareSolverr is an external service.
+    sabnzbd_url: str | None = None
+    sabnzbd_api_key: str | None = None
 
 
 @router.get("/settings")
@@ -98,6 +102,8 @@ def get_settings(db: Session = Depends(get_db)):
         "flaresolverr_url": s.flaresolverr_url,
         "has_opensubtitles_api_key": bool(row.opensubtitles_api_key),
         "subtitle_languages": ",".join(s.subtitle_languages),
+        "sabnzbd_url": s.sabnzbd_url,
+        "has_sabnzbd_api_key": bool(row.sabnzbd_api_key),
     }
 
 
@@ -147,6 +153,8 @@ def save_settings(payload: SettingsUpdate, request: Request, db: Session = Depen
         row.discord_webhook_url = payload.discord_webhook_url
     if payload.opensubtitles_api_key:
         row.opensubtitles_api_key = payload.opensubtitles_api_key
+    if payload.sabnzbd_api_key:
+        row.sabnzbd_api_key = payload.sabnzbd_api_key
 
     # Non-secret fields: always take the submitted value (blank -> use the default).
     if payload.movies_root is not None:
@@ -178,6 +186,8 @@ def save_settings(payload: SettingsUpdate, request: Request, db: Session = Depen
         row.flaresolverr_url = payload.flaresolverr_url.strip() or None
     if payload.subtitle_languages is not None:
         row.subtitle_languages = payload.subtitle_languages.strip() or None
+    if payload.sabnzbd_url is not None:
+        row.sabnzbd_url = payload.sabnzbd_url.strip() or None
 
     db.commit()
     apply_runtime_changes(old, settings_module.effective(db))
