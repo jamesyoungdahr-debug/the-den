@@ -1,5 +1,5 @@
 """Stand-in for the notification targets so tests can verify notifications actually fire:
-a Discord / generic webhook (POST /), an ntfy topic (POST /{topic}, headers Title/Tags/Priority)
+a Discord / generic webhook (POST /), an ntfy topic (POST /{topic}, headers Title/Tags/Priority/Click)
 and a Telegram bot (POST /bot{token}/sendMessage). GET /received lists everything, POST /reset clears."""
 
 from fastapi import FastAPI, Request
@@ -36,6 +36,7 @@ async def topic_webhook(topic: str, request: Request):
         "tags": request.headers.get("Tags"),
         "priority": request.headers.get("Priority"),
         "auth": request.headers.get("Authorization"),
+        "click": request.headers.get("Click"),
         "message": body,
     })
     return {"ok": True}
@@ -44,4 +45,3 @@ async def topic_webhook(topic: str, request: Request):
 @app.get("/received")
 def get_received():
     return received
-

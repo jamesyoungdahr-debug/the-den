@@ -17,12 +17,12 @@ FastAPI + SQLAlchemy/Alembic (SQLite) + Jinja2 + APScheduler media manager with 
 libtorrent client, Discover (TMDB), Plex login + library scan, Requests with quotas, and the
 HoltOS Glass UI. Companion apps: KDE client (the-den-client) and Android app (the-den-android).
 
-LAST TASK: M20 - SEASON PACKS (2026-09-13). the-den v0.6.5, client v0.4.10, android v0.5.7. Plan: docs/tier1-plan.md.
-TIER 1 STATUS: M15 notifications, M16 health/stats, M17 custom formats, M18 upgrades, M19 failed downloads, M20 season packs are DONE and pushed
-  (server 0.6.0 -> 0.6.5, client 0.4.5 -> 0.4.10, android 0.5.2 -> 0.5.7, each tagged). Remaining: M21 Android search + ntfy push + deep links
-  (Claude, next), M14 shakedown on the HoltOS box (user). Verification so far is API smokes, fake-engine probes, the KDE harness and Android builds;
-  the local-swarm e2e for M18-M20 (upgrade swap, seeder disappears, 3-file pack) has not been run. Android 0.5.7 APK built, not yet installed on
-  the phones (wireless-debug ports change; re-pair when needed).
+LAST TASK: M21 - ANDROID SEARCH FROM DETAIL, NTFY PUSH, DEEP LINKS (2026-09-13). the-den v0.6.6, client v0.4.10, android v0.6.0. Plan: docs/tier1-plan.md.
+TIER 1 STATUS: M15 notifications, M16 health/stats, M17 custom formats, M18 upgrades, M19 failed downloads, M20 season packs, M21 Android push are
+  DONE and pushed (server 0.6.0 -> 0.6.6, client 0.4.5 -> 0.4.10, android 0.5.2 -> 0.6.0, each tagged). Remaining: M14 shakedown on the HoltOS box
+  (user), then server 1.0.0. Verification so far is API smokes, fake-engine probes, the KDE harness, Android JVM tests and builds; the local-swarm
+  e2e for M18-M20 (upgrade swap, seeder disappears, 3-file pack) has not been run. Android 0.6.0 APK built, not installed on the phones yet
+  (wireless-debug ports change; re-pair when needed); push has not been tried end to end with a real ntfy topic on a phone.
 LOCAL-MODEL WORKFLOW (user rule: all code is written by the local models, which edit files themselves via lmstudio-bridge run_coding_task; Claude
   specs, reviews the git diff, tests, commits): the 4090 runs qwen3-coder-30b-a3b, the 4080 runs essentialai/rnj-1, both at 32k context.
   Findings: the 4080 is reliable on files under ~200 lines and needs an occasional one-line fix round; the 4090 passes tiny probes and mid-size
@@ -31,6 +31,9 @@ LOCAL-MODEL WORKFLOW (user rule: all code is written by the local models, which 
   the failed rounds, as recorded in each commit. Mitigations: new code goes in new files or Jinja partials; long files get only tiny targeted
   edits; one unit per machine at a time; always give an idempotence guard ("if already present, leave unchanged") because timed-out tasks can
   still land later.
+  M21 finding: the long-file failures come from the bridge's coding agent having only write_file (whole-file rewrite) at max_tokens 4096. Claude
+  patched C:\projects\lmstudio-mcp\lmstudio_bridge.py: edit_file tool (exact old/new replace), LMSTUDIO_TIMEOUT (default 900 s) and
+  LMSTUDIO_AGENT_MAX_TOKENS (16384); MCP_TOOL_TIMEOUT=900000 in ~/.claude/settings.json. Both take effect after the MCP servers restart.
 ------------------------------------------------
 Plan and status: the-den/docs/indexers-plan.md. All code in this task after the first pass was
 drafted by the local LM Studio model through lmstudio-bridge (user rule: ALL code, even

@@ -94,7 +94,7 @@ async def run(db: Session) -> list[HealthIssue]:
 
     for issue in new_issues:
         try:
-            await notify_event(db, "health_warning", issue.message, legacy_discord_url=s.discord_webhook_url)
+            await notify_event(db, "health_warning", issue.message, legacy_discord_url=s.discord_webhook_url, link="theden://discover")
         except Exception:
             pass
 

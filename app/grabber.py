@@ -34,7 +34,7 @@ async def _grab(
     db.add(record)
     db.commit()
     db.refresh(record)
-    await notify_event(db, "grabbed", f"{'Upgrade grabbed' if upgrade else 'Grabbed'} **{label}** -- {release_title}", legacy_discord_url=s.discord_webhook_url)
+    await notify_event(db, "grabbed", f"{'Upgrade grabbed' if upgrade else 'Grabbed'} **{label}** -- {release_title}", legacy_discord_url=s.discord_webhook_url, link="theden://downloads")
     return record
 
 

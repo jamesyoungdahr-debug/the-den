@@ -34,7 +34,7 @@ async def fail_download(db: Session, record: DownloadRecord, reason: str, blockl
     record.status = "failed"
     record.failure_reason = reason
     db.commit()
-    await notify_event(db, "download_failed", f"Download failed ({reason}): {record.release_title}", legacy_discord_url=s.discord_webhook_url)
+    await notify_event(db, "download_failed", f"Download failed ({reason}): {record.release_title}", legacy_discord_url=s.discord_webhook_url, link="theden://downloads")
 
 
 async def check_and_import(db: Session, record: DownloadRecord) -> None:
@@ -131,7 +131,7 @@ async def _import(db: Session, record: DownloadRecord) -> None:
         what = record.release_title
         if record.series_id and record.season_number is not None:
             what = f"{record.release_title} ({len(done)} episodes)"
-        await notify_event(db, event, f"{prefix}: {what}", legacy_discord_url=s.discord_webhook_url)
+        await notify_event(db, event, f"{prefix}: {what}", legacy_discord_url=s.discord_webhook_url, link="theden://downloads")
 
 
 def reap_seeded(db: Session) -> int:

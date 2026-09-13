@@ -28,7 +28,8 @@ Deploy target: native systemd service on Arch Linux (no Docker).
 - [x] M18 -- Upgrades (done 2026-09-12): upgradable titles, daily upgrade search, atomic file swap, badges everywhere
 - [x] M19 -- Failed-download handling (done 2026-09-13): stalled/dead detection, blocklist with expiry, automatic re-search, manual blocklist-and-retry everywhere
 - [x] M20 -- Season packs and season actions (done 2026-09-13): pack import, pack-first search, monitor/search/mark-have per season everywhere
-- [ ] M14, M21 -- Tier 1: shakedown, upgrades, failed-download handling, season packs, Android search + push -- planned, see [docs/tier1-plan.md](docs/tier1-plan.md)
+- [x] M21 -- Android search from Detail, ntfy push, deep links (done 2026-09-13): theden:// links on every notification, foreground ntfy subscriber with a channel per event, Releases from Detail
+- [ ] M14 -- Tier 1 shakedown on the HoltOS box (user), then server 1.0.0 -- see [docs/tier1-plan.md](docs/tier1-plan.md)
 - [ ] UI redesign track ("HoltOS Glass": left sidebar shell, glass/blur surfaces, poster-first pages, across web + KDE + Android) -- planned, see [docs/ui-redesign-plan.md](docs/ui-redesign-plan.md); sequenced ahead of M11's pages
 
 ## Notes

@@ -96,7 +96,7 @@ async def mark_available(db: Session) -> list[MediaRequest]:
         s = settings_module.effective(db)
         for req in done:
             requester = db.get(User, req.requested_by)
-            await notify_event(db, "request_available", f"**{_label(req)}** is now available" + (f" -- requested by {requester.username}" if requester else ""), legacy_discord_url=s.discord_webhook_url)
+            await notify_event(db, "request_available", f"**{_label(req)}** is now available" + (f" -- requested by {requester.username}" if requester else ""), legacy_discord_url=s.discord_webhook_url, link=f"theden://detail/{req.media_type}/{req.tmdb_id}")
     return done
 
 
@@ -183,7 +183,7 @@ async def create_request(db: Session, user: User, media_type: str, tmdb_id: int,
     if user.is_admin or user.auto_approve:
         await approve(db, req, user)
     else:
-        await notify_event(db, "request_submitted", f"**{user.username}** requested **{_label(req)}** -- approve it at /requests", legacy_discord_url=s.discord_webhook_url)
+        await notify_event(db, "request_submitted", f"**{user.username}** requested **{_label(req)}** -- approve it at /requests", legacy_discord_url=s.discord_webhook_url, link=f"theden://requests/{req.id}")
     return req
 
 
@@ -244,7 +244,7 @@ async def approve(db: Session, req: MediaRequest, admin: User) -> MediaRequest:
     req.decided_at = datetime.now(timezone.utc)
     db.commit()
     requester = db.get(User, req.requested_by)
-    await notify_event(db, "request_approved", f"Approved **{_label(req)}** for {requester.username if requester else 'someone'} -- The Den is looking for it", legacy_discord_url=s.discord_webhook_url)
+    await notify_event(db, "request_approved", f"Approved **{_label(req)}** for {requester.username if requester else 'someone'} -- The Den is looking for it", legacy_discord_url=s.discord_webhook_url, link=f"theden://requests/{req.id}")
     return req
 
 
@@ -268,7 +268,7 @@ async def decline(db: Session, req: MediaRequest, admin: User, note: str | None 
     db.commit()
     s = settings_module.effective(db)
     requester = db.get(User, req.requested_by)
-    await notify_event(db, "request_declined", f"Declined **{_label(req)}** for {requester.username if requester else 'someone'}" + (f": {req.note}" if req.note else ""), legacy_discord_url=s.discord_webhook_url)
+    await notify_event(db, "request_declined", f"Declined **{_label(req)}** for {requester.username if requester else 'someone'}" + (f": {req.note}" if req.note else ""), legacy_discord_url=s.discord_webhook_url, link=f"theden://requests/{req.id}")
     return req
 
 

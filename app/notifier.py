@@ -30,7 +30,7 @@ KINDS = {
 }
 
 
-async def send(kind: str, config: dict, title: str, message: str, event: str = "") -> None:
+async def send(kind: str, config: dict, title: str, message: str, event: str = "", link: str = "") -> None:
     """Send one notification through one agent kind. Raises on failure."""
     if kind not in KINDS:
         raise ValueError(f"unknown notification kind {kind!r}")
@@ -44,9 +44,11 @@ async def send(kind: str, config: dict, title: str, message: str, event: str = "
                 headers = {"Title": title, "Tags": event, "Priority": str(config.get("priority", 3))}
                 if config.get("token"):
                     headers["Authorization"] = f"Bearer {config['token']}"
+                if link:
+                    headers["Click"] = link
                 resp = await client.post(url, content=message.encode(), headers=headers)
             case "webhook":
-                resp = await client.post(config["url"], json={"event": event, "title": title, "message": message})
+                resp = await client.post(config["url"], json={"event": event, "title": title, "message": message, "link": link})
             case "telegram":
                 base = config.get("api_url", "https://api.telegram.org").rstrip("/")  # api_url: tests point it at a mock
                 resp = await client.post(
@@ -63,9 +65,10 @@ async def send(kind: str, config: dict, title: str, message: str, event: str = "
         resp.raise_for_status()
 
 
-async def notify_event(db: Session, event: str, message: str, title: str | None = None, legacy_discord_url: str = "") -> None:
+async def notify_event(db: Session, event: str, message: str, title: str | None = None, legacy_discord_url: str = "", link: str = "") -> None:
     """Fan one event out to every enabled agent subscribed to it (empty list = all events).
-    The legacy single Discord URL from Settings still fires unless an agent already covers it."""
+    The legacy single Discord URL from Settings still fires unless an agent already covers it.
+    link is a deep link (theden://...) that ntfy sends as the Click header and the webhook payload includes."""
     if not title:
         title = EVENTS.get(event, event)
 
@@ -77,13 +80,13 @@ async def notify_event(db: Session, event: str, message: str, title: str | None 
         subscribed = json.loads(agent.events or "[]")
         if not subscribed or event in subscribed:
             try:
-                await send(agent.kind, config, title, message, event)
+                await send(agent.kind, config, title, message, event, link)
             except Exception:
                 pass
 
     if legacy_discord_url and not already:
         try:
-            await send("discord", {"webhook_url": legacy_discord_url}, title, message, event)
+            await send("discord", {"webhook_url": legacy_discord_url}, title, message, event, link)
         except Exception:
             pass
 

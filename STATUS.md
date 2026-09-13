@@ -17,6 +17,8 @@ restores torrents from resume data. See ROADMAP.md's M10 section for the details
 two loopback-swarm gotchas that cost the most debugging time.
 
 ## Currently working on
+**M21 -- Android search from Detail, push, deep links (2026-09-13).** Every notification the server sends now carries a `theden://` deep link (ntfy `Click` header, webhook `link` field). The Android app (0.6.0) subscribes to the ntfy topic itself from a foreground service, shows each event on its own notification channel, opens the linked request, download or title when tapped, and lets admins open Releases from a tracked movie or season on Detail. Plan: `docs/tier1-plan.md`.
+
 **M20 -- season packs and season actions (2026-09-13).** Multi-file torrents import
 every episode they contain; automation prefers a season pack when most of a season is
 missing; each season on the series page (web, KDE, Android) can be monitored, searched,
