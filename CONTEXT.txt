@@ -3,66 +3,36 @@ THE DEN - WORKING CONTEXT
 Kept up to date by Claude at every milestone so a fresh session can resume without
 the chat history. Newest entries at the top of each section. Last updated: 2026-09-13.
 
-PICK UP HERE (2026-09-13, session handoff -- PAUSED MID-E9, UNCOMMITTED WORK IN THE TREE)
+PICK UP HERE (2026-09-13, E9 done and pushed, E10 is next)
 -------------------------------------------------------------------------------------------
 Tier 2 (docs/feature-research.md, E1-E10) is being worked through in table order, autonomously, per
-Liam's "just continue until all milestones are done." Done and pushed so far this session: E1, E2,
-E3 (earlier session), E4, E5, E6, E7, E8 -- see the DONE entries below for each.
+Liam's "just continue until all milestones are done." Done and pushed so far: E1, E2, E3 (earlier
+session), E4, E5, E6, E7, E8, E9 -- see the DONE entries below for each. E9 finished a session that
+had been paused mid-feature with uncommitted work (the pause and resume are both recorded in its
+DONE entry below).
 
-SESSION PAUSED BY LIAM MID-E9, ON HIS EXPLICIT REQUEST: "update the logs and leave the in progress
-edits as is." The working tree in C:\projects\theden (the-den server repo only) currently has
-UNCOMMITTED, UNTESTED edits toward E9 (per-user ntfy topic for request outcomes) -- do NOT assume
-these are correct or finished; they have not been run against a migration, not built, not tested,
-not reviewed end-to-end. The other two repos (the-den-client, the-den-android) have no uncommitted
-changes. Exact `git status --short` in the-den at pause time:
-    M app/models.py                                        (User.notify_ntfy_topic column added)
-    M app/notifier.py                                       (new notify_user() function added)
-    M app/requests_service.py                         (notify_user() wired into 3 of 4 call sites:
-                                                         request_available/approved/declined -- NOT
-                                                         request_submitted, deliberately, since that
-                                                         event is admin-facing not requester-facing)
-    M app/routers/auth.py                    (_user_out() exposes notify_ntfy_topic; new POST
-                                               /ui/profile/notifications web route; new POST
-                                               /api/auth/notifications JSON route for Android)
-    M app/templates/profile.html                    (new "Notifications" panel with the ntfy-topic
-                                                      field, following the existing password-panel's
-                                                      holt-panel + form pattern)
-    ?? migrations/versions/e8f9a0b1c2d3_notify_ntfy_topic.py   (new migration, revises d7e8f9a0b1c2,
-                                                                 adds users.notify_ntfy_topic)
-NEXT STEPS TO FINISH E9 (nothing below has been done yet -- do all of it before committing):
-  1. Run the migration round-trip against the test DB (upgrade/downgrade/upgrade) -- see the
-     e*_migrate.sh pattern used for every prior E-milestone this session, in the scratchpad dir of
-     whichever session did this (a fresh session should just write a new one, same pattern: upgrade,
-     downgrade -1, upgrade again, checking `alembic current` after each step).
-  2. `python -c "import app.main"` to confirm no import errors, then restart the test server
-     (WSL, port 8687, see CONTEXT.txt's dev-environment notes below) and hit /api/auth/me and
-     /ui/profile to confirm notify_ntfy_topic round-trips through both the JSON and HTML paths.
-  3. A DB-level smoke test of notifier.notify_user(): no topic configured -> no-op (mock send() and
-     assert it's never called); topic configured -> mock send() and assert it's called with kind=
-     "ntfy", the right topic, and the right event/message/link for each of the 3 wired call sites.
-  4. Android: TheDenApi.kt's Session/user response model needs `notify_ntfy_topic`, plus a new
-     endpoint for POST /api/auth/notifications. Then a small field/section needs to go somewhere in
-     MoreScreen.kt's account panel (the account header + PushSection() area, AdminScreens.kt) -- NOT
-     inside PushSection() itself, that's a different, device-level concern (which ntfy server+topic
-     THIS PHONE subscribes to, vs. this new feature which is which topic THE SERVER pushes the
-     user's own request outcomes to). No KDE for E9 (feature-research.md's surfaces column is
-     "server, web (profile), Android" -- no KDE listed).
-  5. Once verified, commit (the-den server first, then Android), push both, then update CONTEXT.txt/
-     ROADMAP.md/docs/feature-research.md's E9 row to done (M31), following the exact pattern of every
-     prior E-milestone's docs commit this session -- read one of those commits' diffs for the format.
-  6. Then E10 (backup/restore of the SQLite DB + settings export, server + web only per
-     feature-research.md's surfaces column) is the last Tier 2 item. No research has been done on E10
-     yet this session -- start fresh with a research agent the same way every other E-item did.
-  7. Once E10 is done, all of E1-E10 are complete; consider whether feature-research.md's own header/
-     summary section should be updated to reflect that Tier 2 as a whole is done.
-IF STARTING A FRESH SESSION: read the uncommitted diffs first (`git diff` in C:\projects\theden)
-  before writing any more code, to confirm they still look right and match this description --
-  don't just trust this summary blindly, verify against the actual diff.
+NEXT: E10 (backup/restore of the SQLite DB + settings export, server + web only per
+feature-research.md's surfaces column) is the last Tier 2 item. No research has been done on E10
+yet -- start fresh with a research agent the same way every other E-item did. Once E10 is done, all
+of E1-E10 are complete; consider whether feature-research.md's own header/summary section should be
+updated to reflect that Tier 2 as a whole is done.
+
 STANDING RULE (2026-09-13, learned the hard way): push to origin after EVERY milestone commit, not
   just at natural stopping points -- see the NOTE below about the rm -rf incident. Never let more than
   one commit sit unpushed. Use Windows git via the Bash tool for push (WSL git hangs indefinitely on
   a credential prompt with no helper configured -- do not use `wsl git push`, it will hang for the
   full session if not caught).
+
+BRIDGE NOTE (2026-09-13): lmstudio-bridge (4090, qwen2.5-coder-32b-instruct loaded, health_check and
+  get_current_model both fine) timed out on every run_coding_task call this session -- 4 straight
+  failures across both small one-line edits and the larger AdminScreens.kt/MoreScreen unit, each
+  given one or two attempts before being treated as failed. The 4080 (lmstudio-4080super) had no
+  model loaded at all. Per the standing local-model rule's two-failed-attempts exception, all of
+  E9's finishing-touches code (Android: TheDenApi.kt, ApiClient.kt's Session, SessionViewModel.kt,
+  AdminScreens.kt/MoreScreen, MainActivity.kt's nav wiring) and this session's docs updates (this
+  file, ROADMAP.md, feature-research.md) were written directly by Claude instead. A fresh session
+  hitting the same bridge should check LMSTUDIO_TIMEOUT/MCP_TOOL_TIMEOUT and whether qwen2.5-coder-
+  32b-instruct is simply too slow for the 4090's agentic tool-loop before assuming this was a fluke.
 
 REPOS AND VERSIONS
 ------------------
@@ -81,6 +51,25 @@ HoltOS Glass UI. Companion apps: KDE client (the-den-client) and Android app (th
 LAST TASK: M22 - DISCOVER GROUPED (MOVIES / SERIES) AND PAGED "VIEW MORE" (2026-09-13, done, tagged). the-den v0.6.7, client v0.4.11, android v0.6.1. Tier 1 plan:
   docs/tier1-plan.md; Tier 2 candidates: docs/feature-research.md (E1-E10). M22 was the first post-Tier-1 item (Liam's request), rails in
   app/routers/discover.py RAILS, tmdb.* take page=.
+DONE 2026-09-13: E9 - PER-USER NTFY TOPIC (DONE, M31, server + web + Android per feature-research.md's surfaces column --
+  no KDE for this one). New User.notify_ntfy_topic column (migration e8f9a0b1c2d3), notifier.notify_user() (a personal
+  ntfy.sh push, alongside not instead of the admin-configured agents
+  notify_event() already fans out to; no-ops cleanly with no topic or no user), wired into requests_service's three
+  requester-facing outcomes (mark_available/approve/decline) -- deliberately NOT request_submitted, since that event is
+  admin-facing. Server API: _user_out() exposes notify_ntfy_topic, new POST /ui/profile/notifications (web) and POST
+  /api/auth/notifications (JSON, Android) routes. Web: a Notifications panel on the profile page, following the existing
+  password panel's holt-panel + form pattern. Android: TheDenApi.kt's MeResponse/Session gain notifyNtfyTopic, a new
+  NotificationSettingsBody + updateNotifications() endpoint, SessionViewModel gains refresh()/saveNotifyTopic(), and a
+  new AccountNotificationsSection composable sits under the account header on the "More" tab -- distinct from the
+  existing PushSection (that's this device's own push subscription; this is the server's per-user setting).
+  This session resumed a prior session's pause: the code was already written and uncommitted (commit b668c9c, WIP/
+  untested) when picked up. Verified before commit: migration round-trip (upgrade/downgrade -1/upgrade) against the
+  test DB; `python -c "import app.main"` clean; a live HTTP pass against the restarted test server covering both the
+  HTML form (/ui/profile/notifications) and the JSON route (/api/auth/notifications), including the empty-string-clears
+  -to-null case; a DB-level smoke test of notify_user() (no topic -> no-op, no user -> no-op, topic set -> send() called
+  with the right kind/config/event/message/link, and a raised exception from send() is swallowed); Android assembleDebug
+  BUILD SUCCESSFUL and testDebugUnitTest 10/10 (LiveBackendTest 5/5, PushTest 5/5). See the BRIDGE NOTE above the DONE
+  log for why this session's Android/docs edits were written directly rather than through lmstudio-bridge.
 DONE 2026-09-13: M23 - MANUAL IMPORT (DONE, all three surfaces). the-den v0.6.9, client v0.4.12, android v0.6.2. See ROADMAP.md for the summary.
 DONE 2026-09-13: E5 - PER-TITLE HISTORY (DONE, all three surfaces). New `history_events` table (migration e2f3a4b5c6d7) and app/history.py
   (record/for_movie/for_episode/for_series/as_dicts). Recording added at every lifecycle point: grabber._grab ("grabbed"/"upgraded"), download_check._import
