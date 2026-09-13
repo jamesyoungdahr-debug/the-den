@@ -50,6 +50,8 @@ Output: a list of defects, fixed as they appear. Gate for everything below.
 
 ### M17 Custom formats (server, web; apps read-only)
 
+**Done 2026-09-12 (server 0.6.2, client 0.4.7, android 0.5.4).** `custom_formats` (name, JSON rules of {field, op, value, negate} over title / quality / source / codec / hdr / audio / group / language) and `profile_format_scores`; `quality_profiles.min_format_score`. `parse_release` in `app/parser.py` (source, codec, HDR/DV, audio, languages, group). `app/formats.py`: 16 built-in formats seeded at startup with default scores (Remux 60 … CAM -1000, foreign-language-only -200), `score_title`, `validate_rules`. `best_release` ranks by allowed quality, then format score, then seeders and rejects below the profile floor; candidates carry `score` and `formats`. `/api/formats` (CRUD, builtin rename/delete refused), `/api/formats/profiles` + PATCH (qualities, cutoff, floor, per-format scores), `/api/formats/test`. Web: Settings "Quality & formats" section (profile editor, format list with inline scores, rule dialog, title tester, `app/static/formats.js`), Releases page shows score and format chips. KDE and Android Releases pages show score and formats. Verified: `tests/test_formats.py` (20 titles + scoring), `m17_smoke.sh` API sweep, live candidates for The Matrix (290 releases scored), settings page in the browser, KDE harness, Android build. Not done: no TRaSH import; one profile only (the editor targets the first profile); the KDE/Android apps do not edit formats.
+
 - Tables `custom_formats` (name, rules: JSON list of {field: title|group|language,
   op: contains|regex, value, negate}) and `profile_format_scores` (profile, format,
   score). Seeded with the curated set at first run; user-editable.

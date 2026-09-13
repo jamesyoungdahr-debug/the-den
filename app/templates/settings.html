@@ -101,6 +101,7 @@
           <div class="holt-meta">Still fires for every event; add it as an agent above to pick events.</div>
         </div>
       </section>
+      {% include "_formats_section.html" %}
     </form>
 
     <section class="holt-panel" id="plex" style="grid-column: 2">
@@ -215,6 +216,7 @@
       <button type="button" class="holt-btn holt-btn-primary" id="agent-save">Save</button>
     </div>
   </dialog>
+  {% include "_formats_dialog.html" %}
 
   <script>
     // Notification agents (M15): the section above talks to /api/notifications directly.
@@ -312,4 +314,5 @@
     document.getElementById("agent-kind").addEventListener("change", () => renderFields(CURRENT));
     document.addEventListener("DOMContentLoaded", loadNotifications);
   </script>
+  <script src="/static/formats.js?v={{ static_v }}"></script>
 {% endblock %}

@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 
+from app import formats
 from app import indexers as indexer_engine
 from app.models import Episode, Movie, QualityProfile, Series
 from app.parser import parse_quality
@@ -27,7 +28,9 @@ async def scored_candidates(db: Session, query: str, profile: QualityProfile | N
     """Search all enabled indexers for `query`, quality-tag every release, and flag the best one."""
     releases = await indexer_engine.search_all(db, query)
 
-    best = best_release(releases, profile) if profile else None
+    scored_formats = formats.profile_scores(db, profile) if profile else []
+    details = {r.title: formats.score_title(r.title, scored_formats) for r in releases}   # title -> (score, [format names])
+    best = best_release(releases, profile, {t: d[0] for t, d in details.items()}) if profile else None
 
     scored = [
         {
@@ -38,9 +41,11 @@ async def scored_candidates(db: Session, query: str, profile: QualityProfile | N
             "seeders": r.seeders,
             "peers": r.peers,
             "quality": parse_quality(r.title),
+            "score": details[r.title][0],
+            "formats": details[r.title][1],
             "is_best": r is best,
         }
         for r in releases
     ]
-    scored.sort(key=lambda r: (not r["is_best"], -(r["seeders"] or 0)))
+    scored.sort(key=lambda r: (not r["is_best"], -r["score"], -(r["seeders"] or 0)))
     return scored

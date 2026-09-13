@@ -4,7 +4,7 @@
   <div class="holt-page-head">
     <div>
       <h1 class="holt-page-title">Releases</h1>
-      <div class="holt-meta">for {{ heading }} · {{ candidates|length }} found across enabled indexers · best match by quality profile, then seeders</div>
+      <div class="holt-meta">for {{ heading }} · {{ candidates|length }} found across enabled indexers · best match by quality profile, then format score, then seeders</div>
     </div>
     <div class="holt-toolbar"><a class="holt-btn holt-btn-quiet holt-btn-sm" href="{{ back_url }}">← Back</a></div>
   </div>
@@ -17,6 +17,8 @@
         <div class="holt-row-meta">{{ r.indexer_name }} · {{ r.size|filesizeformat(true) if r.size else 'size unknown' }} · {{ r.seeders if r.seeders is not none else "-" }} seeders · {{ r.peers if r.peers is not none else "-" }} peers</div>
       </div>
       <span class="holt-chip" style="padding:5px 10px">{{ r.quality }}</span>
+      <span class="holt-chip" style="padding:5px 10px" title="{{ r.formats|join(', ') if r.formats else 'no custom formats matched' }}">{{ '+' if r.score > 0 else '' }}{{ r.score }}</span>
+      {% for f in r.formats %}<span class="holt-chip is-on" style="padding:3px 8px;font-size:11px">{{ f }}</span>{% endfor %}
       {% if r.is_best %}<span class="holt-badge holt-badge-available"><span class="dot"></span>best match</span>{% endif %}
       <form method="post" action="{{ grab_action }}" style="margin:0">
         <input type="hidden" name="download_url" value="{{ r.download_url }}">

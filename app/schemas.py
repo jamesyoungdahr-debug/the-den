@@ -33,6 +33,8 @@ class ReleaseOut(BaseModel):
 
 class ScoredReleaseOut(ReleaseOut):
     quality: str
+    score: int = 0
+    formats: list[str] = []
     is_best: bool = False
 
 

@@ -1,0 +1,12 @@
+  <dialog id="format-dialog" class="holt-dialog holt-glass-float">
+    <div class="holt-eyebrow" id="format-dialog-title">Custom format</div>
+    <input type="hidden" id="format-id">
+    <div class="holt-field"><label for="format-name">Name</label><input id="format-name" placeholder="e.g. No RARBG"></div>
+    <div class="holt-field"><label>Rules · a release matches when every rule matches</label><div id="format-rules" style="display:flex; flex-direction:column; gap:6px"></div></div>
+    <div><a href="#" class="holt-btn holt-btn-quiet holt-btn-sm" onclick="addRule(); return false;">Add rule</a></div>
+    <div class="holt-field"><label for="format-score">Score for the default profile</label><input id="format-score" type="number" step="1" value="0"></div>
+    <div style="display:flex; gap:8px; justify-content:flex-end; margin-top: var(--holt-space-3)">
+      <button type="button" class="holt-btn holt-btn-quiet" onclick="document.getElementById('format-dialog').close()">Cancel</button>
+      <button type="button" class="holt-btn holt-btn-primary" id="format-save" onclick="saveFormat()">Save</button>
+    </div>
+  </dialog>

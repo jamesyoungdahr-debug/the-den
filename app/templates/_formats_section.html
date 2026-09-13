@@ -1,0 +1,18 @@
+      <section class="holt-panel" id="formats">
+        <div class="holt-panel-head"><div class="holt-eyebrow">Quality &amp; formats</div><div class="holt-meta">what automation prefers: allowed qualities, cutoff, custom-format scores</div></div>
+        <div class="holt-field"><label for="profile-qualities">Allowed qualities, best first (comma separated)</label><input id="profile-qualities" placeholder="1080p,720p,480p"></div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: var(--holt-space-3)">
+          <div class="holt-field"><label for="profile-cutoff">Cutoff</label><select id="profile-cutoff"></select><div class="holt-meta">stop searching once this quality is had</div></div>
+          <div class="holt-field"><label for="profile-min-score">Minimum format score</label><input id="profile-min-score" type="number" step="1" value="0"><div class="holt-meta">releases scoring below this are never grabbed</div></div>
+        </div>
+        <div style="margin-top: var(--holt-space-2)"><a href="#" class="holt-btn holt-btn-secondary holt-btn-sm" onclick="saveProfile(); return false;">Save profile</a></div>
+        <div class="holt-panel-head" style="margin-top: var(--holt-space-4)"><div class="holt-eyebrow">Custom formats</div><div class="holt-meta">each matched format adds its score to a release</div></div>
+        <div id="format-list" class="holt-row-list"></div>
+        <div id="format-result" class="holt-message" style="display:none; margin-top: var(--holt-space-2);"></div>
+        <div style="margin-top: var(--holt-space-3); display:flex; gap: 8px; flex-wrap: wrap; align-items: center">
+          <a href="#" class="holt-btn holt-btn-secondary holt-btn-sm" onclick="openFormat(null); return false;">Add format</a>
+          <input id="format-test-title" placeholder="paste a release title to score it" style="flex:1; min-width: 220px">
+          <a href="#" class="holt-btn holt-btn-quiet holt-btn-sm" onclick="testTitle(); return false;">Score it</a>
+        </div>
+        <div id="format-test-result" class="holt-message" style="display:none; margin-top: var(--holt-space-2);"></div>
+      </section>

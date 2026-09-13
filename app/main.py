@@ -5,12 +5,12 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
 
-from app import auth, automation, health, scheduler
+from app import auth, automation, formats, health, scheduler
 from app import settings as settings_module
 from app.db import SessionLocal, engine as db_engine
 from app.deps import get_db
 from app.models import QualityProfile
-from app.routers import api_settings, discover, downloads, indexers, library, movies, notifications, plex as plex_routes, requests as request_routes, search, series, torrents, ui, users
+from app.routers import api_settings, discover, downloads, indexers, library, movies, notifications, plex as plex_routes, requests as request_routes, search, series, torrents, ui, users, formats as format_routes
 from app.routers import auth as auth_routes
 from app.templating import templates
 from app.torrent import engine as torrent_engine
@@ -31,6 +31,7 @@ app.include_router(downloads.router)
 app.include_router(torrents.router)
 app.include_router(api_settings.router)
 app.include_router(notifications.router)
+app.include_router(format_routes.router)
 app.include_router(ui.router)
 
 
@@ -93,6 +94,7 @@ def seed_default_quality_profile():
         if not db.query(QualityProfile).first():
             db.add(QualityProfile(name="Default", allowed_qualities="1080p,720p,480p", cutoff="1080p"))
             db.commit()
+        formats.seed_builtin(db)
     finally:
         db.close()
 

@@ -17,6 +17,13 @@ restores torrents from resume data. See ROADMAP.md's M10 section for the details
 two loopback-swarm gotchas that cost the most debugging time.
 
 ## Currently working on
+**M17 -- custom formats (2026-09-12).** Release titles are parsed into source / codec /
+HDR / audio / language / group; 16 built-in custom formats (editable, plus your own rule
+sets) each carry a score per quality profile, and the profile has a minimum score below
+which a release is never grabbed. Selection is quality, then score, then seeders. Managed
+from Settings -> Quality & formats on the web; the Releases page and both apps show each
+release's score and matched formats. Plan: `docs/tier1-plan.md`.
+
 **M16 -- health and indexer stats (2026-09-12).** Every search is counted per indexer per
 day (`indexer_stats`); `app/health.py` checks folders, the torrent engine, the Cloudflare
 solver, the Plex token and failing indexers at the end of each automation cycle, keeps the

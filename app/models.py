@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 
 from app.db import Base
 
@@ -30,6 +30,7 @@ class QualityProfile(Base):
     name = Column(String, nullable=False)
     allowed_qualities = Column(String, nullable=False)  # comma-separated, best first
     cutoff = Column(String, nullable=False)  # stop searching once this quality is had
+    min_format_score = Column(Integer, nullable=False, default=0)  # releases scoring below this are rejected
 
 
 class Movie(Base):
@@ -250,3 +251,28 @@ class HealthIssue(Base):
     message = Column(String, nullable=False)
     first_seen = Column(DateTime, nullable=False)
     last_seen = Column(DateTime, nullable=False)
+
+
+class CustomFormat(Base):
+    """A named release-title rule set (M17): rules is a JSON list of
+    {"field": "title"|"group"|"language"|"source", "op": "contains"|"regex", "value": str, "negate": bool}.
+    A release matches the format when every rule matches."""
+
+    __tablename__ = "custom_formats"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False, unique=True)
+    rules = Column(Text, nullable=False, default="[]")  # JSON list
+    builtin = Column(Boolean, nullable=False, default=False)
+
+
+class ProfileFormatScore(Base):
+    """Score a quality profile gives a custom format; missing row means 0."""
+
+    __tablename__ = "profile_format_scores"
+    __table_args__ = (UniqueConstraint("profile_id", "format_id", name="uq_profile_format"),)
+
+    id = Column(Integer, primary_key=True)
+    profile_id = Column(Integer, ForeignKey("quality_profiles.id", ondelete="CASCADE"), nullable=False)
+    format_id = Column(Integer, ForeignKey("custom_formats.id", ondelete="CASCADE"), nullable=False)
+    score = Column(Integer, nullable=False, default=0)
