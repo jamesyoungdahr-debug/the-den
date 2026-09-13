@@ -85,6 +85,9 @@ The web UI binds to `127.0.0.1:8686` only. Sign-in is optional by default (see
 Accounts); set `AUTH_REQUIRED=true` and put a TLS reverse proxy in front of it before
 exposing it beyond localhost. The torrent client listens on `TORRENT_PORT` (default 6881,
 TCP+UDP) on all interfaces; forward that port on your router for better peer connectivity.
+The built-in Cloudflare solver opens Chromium headed when a display is available (that
+clears the check most reliably); set `DEN_SOLVER_HEADLESS=1` to keep it windowless anyway,
+for example on a dev box with WSLg where the browser would pop up on your desktop.
 This packaging has been run for real through `makepkg -si` + `pacman -U` +
 `systemctl enable --now` on genuine Arch Linux (WSL2, not literally CachyOS -- see
 ROADMAP.md for details) and came up cleanly.

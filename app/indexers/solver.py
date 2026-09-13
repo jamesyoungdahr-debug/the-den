@@ -65,7 +65,8 @@ async def _get_browser():
         sandbox=os.geteuid() != 0 if hasattr(os, "geteuid") else True,
         # With a display (a desktop, or Xvfb via the systemd unit) the browser runs headed,
         # which Cloudflare clears far more reliably than any headless mode.
-        browser_args=([] if os.environ.get("DISPLAY") else ["--headless=new"]) + ["--disable-gpu", "--no-first-run", "--window-size=1280,900", "--lang=en-US"],
+        # DEN_SOLVER_HEADLESS=1 forces the windowless mode anyway (dev boxes with WSLg, where a headed browser pops up on the desktop).
+        browser_args=([] if os.environ.get("DISPLAY") and os.environ.get("DEN_SOLVER_HEADLESS", "").lower() not in ("1", "true", "yes") else ["--headless=new"]) + ["--disable-gpu", "--no-first-run", "--window-size=1280,900", "--lang=en-US"],
     )
     return _browser
 
