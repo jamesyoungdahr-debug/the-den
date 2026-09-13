@@ -42,7 +42,7 @@ quotas and approval, accounts and API tokens, a Glass UI on all three surfaces.
 | E5 (done 2026-09-13, M24) | **Blocklist and history**: every grab, import, failure and removal with timestamps; per-title history on the detail page; "blocklist this release". | server (table), web/KDE/Android (history tab) |
 | E6 | **Subtitles**: Bazarr-style OpenSubtitles fetch per language preference. | server, settings on all surfaces |
 | E7 (done 2026-09-13, M28) | **Usenet download client**: the presets already list 13 Newznab indexers, but there is no NZB downloader (SABnzbd/NZBGet integration, or a built-in one). Until then the usenet presets only work for people who also run an NZB client. Shipped: SABnzbd integration (URL + API key, matching the FlareSolverr precedent). Not shipped: NZBGet (one client was enough scope; SABnzbd is the more common choice) and a distinct usenet queue view on the Downloads page (grab/check/import works, but the page still only shows torrents). | server (downloader abstraction), settings |
-| E8 | **Request comments and reasons**: decline with a note (exists) plus a user-visible thread; "request 4K" as a variant. | server, web, Android |
+| E8 (done 2026-09-13, M29) | **Request comments and reasons**: decline with a note (exists) plus a user-visible thread; "request 4K" as a variant. | server, web, Android |
 | E9 | **Per-user notification settings** for request outcomes (email or ntfy per user). | server, web (profile), Android |
 | E10 | **Backup and restore** of the SQLite database and settings from the web UI, and an export of the indexer list. | server, web |
 

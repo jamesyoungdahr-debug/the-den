@@ -70,6 +70,15 @@ DONE 2026-09-13: E7 - USENET VIA SABNZBD (DONE, server + web only, per feature-r
   duplicating logic. Verified: migration round-trip, a DB-level smoke test of the full grab->check->import->reap pipeline against a mocked SABnzbd
   client, a live settings save/read round-trip, and confirmed the existing torrent path still works after the download_check.py rewrite. the-den
   commit 6d4d6fd (untagged).
+DONE 2026-09-13: E8 - REQUEST COMMENTS AND A 4K FLAG (DONE, server + web + Android, per feature-research.md's surfaces column -- no KDE for this one).
+  New request_comments table (mirrors HistoryEvent's append-only/FK-to-parent shape; new visibility rule -- requester + any admin, via
+  _can_see_comments()). MediaRequest.is_4k is informational only (no quality-profile routing). New GET/POST /api/requests/{id}/comments; a JS-driven
+  panel on web requests.html and a ModalBottomSheet on Android's RequestsScreen.kt, both new UI since no comment-thread precedent existed anywhere
+  in the app. Two real bugs found and fixed during testing: the new endpoints used the HTML-route _require_me() helper (redirect) instead of the
+  JSON-API 401 convention; deleting a request didn't delete its orphaned comments (SQLite doesn't cascade, and a reused autoincrement id could
+  resurface them under an unrelated request) -- fixed with requests_service.delete_request(). Verified: migration round-trip, a live HTTP smoke
+  test covering the full comment CRUD + both bug fixes, a live browser pass, and an Android debug build. the-den commit c45e207 (untagged), android
+  v0.6.6.
 TIER 1 STATUS: M15 notifications, M16 health/stats, M17 custom formats, M18 upgrades, M19 failed downloads, M20 season packs, M21 Android push are
   DONE and pushed (server 0.6.0 -> 0.6.6, client 0.4.5 -> 0.4.10, android 0.5.2 -> 0.6.0, each tagged). Remaining: M14 shakedown on the HoltOS box
   (user); no 1.0.0 planned, the server stays on 0.x (Liam, 2026-09-13). Verification so far is API smokes, fake-engine probes, the KDE harness, Android JVM tests and builds; the local-swarm
