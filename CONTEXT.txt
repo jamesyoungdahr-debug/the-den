@@ -17,7 +17,7 @@ FastAPI + SQLAlchemy/Alembic (SQLite) + Jinja2 + APScheduler media manager with 
 libtorrent client, Discover (TMDB), Plex login + library scan, Requests with quotas, and the
 HoltOS Glass UI. Companion apps: KDE client (the-den-client) and Android app (the-den-android).
 
-LAST TASK: M19 - FAILED-DOWNLOAD HANDLING (2026-09-13). the-den v0.6.4, client v0.4.9, android v0.5.6. Plan: docs/tier1-plan.md (M14 shakedown is the user's; M20 season packs is next for Claude). Android 0.5.6 APK built, not yet installed on the phones. Not done: local-swarm e2e for M18/M19. The 4090 bridge timed out on every run_coding_task during M19 (plain chat still answered) -- restart the LM Studio server there before the next milestone; the 4080 did the M19 units.
+LAST TASK: M20 - SEASON PACKS (2026-09-13). the-den v0.6.5, client v0.4.10, android v0.5.7. Plan: docs/tier1-plan.md (M14 shakedown is the user's; M21 Android search + push is next for Claude). Android 0.5.7 APK built, not yet installed on the phones. Not done: local-swarm e2e for M18-M20. Local models: both restarted with 32k context; the 4080 (rnj-1) did most of M19/M20 reliably on files under ~200 lines; the 4090 (qwen3-coder) passes tiny probes but times out on most real files, works sometimes on ~100-line files.
   Previous: M17 custom formats done (the-den v0.6.2, client v0.4.7, android v0.5.4). Plan: docs/tier1-plan.md. Local-model workflow: the 4090 runs
   qwen3-coder-30b-a3b (32k ctx), the 4080 runs essentialai/rnj-1 (32k ctx); both edit files themselves via run_coding_task; whole-file rewrites over
   ~300 lines time out, so add big markup as Jinja partials / new files and keep long-file edits for Claude after two failures.

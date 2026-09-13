@@ -102,6 +102,7 @@ class EpisodeOut(BaseModel):
     title: str | None = None
     air_date: str | None = None
     has_file: bool
+    monitored: bool = True
     file_quality: str | None = None
     file_score: int = 0
     upgradable: bool = False

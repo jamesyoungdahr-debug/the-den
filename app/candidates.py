@@ -1,10 +1,12 @@
+from collections.abc import Callable
 from sqlalchemy.orm import Session
 
 from app import blocklist
 from app import formats
 from app import indexers as indexer_engine
 from app.models import Episode, Movie, QualityProfile, Series
-from app.parser import parse_quality
+from app.parser import parse_quality, parse_season_pack
+from app.torznab import Release
 from app.scoring import best_release
 
 
@@ -25,11 +27,20 @@ def episode_query(series: Series, episode: Episode) -> str:
     return f"{series.title} S{episode.season_number:02d}E{episode.episode_number:02d}"
 
 
-async def scored_candidates(db: Session, query: str, profile: QualityProfile | None) -> list[dict]:
-    """Search all enabled indexers for `query`, quality-tag every release, and flag the best one."""
+def season_query(series: Series, season_number: int) -> str:
+    """Indexer query for a whole season: `Show S01` is the form season packs are named after."""
+    return f"{series.title} S{season_number:02d}"
+
+
+async def scored_candidates(db: Session, query: str, profile: QualityProfile | None, keep: Callable[[Release], bool] | None = None) -> list[dict]:
+    """Search all enabled indexers for `query`, quality-tag every release, and flag the best one.
+    `keep` drops releases before scoring (season packs use it)."""
     releases = await indexer_engine.search_all(db, query)
     keys = blocklist.blocked_keys(db)
     releases = [r for r in releases if not blocklist.is_blocked(r.title, r.download_url, keys)]
+
+    if keep is not None:
+        releases = [r for r in releases if keep(r)]
 
     scored_formats = formats.profile_scores(db, profile) if profile else []
     details = {r.title: formats.score_title(r.title, scored_formats) for r in releases}   # title -> (score, [format names])
@@ -52,3 +63,8 @@ async def scored_candidates(db: Session, query: str, profile: QualityProfile | N
     ]
     scored.sort(key=lambda r: (not r["is_best"], -r["score"], -(r["seeders"] or 0)))
     return scored
+
+
+async def season_candidates(db: Session, series: Series, season_number: int, profile: QualityProfile | None) -> list[dict]:
+    """Releases that are whole-season packs for this season, scored like any candidate."""
+    return await scored_candidates(db, season_query(series, season_number), profile, keep=lambda r: parse_season_pack(r.title) == season_number)

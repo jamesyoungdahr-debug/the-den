@@ -37,6 +37,16 @@
         {% if season.have == season.total %}<span class="holt-badge holt-badge-available"><span class="dot"></span>complete</span>
         {% elif season.have %}<span class="holt-badge holt-badge-partial"><span class="dot"></span>partial</span>
         {% else %}<span class="holt-badge holt-badge-missing"><span class="dot"></span>missing</span>{% endif %}
+        {% if is_admin %}
+        <div class="holt-row-actions" onclick="event.stopPropagation()" style="display:flex; gap:6px; margin-left:auto">
+          <form method="post" action="/ui/series/{{ series.id }}/seasons/{{ season.number }}/{{ 'unmonitor' if season.monitored else 'monitor' }}" style="margin:0"><button type="submit" class="holt-btn holt-btn-quiet holt-btn-sm">{{ 'Unmonitor' if season.monitored else 'Monitor' }}</button></form>
+          {% if season.have < season.total %}
+          <a href="/ui/series/{{ series.id }}/seasons/{{ season.number }}/candidates" class="holt-btn holt-btn-quiet holt-btn-sm">Season packs</a>
+          <form method="post" action="/ui/series/{{ series.id }}/seasons/{{ season.number }}/search" style="margin:0"><button type="submit" class="holt-btn holt-btn-secondary holt-btn-sm">Search season</button></form>
+          <form method="post" action="/ui/series/{{ series.id }}/seasons/{{ season.number }}/mark-have" style="margin:0"><button type="submit" class="holt-btn holt-btn-quiet holt-btn-sm">Mark as have</button></form>
+          {% endif %}
+        </div>
+        {% endif %}
         <svg class="holt-ico den-season-chevron" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"></path></svg>
       </summary>
       <div class="holt-row-list" style="margin-top: var(--holt-space-2)">
@@ -47,7 +57,7 @@
             <div class="holt-row-meta">{{ e.air_date or 'no air date' }}</div>
           </div>
           {% if e.has_file and e.id in upgradable_ids %}<span class="holt-badge holt-badge-partial"><span class="dot"></span>{{ e.file_quality or 'have' }} · upgradable</span>
-          {% elif e.has_file %}<span class="holt-badge holt-badge-available"><span class="dot"></span>have{% if e.file_quality %} · {{ e.file_quality }}{% endif %}</span>
+          {% elif e.has_file %}<span class="holt-badge holt-badge-available"><span class="dot"></span>have{%if e.file_quality %} · {{ e.file_quality }}{% endif %}</span>
           {% else %}<span class="holt-badge holt-badge-missing"><span class="dot"></span>missing</span>{% endif %}
           {% if is_admin and (not e.has_file or e.id in upgradable_ids) %}<a href="/ui/episodes/{{ e.id }}/candidates" class="holt-btn holt-btn-quiet holt-btn-sm">Find releases</a>{% endif %}
         </div>

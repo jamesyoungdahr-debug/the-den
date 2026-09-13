@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app import auth, tvmaze
-from app.candidates import episode_query, profile_for, scored_candidates
+from app import auth, automation, tvmaze
+from app.candidates import episode_query, profile_for, scored_candidates, season_candidates
 from app.deps import get_db
-from app.grabber import grab_episode as do_grab_episode
+from app.grabber import grab_episode as do_grab_episode, grab_season as do_grab_season
 from app.models import DownloadRecord, Episode, Series
 from app.schemas import DownloadRecordOut, EpisodeOut, GrabRequest, ScoredReleaseOut, SeriesCreate, SeriesOut
 from app.scoring import is_upgradable
@@ -103,3 +104,57 @@ async def grab_episode(episode_id: int, payload: GrabRequest, db: Session = Depe
         return await do_grab_episode(db, episode, payload.download_url, payload.release_title)
     except Exception as exc:
         raise HTTPException(502, f"Failed to send to download client: {exc}")
+
+
+class SeasonMonitor(BaseModel):
+    monitored: bool
+
+
+def _season(db: Session, series_id: int, season_number: int) -> tuple[Series, list[Episode]]:
+    series = db.get(Series, series_id)
+    if not series:
+        raise HTTPException(404, "Series not found")
+    episodes = db.query(Episode).filter(Episode.series_id == series_id, Episode.season_number == season_number).order_by(Episode.episode_number).all()
+    if not episodes:
+        raise HTTPException(404, "Season not found")
+    return series, episodes
+
+
+@router.get("/series/{series_id}/seasons/{season_number}/candidates", response_model=list[ScoredReleaseOut], dependencies=[Depends(auth.require_admin)])
+async def season_candidates_route(series_id: int, season_number: int, db: Session = Depends(get_db)):
+    series, _ = _season(db, series_id, season_number)
+    return await season_candidates(db, series, season_number, profile_for(db, series.quality_profile_id))
+
+
+@router.post("/series/{series_id}/seasons/{season_number}/grab", response_model=DownloadRecordOut, dependencies=[Depends(auth.require_admin)])
+async def grab_season(series_id: int, season_number: int, payload: GrabRequest, db: Session = Depends(get_db)):
+    series, _ = _season(db, series_id, season_number)
+    try:
+        return await do_grab_season(db, series, season_number, payload.download_url, payload.release_title)
+    except Exception as exc:
+        raise HTTPException(502, f"Failed to send to download client: {exc}")
+
+
+@router.post("/series/{series_id}/seasons/{season_number}/monitor", dependencies=[Depends(auth.require_admin)])
+async def monitor_season(series_id: int, season_number: int, payload: SeasonMonitor, db: Session = Depends(get_db)):
+    _, episodes = _season(db, series_id, season_number)
+    for e in episodes:
+        e.monitored = payload.monitored
+    db.commit()
+    return {"season_number": season_number, "monitored": payload.monitored, "episodes": len(episodes)}
+
+
+@router.post("/series/{series_id}/seasons/{season_number}/mark-have", dependencies=[Depends(auth.require_admin)])
+async def mark_season_have(series_id: int, season_number: int, db: Session = Depends(get_db)):
+    _, episodes = _season(db, series_id, season_number)
+    for e in episodes:
+        e.has_file = True
+    db.commit()
+    return {"season_number": season_number, "have": len(episodes)}
+
+
+@router.post("/series/{series_id}/seasons/{season_number}/search", dependencies=[Depends(auth.require_admin)])
+async def search_season_route(series_id: int, season_number: int, db: Session = Depends(get_db)):
+    series, _ = _season(db, series_id, season_number)
+    grabbed = await automation.search_season(db, series, season_number)
+    return {"season_number": season_number, "grabbed": grabbed}

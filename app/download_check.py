@@ -80,6 +80,7 @@ async def check_and_import(db: Session, record: DownloadRecord) -> None:
 async def _import(db: Session, record: DownloadRecord) -> None:
     s = settings_module.effective(db)
     files = engine.files(record.info_hash)
+    done = {}
     imported = False
     if record.movie_id:
         movie = db.get(Movie, record.movie_id)
@@ -93,6 +94,22 @@ async def _import(db: Session, record: DownloadRecord) -> None:
             movie.file_score = record.score or 0
             movie.file_path = str(dest)
             imported = True
+    elif record.series_id and record.season_number is not None:
+        series = db.get(Series, record.series_id)
+        if series is None:
+            record.status = "failed"
+            return
+        season_eps = db.query(Episode).filter(Episode.series_id == series.id, Episode.season_number == record.season_number).all()
+        done, unmatched = importer.import_season_pack(files, series, record.season_number, {e.episode_number: e for e in season_eps}, s.tv_root)
+        for e in season_eps:
+            if e.episode_number in done:
+                e.has_file = True
+                e.file_quality = record.quality
+                e.file_score = record.score or 0
+                e.file_path = str(done[e.episode_number])
+        imported = bool(done)
+        if unmatched:
+            record.failure_reason = f"{len(unmatched)} file(s) matched no episode: " + ", ".join(unmatched[:5])
     elif record.episode_id:
         episode = db.get(Episode, record.episode_id)
         series = db.get(Series, episode.series_id) if episode else None
@@ -111,7 +128,10 @@ async def _import(db: Session, record: DownloadRecord) -> None:
     if imported:
         event = "upgraded" if record.upgrade else "imported"
         prefix = "Upgraded" if record.upgrade else "Imported"
-        await notify_event(db, event, f"{prefix}: {record.release_title}", legacy_discord_url=s.discord_webhook_url)
+        what = record.release_title
+        if record.series_id and record.season_number is not None:
+            what = f"{record.release_title} ({len(done)} episodes)"
+        await notify_event(db, event, f"{prefix}: {what}", legacy_discord_url=s.discord_webhook_url)
 
 
 def reap_seeded(db: Session) -> int:

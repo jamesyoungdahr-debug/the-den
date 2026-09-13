@@ -10,6 +10,7 @@ import shutil
 from pathlib import Path
 
 from app.models import Episode, Movie, Series
+from app.parser import parse_episode
 from app.torrent import TorrentFile
 
 VIDEO_EXTENSIONS = {".mkv", ".mp4", ".avi", ".m4v", ".mov", ".ts", ".wmv"}
@@ -84,3 +85,29 @@ def import_episode(files: list[TorrentFile], series: Series, episode: Episode, t
     dest_dir = Path(tv_root) / _safe_name(series.title) / f"Season {episode.season_number:02d}"
     name = episode_name(series, episode)
     return _link_into(files, dest_dir, name=name, replace=Path(replace) if replace else None)
+
+
+def import_season_pack(files: list[TorrentFile], series: Series, season_number: int, episodes: dict[int, Episode], tv_root: str) -> tuple[dict[int, Path], list[str]]:
+    """Import every video file of a multi-episode torrent to the episode it names.
+    `episodes` maps episode number -> Episode for this season. Returns
+    ({episode_number: library path written}, [file names that matched no episode]).
+    Files whose parsed season differs from `season_number`, or whose episode is not in
+    `episodes`, count as unmatched. Samples (name contains 'sample') are skipped silently."""
+    dest_dir = Path(tv_root) / _safe_name(series.title) / f"Season {season_number:02d}"
+    imported: dict[int, Path] = {}
+    unmatched: list[str] = []
+    for f in files:
+        source = Path(f.path)
+        if source.suffix.lower() not in VIDEO_EXTENSIONS or not source.is_file():
+            continue
+        if "sample" in source.name.lower():
+            continue
+        parsed = parse_episode(source.name)
+        if parsed is None or parsed[0] != season_number or parsed[1] not in episodes:
+            unmatched.append(source.name)
+            continue
+        episode = episodes[parsed[1]]
+        dest = _link_into([f], dest_dir, name=episode_name(series, episode), replace=Path(episode.file_path) if episode.file_path else None)
+        if dest is not None:
+            imported[parsed[1]] = dest
+    return imported, unmatched

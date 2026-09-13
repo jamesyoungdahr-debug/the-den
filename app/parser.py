@@ -114,3 +114,28 @@ def parse_release(release_title: str) -> dict:
         "languages": languages,
         "title": release_title
     }
+
+
+_EPISODE_RE = re.compile(r"\bS(\d{1,2})[\s._-]?E(\d{1,3})\b|\b(\d{1,2})x(\d{2,3})\b", re.IGNORECASE)
+_SEASON_RE = re.compile(r"\bS(\d{1,2})\b(?![\s._-]?E\d)|\bSeason[\s._-]?(\d{1,2})\b", re.IGNORECASE)
+
+
+def parse_episode(name: str) -> tuple[int, int] | None:
+    """(season, episode) from a file or release name: S01E02, s1e2, 1x02. None when absent."""
+    m = _EPISODE_RE.search(name or "")
+    if not m:
+        return None
+    if m.group(1) is not None:
+        return int(m.group(1)), int(m.group(2))
+    return int(m.group(3)), int(m.group(4))
+
+
+def parse_season_pack(release_title: str) -> int | None:
+    """The season number when a release title names a whole season (S01, Season 1, S01.COMPLETE)
+    and no single episode; None for episode releases and titles without a season."""
+    if _EPISODE_RE.search(release_title or ""):
+        return None
+    m = _SEASON_RE.search(release_title or "")
+    if not m:
+        return None
+    return int(m.group(1) if m.group(1) is not None else m.group(2))

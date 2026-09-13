@@ -9,12 +9,12 @@ from app import indexers as indexer_engine
 from app import auth, config, library_service
 from app import settings as settings_module
 from app import tmdb, torznab, tvmaze
-from app.candidates import episode_query, movie_query, profile_for, scored_candidates
-from app import blocklist
+from app.candidates import episode_query, movie_query, profile_for, scored_candidates, season_candidates
+from app import automation, blocklist
 from app.scoring import is_upgradable
 from app.deps import get_db
 from app.download_check import check_and_import
-from app.grabber import grab_episode as do_grab_episode
+from app.grabber import grab_episode as do_grab_episode, grab_season as do_grab_season
 from app.grabber import grab_movie as do_grab_movie
 from app.models import BlocklistEntry, DownloadRecord, Episode, Indexer, Movie, Series
 from app.routers.api_settings import apply_runtime_changes
@@ -293,10 +293,11 @@ def ui_series_detail(series_id: int, request: Request, db: Session = Depends(get
     seasons: list[dict] = []
     for e in episodes:
         if not seasons or seasons[-1]["number"] != e.season_number:
-            seasons.append({"number": e.season_number, "episodes": [], "have": 0, "total": 0})
+            seasons.append({"number": e.season_number, "episodes": [], "have": 0, "total": 0, "monitored": False})
         seasons[-1]["episodes"].append(e)
         seasons[-1]["total"] += 1
         seasons[-1]["have"] += 1 if e.has_file else 0
+        seasons[-1]["monitored"] = seasons[-1]["monitored"] or bool(e.monitored)
     return templates.TemplateResponse(
         "series_detail.html",
         {
@@ -328,6 +329,59 @@ async def ui_episode_candidates(episode_id: int, request: Request, db: Session =
             "active_nav": "tv",
         },
     )
+
+
+@router.get("/ui/series/{series_id}/seasons/{season_number}/candidates", response_class=HTMLResponse, dependencies=ADMIN)
+async def ui_season_candidates(series_id: int, season_number: int, request: Request, db: Session = Depends(get_db)):
+    series = db.get(Series, series_id)
+    if not series:
+        raise HTTPException(404, "Series not found")
+    candidates = await season_candidates(db, series, season_number, profile_for(db, series.quality_profile_id))
+    return templates.TemplateResponse(
+        "candidates.html",
+        {
+            "request": request,
+            "heading": f"{series.title} S{season_number:02d} (season pack)",
+            "grab_action": f"/ui/series/{series.id}/seasons/{season_number}/grab",
+            "back_url": f"/ui/series/{series.id}",
+            "candidates": candidates,
+            "active_nav": "tv",
+        },
+    )
+
+
+@router.post("/ui/series/{series_id}/seasons/{season_number}/grab", dependencies=ADMIN)
+async def ui_grab_season(series_id: int, season_number: int, download_url: str = Form(...), release_title: str = Form(...), db: Session = Depends(get_db)):
+    series = db.get(Series, series_id)
+    if not series:
+        raise HTTPException(404, "Series not found")
+    try:
+        await do_grab_season(db, series, season_number, download_url, release_title)
+    except Exception as exc:
+        raise HTTPException(502, f"Failed to send to download client: {exc}")
+    return RedirectResponse("/ui/downloads", status_code=303)
+
+
+@router.post("/ui/series/{series_id}/seasons/{season_number}/{action}", dependencies=ADMIN)
+async def ui_season_action(series_id: int, season_number: int, action: str, db: Session = Depends(get_db)):
+    """monitor | unmonitor | mark-have | search, from the season header on the series page."""
+    series = db.get(Series, series_id)
+    if not series:
+        raise HTTPException(404, "Series not found")
+    episodes = db.query(Episode).filter(Episode.series_id == series_id, Episode.season_number == season_number).all()
+    if action in ("monitor", "unmonitor"):
+        for e in episodes:
+            e.monitored = action == "monitor"
+        db.commit()
+    elif action == "mark-have":
+        for e in episodes:
+            e.has_file = True
+        db.commit()
+    elif action == "search":
+        await automation.search_season(db, series, season_number)
+    else:
+        raise HTTPException(404, "Unknown season action")
+    return RedirectResponse(f"/ui/series/{series_id}", status_code=303)
 
 
 @router.post("/ui/episodes/{episode_id}/grab", dependencies=ADMIN)

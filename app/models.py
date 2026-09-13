@@ -128,9 +128,12 @@ class DownloadRecord(Base):
     __tablename__ = "download_records"
 
     id = Column(Integer, primary_key=True)
-    # Exactly one of these is set, depending on whether this download is a movie or an episode.
+    # One of movie_id, episode_id or (series_id + season_number) is set.
     movie_id = Column(Integer, ForeignKey("movies.id"), nullable=True)
     episode_id = Column(Integer, ForeignKey("episodes.id"), nullable=True)
+    # A season pack sets these instead of episode_id: every episode file in the torrent is imported.
+    series_id = Column(Integer, ForeignKey("series.id"), nullable=True)
+    season_number = Column(Integer, nullable=True)
     release_title = Column(String, nullable=False)
     download_url = Column(String, nullable=False)
     # Key into the built-in torrent engine (app/torrent). Null only for records that

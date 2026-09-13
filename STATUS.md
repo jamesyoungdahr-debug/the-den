@@ -17,6 +17,11 @@ restores torrents from resume data. See ROADMAP.md's M10 section for the details
 two loopback-swarm gotchas that cost the most debugging time.
 
 ## Currently working on
+**M20 -- season packs and season actions (2026-09-13).** Multi-file torrents import
+every episode they contain; automation prefers a season pack when most of a season is
+missing; each season on the series page (web, KDE, Android) can be monitored, searched,
+browsed for packs or marked as have. Plan: `docs/tier1-plan.md`.
+
 **M19 -- failed-download handling (2026-09-13).** Torrents that error out, never get
 metadata, or stall with no seeders are given up on automatically: the release goes on a
 blocklist (30 days by default), the torrent and its data are removed, and the next cycle
