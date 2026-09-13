@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app import indexers as indexer_engine
 from app import auth, config, library_service
+from app import renamer
 from app import settings as settings_module
 from app import tmdb, torznab, tvmaze
 from app.candidates import episode_query, movie_query, profile_for, scored_candidates, season_candidates
@@ -555,6 +556,7 @@ def ui_settings(request: Request, db: Session = Depends(get_db)):
             "s": s,
             "has_tmdb_api_key": bool(row.tmdb_api_key),
             "has_discord_webhook": bool(row.discord_webhook_url),
+            "has_opensubtitles_api_key": bool(row.opensubtitles_api_key),
             "state_dir": config.STATE_DIR,
             "saved": request.query_params.get("saved") == "1",
             "notice": request.query_params.get("notice"),
@@ -594,11 +596,16 @@ def ui_save_settings(
     request_series_limit: str = Form(""),
     request_limit_days: str = Form(""),
     flaresolverr_url: str = Form(""),
+    import_list_interval_minutes: str = Form(""),
+    opensubtitles_api_key: str = Form(""),
+    subtitle_languages: str = Form(""),
     db: Session = Depends(get_db),
 ):
     row = settings_module.get_row(db)
     old = settings_module.effective(db)
     row.flaresolverr_url = flaresolverr_url.strip() or None
+    row.subtitle_languages = subtitle_languages.strip() or None
+    row.import_list_interval_minutes = _int_or_none(import_list_interval_minutes)
     row.request_movie_limit = _int_or_none(request_movie_limit)
     row.request_series_limit = _int_or_none(request_series_limit)
     row.request_limit_days = _int_or_none(request_limit_days) or None
@@ -608,6 +615,8 @@ def ui_save_settings(
         row.tmdb_api_key = tmdb_api_key
     if discord_webhook_url:
         row.discord_webhook_url = discord_webhook_url
+    if opensubtitles_api_key:
+        row.opensubtitles_api_key = opensubtitles_api_key
 
     # Non-secret fields: always take the submitted value (blank means "use the default").
     row.movies_root = movies_root or None
@@ -654,3 +663,28 @@ def ui_assign_unmatched(download_id: int, file: str = Form(...), kind: str = For
 def ui_import_as_is_unmatched(download_id: int, file: str = Form(...), root: str = Form(...), db: Session = Depends(get_db)):
     _import_as_is_action(download_id, ImportAsIsBody(file=file, root=root), db)
     return RedirectResponse("/ui/downloads/unmatched", status_code=303)
+
+
+@router.get("/ui/rename", response_class=HTMLResponse, dependencies=ADMIN)
+def ui_rename(request: Request, db: Session = Depends(get_db)):
+    plans = renamer.all_plans(db)
+    return templates.TemplateResponse("rename.html", {"request": request, "plans": plans, "active_nav": "settings"})
+
+
+@router.post("/ui/rename/apply", dependencies=ADMIN)
+def ui_rename_apply(kind: str = Form(...), item_id: int = Form(...), db: Session = Depends(get_db)):
+    try:
+        renamer.apply_plan(db, kind, item_id)
+    except (ValueError, OSError):
+        pass
+    return RedirectResponse("/ui/rename", status_code=303)
+
+
+@router.post("/ui/rename/apply-all", dependencies=ADMIN)
+def ui_rename_apply_all(db: Session = Depends(get_db)):
+    for plan in renamer.all_plans(db):
+        try:
+            renamer.apply_plan(db, plan["kind"], plan["id"])
+        except (ValueError, OSError):
+            pass
+    return RedirectResponse("/ui/rename", status_code=303)

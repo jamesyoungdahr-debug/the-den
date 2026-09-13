@@ -18,6 +18,7 @@
       <a href="#library">Library</a>
       <a href="#torrent">Torrent client</a>
       <a href="#automation">Automation</a>
+      <a href="#subtitles">Subtitles</a>
       <a href="#requests">Requests</a>
       <a href="#indexers">Indexers</a>
       <a href="#notifications">Notifications</a>
@@ -37,6 +38,7 @@
           <div class="holt-field"><label>Movies library folder</label><input type="text" name="movies_root" value="{{ s.movies_root }}"></div>
           <div class="holt-field"><label>TV library folder</label><input type="text" name="tv_root" value="{{ s.tv_root }}"></div>
         </div>
+        <div class="holt-meta" style="margin-top: var(--holt-space-2)"><a href="/ui/rename">Rename existing files</a> to match the current naming convention.</div>
       </section>
 
       <section class="holt-panel" id="torrent">
@@ -56,6 +58,20 @@
           <div class="holt-field"><label>Seed time limit (minutes, 0 = none)</label><input type="number" name="seed_time_limit_minutes" value="{{ s.seed_time_limit_minutes }}" min="0"></div>
         </div>
         <div class="holt-meta" style="margin-top: var(--holt-space-2)">Once an imported torrent hits either limit it's stopped, and the next automation cycle removes it along with its downloaded files. The library keeps its copy.</div>
+      </section>
+
+      <section class="holt-panel" id="subtitles">
+        <div class="holt-panel-head"><div class="holt-eyebrow">Subtitles</div><div class="holt-meta">OpenSubtitles</div></div>
+        <div class="holt-field">
+          <label>OpenSubtitles API key {{ "· currently set" if has_opensubtitles_api_key else "· not set" }}</label>
+          <input type="password" name="opensubtitles_api_key" placeholder="leave blank to keep current value" autocomplete="off">
+          <div class="holt-meta">Free key from <a href="https://www.opensubtitles.com/">opensubtitles.com</a> → Consumers → Api key. Leave blank (here and in the languages field below) to turn subtitle fetching off.</div>
+        </div>
+        <div class="holt-field">
+          <label>Languages (comma-separated ISO codes)</label>
+          <input type="text" name="subtitle_languages" value="{{ s.subtitle_languages | join(',') }}" placeholder="en,es">
+          <div class="holt-meta">Every automation cycle fetches whichever of these a movie or episode is missing.</div>
+        </div>
       </section>
 
       <section class="holt-panel" id="automation">
@@ -100,6 +116,24 @@
           <input type="password" name="discord_webhook_url" placeholder="leave blank to keep current value" autocomplete="off">
           <div class="holt-meta">Still fires for every event; add it as an agent above to pick events.</div>
         </div>
+      </section>
+
+      <section class="holt-panel" id="import-lists">
+        <div class="holt-panel-head"><div class="holt-eyebrow">Import Lists</div><div class="holt-meta">Auto-add from a TMDB list or your Plex watchlist</div></div>
+        <div id="importlist-list" class="holt-row-list"></div>
+        <div id="importlist-result" class="holt-message" style="display:none; margin-top: var(--holt-space-2);"></div>
+        <div style="margin-top: var(--holt-space-3)"><a href="#" class="holt-btn holt-btn-secondary holt-btn-sm" onclick="openImportList(null); return false;">Add list</a></div>
+        <div class="holt-field" style="margin: var(--holt-space-3) 0 0">
+          <label>Sync every (minutes)</label>
+          <input type="number" name="import_list_interval_minutes" value="{{ s.import_list_interval_minutes }}" min="15" style="max-width:160px">
+        </div>
+      </section>
+
+      <section class="holt-panel" id="root-folders">
+        <div class="holt-panel-head"><div class="holt-eyebrow">Root Folders</div><div class="holt-meta">Extra movie/TV libraries beyond the default folders above</div></div>
+        <div id="rootfolder-list" class="holt-row-list"></div>
+        <div id="rootfolder-result" class="holt-message" style="display:none; margin-top: var(--holt-space-2);"></div>
+        <div style="margin-top: var(--holt-space-3)"><a href="#" class="holt-btn holt-btn-secondary holt-btn-sm" onclick="openRootFolder(null); return false;">Add folder</a></div>
       </section>
       {% include "_formats_section.html" %}
     </form>
@@ -216,6 +250,42 @@
       <button type="button" class="holt-btn holt-btn-primary" id="agent-save">Save</button>
     </div>
   </dialog>
+
+  <dialog id="importlist-dialog" class="holt-dialog holt-glass-float">
+    <div class="holt-eyebrow" style="margin-bottom: var(--holt-space-3)">Import list</div>
+    <input type="hidden" id="importlist-id">
+    <div class="holt-field"><label for="importlist-name">Name</label><input id="importlist-name" placeholder="e.g. Watchlist movies"></div>
+    <div class="holt-field"><label for="importlist-kind">Kind</label>
+      <select id="importlist-kind" onchange="renderImportListFields()">
+        <option value="tmdb_list">TMDB list</option>
+        <option value="plex_watchlist">Plex watchlist</option>
+      </select>
+    </div>
+    <div id="importlist-fields"></div>
+    <div class="holt-field"><label style="display:flex; align-items:center; gap:8px"><input type="checkbox" id="importlist-enabled" style="width:auto"> Enabled</label></div>
+    <div style="display:flex; gap: 8px; justify-content: flex-end">
+      <button type="button" class="holt-btn holt-btn-quiet" data-close-dialog>Cancel</button>
+      <button type="button" class="holt-btn holt-btn-primary" id="importlist-save">Save</button>
+    </div>
+  </dialog>
+
+  <dialog id="rootfolder-dialog" class="holt-dialog holt-glass-float">
+    <div class="holt-eyebrow" style="margin-bottom: var(--holt-space-3)">Root folder</div>
+    <input type="hidden" id="rootfolder-id">
+    <div class="holt-field"><label for="rootfolder-name">Name</label><input id="rootfolder-name" placeholder="e.g. Kids Movies"></div>
+    <div class="holt-field"><label for="rootfolder-media-type">Media type</label>
+      <select id="rootfolder-media-type">
+        <option value="movie">Movie</option>
+        <option value="tv">TV</option>
+      </select>
+    </div>
+    <div class="holt-field"><label for="rootfolder-path">Path</label><input id="rootfolder-path" placeholder="/path/to/library"></div>
+    <div class="holt-field"><label style="display:flex; align-items:center; gap:8px"><input type="checkbox" id="rootfolder-default" style="width:auto"> Default for this media type</label></div>
+    <div style="display:flex; gap: 8px; justify-content: flex-end">
+      <button type="button" class="holt-btn holt-btn-quiet" data-close-dialog>Cancel</button>
+      <button type="button" class="holt-btn holt-btn-primary" id="rootfolder-save">Save</button>
+    </div>
+  </dialog>
   {% include "_formats_dialog.html" %}
 
   <script>
@@ -313,6 +383,143 @@
     document.getElementById("agent-test").onclick = () => testAgent(document.getElementById("agent-id").value || null);
     document.getElementById("agent-kind").addEventListener("change", () => renderFields(CURRENT));
     document.addEventListener("DOMContentLoaded", loadNotifications);
+  </script>
+  <script>
+    // Import lists (E1): talks to /api/import-lists directly.
+    let IMPORTLISTS = [], IL_CURRENT = null;
+    async function ilApi(method, path, body) {
+      const opts = { method, credentials: "same-origin" };
+      if (body !== undefined) { opts.headers = { "Content-Type": "application/json" }; opts.body = JSON.stringify(body); }
+      const res = await fetch("/api/import-lists" + path, opts);
+      if (!res.ok) { let d = res.statusText; try { d = (await res.json()).detail || d; } catch (e) {} throw new Error(d); }
+      return res.status === 204 ? null : res.json();
+    }
+    function ilShow(text, ok) {
+      const el = document.getElementById("importlist-result");
+      el.textContent = text; el.className = "holt-message " + (ok ? "holt-message-positive" : "holt-message-warning"); el.style.display = "block";
+    }
+    async function loadImportLists() {
+      IMPORTLISTS = await ilApi("GET", "");
+      renderImportLists();
+    }
+    function renderImportLists() {
+      const list = document.getElementById("importlist-list");
+      list.innerHTML = IMPORTLISTS.map(il => `
+        <div class="holt-row">
+          <div class="holt-row-main">
+            <div class="holt-row-title">${il.name} <span class="holt-meta">${il.kind === "tmdb_list" ? "TMDB list " + (il.config.list_id || "") : "Plex watchlist"}</span></div>
+            <div class="holt-meta">${il.enabled ? "enabled" : "disabled"} · ${il.last_result ? il.last_result : "never synced"}</div>
+          </div>
+          <div class="holt-row-actions">
+            <button type="button" class="holt-btn holt-btn-quiet holt-btn-sm" onclick="syncImportList(${il.id})">Sync now</button>
+            <button type="button" class="holt-btn holt-btn-quiet holt-btn-sm" onclick="openImportList(${il.id})">Edit</button>
+            <button type="button" class="holt-btn holt-btn-quiet holt-btn-sm" onclick="deleteImportList(${il.id})">Delete</button>
+          </div>
+        </div>`).join("") || '<div class="holt-meta">No import lists yet.</div>';
+    }
+    function renderImportListFields() {
+      const kind = document.getElementById("importlist-kind").value;
+      const fields = document.getElementById("importlist-fields");
+      const listId = IL_CURRENT && IL_CURRENT.kind === kind ? (IL_CURRENT.config.list_id || "") : "";
+      fields.innerHTML = kind === "tmdb_list"
+        ? `<div class="holt-field"><label for="importlist-listid">TMDB list ID</label><input id="importlist-listid" value="${listId}" placeholder="e.g. 8231412"><div class="holt-meta">The numeric ID from the list's TMDB URL (themoviedb.org/list/&lt;id&gt;). Public lists only, movies only.</div></div>`
+        : `<div class="holt-meta">Reads the connected Plex account's Discover watchlist (Settings → Plex must be connected first). Movies and series with a TMDB match are added.</div>`;
+    }
+    function openImportList(id) {
+      IL_CURRENT = id ? IMPORTLISTS.find(il => il.id === id) : null;
+      document.getElementById("importlist-id").value = id || "";
+      document.getElementById("importlist-name").value = IL_CURRENT ? IL_CURRENT.name : "";
+      document.getElementById("importlist-kind").value = IL_CURRENT ? IL_CURRENT.kind : "tmdb_list";
+      document.getElementById("importlist-enabled").checked = IL_CURRENT ? IL_CURRENT.enabled : true;
+      renderImportListFields();
+      document.getElementById("importlist-dialog").showModal();
+    }
+    async function syncImportList(id) {
+      try {
+        const res = await ilApi("POST", `/${id}/sync`);
+        ilShow(`${res.name || "Sync"}: ${res.result}`, true);
+        await loadImportLists();
+      } catch (e) { ilShow(String(e.message || e), false); }
+    }
+    async function deleteImportList(id) {
+      if (!confirm("Delete this import list?")) return;
+      try { await ilApi("DELETE", `/${id}`); await loadImportLists(); } catch (e) { ilShow(String(e.message || e), false); }
+    }
+    document.getElementById("importlist-save").addEventListener("click", async () => {
+      const id = document.getElementById("importlist-id").value;
+      const kind = document.getElementById("importlist-kind").value;
+      const config = kind === "tmdb_list" ? { list_id: document.getElementById("importlist-listid").value.trim() } : {};
+      const body = { name: document.getElementById("importlist-name").value.trim(), kind, config, enabled: document.getElementById("importlist-enabled").checked };
+      try {
+        if (id) await ilApi("PUT", `/${id}`, body); else await ilApi("POST", "", body);
+        document.getElementById("importlist-dialog").close();
+        await loadImportLists();
+        ilShow("Saved", true);
+      } catch (e) { ilShow(String(e.message || e), false); }
+    });
+    document.addEventListener("DOMContentLoaded", loadImportLists);
+  </script>
+  <script>
+    // Root folders (E2): talks to /api/root-folders directly.
+    let ROOTFOLDERS = [];
+    async function rfApi(method, path, body) {
+      const opts = { method, credentials: "same-origin" };
+      if (body !== undefined) { opts.headers = { "Content-Type": "application/json" }; opts.body = JSON.stringify(body); }
+      const res = await fetch("/api/root-folders" + path, opts);
+      if (!res.ok) { let d = res.statusText; try { d = (await res.json()).detail || d; } catch (e) {} throw new Error(d); }
+      return res.status === 204 ? null : res.json();
+    }
+    function rfShow(text, ok) {
+      const el = document.getElementById("rootfolder-result");
+      el.textContent = text; el.className = "holt-message " + (ok ? "holt-message-positive" : "holt-message-warning"); el.style.display = "block";
+    }
+    async function loadRootFolders() {
+      ROOTFOLDERS = await rfApi("GET", "");
+      renderRootFolders();
+    }
+    function renderRootFolders() {
+      const list = document.getElementById("rootfolder-list");
+      list.innerHTML = ROOTFOLDERS.map(rf => `
+        <div class="holt-row">
+          <div class="holt-row-main">
+            <div class="holt-row-title">${rf.name} <span class="holt-meta">${rf.media_type} · ${rf.path}</span></div>
+            <div class="holt-meta">${rf.is_default ? "default for " + rf.media_type : ""}</div>
+          </div>
+          <div class="holt-row-actions">
+            <button type="button" class="holt-btn holt-btn-quiet holt-btn-sm" onclick="openRootFolder(${rf.id})">Edit</button>
+            <button type="button" class="holt-btn holt-btn-quiet holt-btn-sm" onclick="deleteRootFolder(${rf.id})">Delete</button>
+          </div>
+        </div>`).join("") || '<div class="holt-meta">No extra root folders yet -- everything uses the Movies/TV library folders above.</div>';
+    }
+    function openRootFolder(id) {
+      const rf = id ? ROOTFOLDERS.find(r => r.id === id) : null;
+      document.getElementById("rootfolder-id").value = id || "";
+      document.getElementById("rootfolder-name").value = rf ? rf.name : "";
+      document.getElementById("rootfolder-media-type").value = rf ? rf.media_type : "movie";
+      document.getElementById("rootfolder-path").value = rf ? rf.path : "";
+      document.getElementById("rootfolder-default").checked = rf ? rf.is_default : false;
+      document.getElementById("rootfolder-dialog").showModal();
+    }
+    async function deleteRootFolder(id) {
+      if (!confirm("Delete this root folder? Titles assigned to it keep their file_path but new imports fall back to the default.")) return;
+      try { await rfApi("DELETE", `/${id}`); await loadRootFolders(); } catch (e) { rfShow(String(e.message || e), false); }
+    }
+    document.getElementById("rootfolder-save").addEventListener("click", async () => {
+      const id = document.getElementById("rootfolder-id").value;
+      const body = {
+        name: document.getElementById("rootfolder-name").value.trim(),
+        media_type: document.getElementById("rootfolder-media-type").value,
+        path: document.getElementById("rootfolder-path").value.trim(),
+        is_default: document.getElementById("rootfolder-default").checked,
+      };
+      try {
+        if (id) await rfApi("PUT", `/${id}`, body); else await rfApi("POST", "", body);
+        document.getElementById("rootfolder-dialog").close();
+        await loadRootFolders();
+        rfShow("Saved", true);
+      } catch (e) { rfShow(String(e.message || e), false); }
+    });
+    document.addEventListener("DOMContentLoaded", loadRootFolders);
   </script>
   <script src="/static/formats.js?v={{ static_v }}"></script>
 {% endblock %}

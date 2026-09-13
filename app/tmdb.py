@@ -105,6 +105,15 @@ async def search_multi(query: str, api_key: str) -> list[dict]:
     return _cards(await _get("/search/multi", api_key, {"query": query, "include_adult": "false"}, ttl=SEARCH_TTL))
 
 
+async def get_list(list_id: str, api_key: str) -> list[dict]:
+    """A TMDB v3 list's items, normalized. v3 lists are movies-only (TMDB's v4 "combined"
+    lists need a user access token, not just an API key, so this stays v3 for now)."""
+    data = await _get(f"/list/{list_id}", api_key, ttl=RAIL_TTL)
+    if not data:
+        return []
+    return [c for c in (normalize(item, "movie") for item in data.get("items", [])) if c]
+
+
 # ---- rails ---------------------------------------------------------------------------
 
 async def trending(api_key: str, window: str = "week", page: int = 1) -> list[dict]:

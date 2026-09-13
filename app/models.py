@@ -34,6 +34,19 @@ class QualityProfile(Base):
     upgrade_until_score = Column(Integer, nullable=False, default=0)  # keep upgrading a title's file until its format score reaches this (0 = quality cutoff only)
 
 
+class RootFolder(Base):
+    """A named library folder (E2): Movies vs Kids Movies, 4K vs 1080p, etc. Falls back to
+    Settings.movies_root/tv_root when a title has none and no default is marked."""
+
+    __tablename__ = "root_folders"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+    media_type = Column(String, nullable=False)  # movie | tv
+    path = Column(String, nullable=False)
+    is_default = Column(Boolean, nullable=False, default=False)
+
+
 class Movie(Base):
     __tablename__ = "movies"
 
@@ -49,6 +62,7 @@ class Movie(Base):
     file_path = Column(String, nullable=True)  # the library file the last import wrote
     last_upgrade_search = Column(DateTime, nullable=True)
     quality_profile_id = Column(Integer, ForeignKey("quality_profiles.id"), nullable=True)
+    root_folder_id = Column(Integer, ForeignKey("root_folders.id"), nullable=True)
 
 
 class Series(Base):
@@ -62,6 +76,7 @@ class Series(Base):
     overview = Column(String, nullable=True)
     poster_path = Column(String, nullable=True)
     quality_profile_id = Column(Integer, ForeignKey("quality_profiles.id"), nullable=True)
+    root_folder_id = Column(Integer, ForeignKey("root_folders.id"), nullable=True)
 
 
 class Episode(Base):
@@ -111,6 +126,9 @@ class Settings(Base):
     plex_sections = Column(String, nullable=True)  # JSON list of section keys
     plex_allow_any_account = Column(Boolean, nullable=True)
     plex_scan_interval_minutes = Column(Integer, nullable=True)
+    import_list_interval_minutes = Column(Integer, nullable=True)
+    opensubtitles_api_key = Column(String, nullable=True)
+    subtitle_languages = Column(String, nullable=True)  # comma-separated language codes, e.g. "en,es"
     plex_last_scan_at = Column(DateTime, nullable=True)
     plex_last_scan_result = Column(String, nullable=True)
     # Request quotas (M11g): how many movies / series a non-admin may request per window.
@@ -242,6 +260,21 @@ class NotificationAgent(Base):
     config = Column(String, nullable=True)  # JSON object with the kind's fields, see app/notifier.KINDS
     events = Column(String, nullable=True)  # JSON list of event keys; null/empty = every event
     enabled = Column(Boolean, nullable=False, default=True)
+
+
+class ImportList(Base):
+    """A place to auto-add movies/series from (E1): a TMDB list or a Plex watchlist, synced on a schedule."""
+
+    __tablename__ = "import_lists"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String, nullable=False)
+    kind = Column(String, nullable=False)  # tmdb_list | plex_watchlist
+    config = Column(String, nullable=True)  # JSON object with the kind's fields (e.g. {"list_id": "..."} for tmdb_list)
+    quality_profile_id = Column(Integer, ForeignKey("quality_profiles.id"), nullable=True)
+    enabled = Column(Boolean, nullable=False, default=True)
+    last_synced_at = Column(DateTime, nullable=True)
+    last_result = Column(String, nullable=True)  # e.g. "3 added, 12 already in the library"
 
 
 class IndexerStat(Base):

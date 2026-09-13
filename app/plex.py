@@ -178,3 +178,29 @@ async def library_sections(server_uri: str, token: str) -> list[dict]:
     for d in data.get("MediaContainer", {}).get("Directory", []):
         out.append({"key": str(d.get("key")), "title": d.get("title"), "type": d.get("type")})
     return out
+
+
+# ---- watchlist (E1 import lists) --------------------------------------------------
+
+async def watchlist(token: str) -> list[dict]:
+    """The plex.tv account's Discover watchlist: [{tmdb_id, media_type, title}]. Only items
+    Plex's own metadata already links to a TMDB id are returned; anything else is skipped."""
+    async with httpx.AsyncClient(timeout=20) as client:
+        resp = await client.get(f"{config.PLEX_DISCOVER_URL}/library/sections/watchlist/all", headers=_headers(token), params={"includeExternalMedia": "0"})
+        resp.raise_for_status()
+        data = resp.json()
+    out = []
+    for item in data.get("MediaContainer", {}).get("Metadata", []):
+        media_type = "movie" if item.get("type") == "movie" else "tv" if item.get("type") == "show" else None
+        if not media_type:
+            continue
+        tmdb_id = None
+        for guid in item.get("Guid", []):
+            gid = guid.get("id", "")
+            if gid.startswith("tmdb://"):
+                tmdb_id = int(gid.split("://", 1)[1])
+                break
+        if tmdb_id is None:
+            continue
+        out.append({"tmdb_id": tmdb_id, "media_type": media_type, "title": item.get("title")})
+    return out

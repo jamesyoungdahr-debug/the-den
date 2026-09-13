@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title_suffix %} — Rename files{% endblock %}
+{% block content %}
+  <div class="holt-page-head">
+    <div>
+      <h1 class="holt-page-title">Rename files</h1>
+      <div class="holt-meta">Library files that don't match the current Plex naming convention -- {{ plans|length }} to review</div>
+    </div>
+    <div class="holt-toolbar"><a class="holt-chip" href="/ui/settings">‹ Settings</a></div>
+  </div>
+
+  {% if not plans %}
+  <div class="holt-empty holt-panel">
+    <div class="holt-empty-title">Nothing to rename</div>
+    <div class="holt-body">Every file in the library already matches the current naming convention.</div>
+  </div>
+  {% else %}
+  <div class="holt-toolbar" style="margin-bottom: var(--holt-space-3)">
+    <form method="post" action="/ui/rename/apply-all" style="margin:0">
+      <button type="submit" class="holt-btn holt-btn-primary">Rename all {{ plans|length }}</button>
+    </form>
+  </div>
+  <section class="holt-section">
+    <div class="holt-panel">
+      <div class="holt-row-list">
+        {% for p in plans %}
+        <div class="holt-row">
+          <div class="holt-row-main">
+            <div class="holt-row-title">{{ p.label }}</div>
+            <div class="holt-row-meta">{{ p.current_path }} → {{ p.proposed_path }}</div>
+          </div>
+          <div class="holt-toolbar">
+            <form method="post" action="/ui/rename/apply" style="margin:0">
+              <input type="hidden" name="kind" value="{{ p.kind }}">
+              <input type="hidden" name="item_id" value="{{ p.id }}">
+              <button type="submit" class="holt-btn holt-btn-primary holt-btn-sm">Rename</button>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+{% endblock %}

@@ -39,6 +39,7 @@ class SettingsUpdate(BaseModel):
     plex_sections: list[str] | None = None
     plex_allow_any_account: bool | None = None
     plex_scan_interval_minutes: int | None = Field(default=None, ge=5)
+    import_list_interval_minutes: int | None = Field(default=None, ge=15)
     # Request quotas for non-admins (M11g); 0 = unlimited
     request_movie_limit: int | None = Field(default=None, ge=0)
     request_series_limit: int | None = Field(default=None, ge=0)
@@ -48,6 +49,10 @@ class SettingsUpdate(BaseModel):
     auth_required: bool | None = None
     # FlareSolverr / Byparr for Cloudflare-fronted public trackers (M12); blank = none
     flaresolverr_url: str | None = None
+    # OpenSubtitles (E6); blank api key = no fetch. subtitle_languages is a comma-separated
+    # list of ISO 639-1 codes, e.g. "en,es".
+    opensubtitles_api_key: str | None = None
+    subtitle_languages: str | None = None
 
 
 @router.get("/settings")
@@ -83,6 +88,7 @@ def get_settings(db: Session = Depends(get_db)):
         "plex_sections": s.plex_sections,
         "plex_allow_any_account": s.plex_allow_any_account,
         "plex_scan_interval_minutes": s.plex_scan_interval_minutes,
+        "import_list_interval_minutes": s.import_list_interval_minutes,
         "plex_last_scan_at": row.plex_last_scan_at.isoformat() if row.plex_last_scan_at else None,
         "plex_last_scan_result": row.plex_last_scan_result,
         "request_movie_limit": s.request_movie_limit,
@@ -90,6 +96,8 @@ def get_settings(db: Session = Depends(get_db)):
         "request_limit_days": s.request_limit_days,
         "auth_required": auth.required(),
         "flaresolverr_url": s.flaresolverr_url,
+        "has_opensubtitles_api_key": bool(row.opensubtitles_api_key),
+        "subtitle_languages": ",".join(s.subtitle_languages),
     }
 
 
@@ -108,6 +116,11 @@ def apply_runtime_changes(old: settings_module.EffectiveSettings, new: settings_
     if new.plex_scan_interval_minutes != old.plex_scan_interval_minutes:
         try:
             scheduler.reschedule_plex(new.plex_scan_interval_minutes)
+        except Exception:
+            pass
+    if new.import_list_interval_minutes != old.import_list_interval_minutes:
+        try:
+            scheduler.reschedule_import_lists(new.import_list_interval_minutes)
         except Exception:
             pass
 
@@ -132,6 +145,8 @@ def save_settings(payload: SettingsUpdate, request: Request, db: Session = Depen
         row.tmdb_api_key = payload.tmdb_api_key
     if payload.discord_webhook_url:
         row.discord_webhook_url = payload.discord_webhook_url
+    if payload.opensubtitles_api_key:
+        row.opensubtitles_api_key = payload.opensubtitles_api_key
 
     # Non-secret fields: always take the submitted value (blank -> use the default).
     if payload.movies_root is not None:
@@ -157,8 +172,12 @@ def save_settings(payload: SettingsUpdate, request: Request, db: Session = Depen
         row.plex_allow_any_account = payload.plex_allow_any_account
     if payload.plex_scan_interval_minutes is not None:
         row.plex_scan_interval_minutes = payload.plex_scan_interval_minutes
+    if payload.import_list_interval_minutes is not None:
+        row.import_list_interval_minutes = payload.import_list_interval_minutes
     if payload.flaresolverr_url is not None:
         row.flaresolverr_url = payload.flaresolverr_url.strip() or None
+    if payload.subtitle_languages is not None:
+        row.subtitle_languages = payload.subtitle_languages.strip() or None
 
     db.commit()
     apply_runtime_changes(old, settings_module.effective(db))

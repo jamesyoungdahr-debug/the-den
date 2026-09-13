@@ -196,48 +196,70 @@ def _label(req: MediaRequest) -> str:
 
 # ---- decide ----------------------------------------------------------------------------
 
+async def get_or_create_movie(db: Session, tmdb_id: int, title: str | None = None, year: int | None = None, poster_path: str | None = None) -> tuple[Movie, bool]:
+    """The library's Movie row for this TMDB id, creating it (as wanted, no quality
+    profile) if it doesn't exist yet. Returns (movie, created)."""
+    movie = db.query(Movie).filter(Movie.tmdb_id == tmdb_id).first()
+    if movie is not None:
+        return movie, False
+    s = settings_module.effective(db)
+    details = await tmdb.movie_details(tmdb_id, s.tmdb_api_key) or {}
+    movie = Movie(
+        tmdb_id=tmdb_id, title=title or details.get("title") or f"TMDB {tmdb_id}", year=year or details.get("year"),
+        overview=details.get("overview"), poster_path=poster_path or details.get("poster_path"),
+    )
+    db.add(movie)
+    db.flush()
+    return movie, True
+
+
+async def get_or_create_series(db: Session, tmdb_id: int, season_list: list[int] | None = None) -> tuple[Series | None, bool]:
+    """The library's Series row for this TMDB id (mapped to TVmaze for episode lists),
+    creating it and its episodes if it doesn't exist yet. `season_list` marks only those
+    seasons monitored on a new series; empty/None monitors every season. Returns
+    (series, created); series is None if TMDB or TVmaze couldn't resolve it (RequestError
+    is raised for a caller-facing 404/502 instead of returning None -- same as before)."""
+    series = db.query(Series).filter(Series.tmdb_id == tmdb_id).first()
+    if series is not None:
+        return series, False
+    s = settings_module.effective(db)
+    details = await tmdb.tv_details(tmdb_id, s.tmdb_api_key)
+    if details is None:
+        raise RequestError(404, "That series isn't on TMDB any more")
+    show = await _map_tv(details)
+    if show is None:
+        raise RequestError(502, "Couldn't match this series on TVmaze (which supplies episode lists). Add it from the TV page by name, then approve again.")
+    series = db.query(Series).filter(Series.tvmaze_id == show["tvmaze_id"]).first()
+    if series is not None:
+        series.tmdb_id = tmdb_id
+        return series, False
+    series = Series(
+        tvmaze_id=show["tvmaze_id"], tmdb_id=tmdb_id, title=details["title"], year=details.get("year") or show["year"],
+        overview=details.get("overview") or show["overview"], poster_path=details.get("poster_path") or show["poster_path"],
+    )
+    db.add(series)
+    db.flush()
+    wanted = set(season_list or [])
+    for ep in await tvmaze.get_tv_episodes(show["tvmaze_id"]):
+        db.add(Episode(series_id=series.id, monitored=(not wanted or ep["season_number"] in wanted), **ep))
+    return series, True
+
+
 async def approve(db: Session, req: MediaRequest, admin: User) -> MediaRequest:
     if req.status == "approved":
         return req
     s = settings_module.effective(db)
     if req.media_type == "movie":
-        movie = db.query(Movie).filter(Movie.tmdb_id == req.tmdb_id).first()
-        if movie is None:
-            details = await tmdb.movie_details(req.tmdb_id, s.tmdb_api_key) or {}
-            movie = Movie(
-                tmdb_id=req.tmdb_id, title=req.title, year=req.year,
-                overview=details.get("overview"), poster_path=req.poster_path or details.get("poster_path"),
-            )
-            db.add(movie)
-            db.flush()
+        movie, _ = await get_or_create_movie(db, req.tmdb_id, req.title, req.year, req.poster_path)
         req.movie_id = movie.id
     else:
-        series = db.query(Series).filter(Series.tmdb_id == req.tmdb_id).first()
-        if series is None:
-            details = await tmdb.tv_details(req.tmdb_id, s.tmdb_api_key)
-            if details is None:
-                raise RequestError(404, "That series isn't on TMDB any more")
-            show = await _map_tv(details)
-            if show is None:
-                raise RequestError(502, "Couldn't match this series on TVmaze (which supplies episode lists). Add it from the TV page by name, then approve again.")
-            series = db.query(Series).filter(Series.tvmaze_id == show["tvmaze_id"]).first()
-            if series is None:
-                series = Series(
-                    tvmaze_id=show["tvmaze_id"], tmdb_id=req.tmdb_id, title=details["title"], year=details.get("year") or show["year"],
-                    overview=details.get("overview") or show["overview"], poster_path=details.get("poster_path") or show["poster_path"],
-                )
-                db.add(series)
-                db.flush()
-                wanted = set(req.season_list)
-                for ep in await tvmaze.get_tv_episodes(show["tvmaze_id"]):
-                    db.add(Episode(series_id=series.id, monitored=(not wanted or ep["season_number"] in wanted), **ep))
+        series, created = await get_or_create_series(db, req.tmdb_id, req.season_list)
+        if not created:
+            wanted = set(req.season_list)
+            if wanted:
+                db.query(Episode).filter(Episode.series_id == series.id, Episode.season_number.in_(wanted)).update({"monitored": True}, synchronize_session=False)
             else:
-                series.tmdb_id = req.tmdb_id
-        wanted = set(req.season_list)
-        if wanted:
-            db.query(Episode).filter(Episode.series_id == series.id, Episode.season_number.in_(wanted)).update({"monitored": True}, synchronize_session=False)
-        else:
-            db.query(Episode).filter(Episode.series_id == series.id).update({"monitored": True}, synchronize_session=False)
+                db.query(Episode).filter(Episode.series_id == series.id).update({"monitored": True}, synchronize_session=False)
         req.series_id = series.id
     req.status = "approved"
     req.decided_by = admin.id

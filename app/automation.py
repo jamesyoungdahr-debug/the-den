@@ -5,7 +5,7 @@ then search+grab anything still missing."""
 from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 
-from app import blocklist, health, requests_service
+from app import blocklist, health, requests_service, subtitles
 from app.candidates import episode_query, movie_query, profile_for, scored_candidates, season_candidates
 from app.download_check import check_and_import, reap_seeded
 from app.grabber import grab_episode, grab_movie, grab_season
@@ -213,3 +213,7 @@ async def run_cycle(db: Session) -> None:
         await health.run(db)
     except Exception:
         pass  # health checks are advisory
+    try:
+        await subtitles.fetch_missing(db)
+    except Exception:
+        pass  # subtitle fetch is best-effort; the next cycle retries

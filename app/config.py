@@ -46,6 +46,14 @@ PLEX_TOKEN = os.environ.get("PLEX_TOKEN", "")
 PLEX_URL = os.environ.get("PLEX_URL", "")
 PLEX_TV_URL = os.environ.get("PLEX_TV_URL", "https://plex.tv")
 PLEX_AUTH_URL = os.environ.get("PLEX_AUTH_URL", "https://app.plex.tv/auth")
+PLEX_DISCOVER_URL = os.environ.get("PLEX_DISCOVER_URL", "https://discover.provider.plex.tv")
+
+# E1: import lists (TMDB list, Plex watchlist) synced on a timer.
+IMPORT_LIST_INTERVAL_MINUTES = int(os.environ.get("IMPORT_LIST_INTERVAL_MINUTES", "360"))
+
+# E6: subtitles (OpenSubtitles, anonymous API key -- no OAuth needed for search/download).
+OPENSUBTITLES_API_KEY = os.environ.get("OPENSUBTITLES_API_KEY", "")
+SUBTITLE_LANGUAGES = os.environ.get("SUBTITLE_LANGUAGES", "")
 PLEX_SCAN_INTERVAL_MINUTES = int(os.environ.get("PLEX_SCAN_INTERVAL_MINUTES", "30"))
 
 # Request quotas for non-admin users (M11g); 0 = unlimited. Overridable in Settings and per user.

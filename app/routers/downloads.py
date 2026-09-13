@@ -3,7 +3,7 @@ import json
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app import auth, automation, blocklist, importer, settings as settings_module
+from app import auth, automation, blocklist, importer, root_folders, settings as settings_module
 from app.deps import get_db
 from app.download_check import check_and_import, fail_download
 from app.models import DownloadRecord, BlocklistEntry, Episode, Movie, Series
@@ -136,7 +136,8 @@ def assign_download(download_id: int, body: AssignBody, db: Session = Depends(ge
         movie = db.get(Movie, body.id)
         if movie is None:
             raise HTTPException(404, "Movie not found")
-        dest = importer.import_movie(files, movie, s.movies_root, source_name=body.file)
+        movies_root = root_folders.root_folder_for(db, movie.root_folder_id, "movie", s.movies_root)
+        dest = importer.import_movie(files, movie, movies_root, source_name=body.file)
         if dest is None:
             raise HTTPException(400, "Couldn't link that file")
         movie.has_file = True
@@ -149,7 +150,8 @@ def assign_download(download_id: int, body: AssignBody, db: Session = Depends(ge
         if episode is None:
             raise HTTPException(404, "Episode not found")
         series = db.get(Series, episode.series_id)
-        dest = importer.import_episode(files, series, episode, s.tv_root, source_name=body.file)
+        tv_root = root_folders.root_folder_for(db, series.root_folder_id, "tv", s.tv_root)
+        dest = importer.import_episode(files, series, episode, tv_root, source_name=body.file)
         if dest is None:
             raise HTTPException(400, "Couldn't link that file")
         episode.has_file = True

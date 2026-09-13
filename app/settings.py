@@ -32,6 +32,9 @@ class EffectiveSettings:
     plex_sections: list[str]
     plex_allow_any_account: bool
     plex_scan_interval_minutes: int
+    import_list_interval_minutes: int
+    opensubtitles_api_key: str
+    subtitle_languages: list[str]
     request_movie_limit: int
     request_series_limit: int
     request_limit_days: int
@@ -93,6 +96,9 @@ def effective(db: Session) -> EffectiveSettings:
         plex_sections=json.loads(row.plex_sections) if row.plex_sections else [],
         plex_allow_any_account=bool(row.plex_allow_any_account),
         plex_scan_interval_minutes=_pick(row.plex_scan_interval_minutes, config.PLEX_SCAN_INTERVAL_MINUTES),
+        import_list_interval_minutes=_pick(row.import_list_interval_minutes, config.IMPORT_LIST_INTERVAL_MINUTES),
+        opensubtitles_api_key=_pick(row.opensubtitles_api_key, config.OPENSUBTITLES_API_KEY),
+        subtitle_languages=[lang.strip() for lang in _pick(row.subtitle_languages, config.SUBTITLE_LANGUAGES).split(",") if lang.strip()],
         request_movie_limit=_pick(row.request_movie_limit, config.REQUEST_MOVIE_LIMIT),
         request_series_limit=_pick(row.request_series_limit, config.REQUEST_SERIES_LIMIT),
         request_limit_days=_pick(row.request_limit_days, config.REQUEST_LIMIT_DAYS),

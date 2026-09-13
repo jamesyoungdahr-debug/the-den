@@ -5,7 +5,7 @@ import json
 from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 
-from app import blocklist, history, importer, settings as settings_module
+from app import blocklist, history, importer, root_folders, settings as settings_module
 from app.models import DownloadRecord, Episode, Movie, Series
 from app.notifier import notify_event
 from app.torrent import engine
@@ -94,7 +94,8 @@ async def _import(db: Session, record: DownloadRecord) -> None:
         if movie is None:
             record.status = "failed"
             return
-        dest = importer.import_movie(files, movie, s.movies_root, replace=movie.file_path if record.upgrade else None)
+        movies_root = root_folders.root_folder_for(db, movie.root_folder_id, "movie", s.movies_root)
+        dest = importer.import_movie(files, movie, movies_root, replace=movie.file_path if record.upgrade else None)
         if dest:
             movie.has_file = True
             movie.file_quality = record.quality
@@ -111,7 +112,8 @@ async def _import(db: Session, record: DownloadRecord) -> None:
             record.status = "failed"
             return
         season_eps = db.query(Episode).filter(Episode.series_id == series.id, Episode.season_number == record.season_number).all()
-        done, unmatched = importer.import_season_pack(files, series, record.season_number, {e.episode_number: e for e in season_eps}, s.tv_root)
+        tv_root = root_folders.root_folder_for(db, series.root_folder_id, "tv", s.tv_root)
+        done, unmatched = importer.import_season_pack(files, series, record.season_number, {e.episode_number: e for e in season_eps}, tv_root)
         for e in season_eps:
             if e.episode_number in done:
                 e.has_file = True
@@ -128,7 +130,8 @@ async def _import(db: Session, record: DownloadRecord) -> None:
         if episode is None or series is None:
             record.status = "failed"
             return
-        dest = importer.import_episode(files, series, episode, s.tv_root, replace=episode.file_path if record.upgrade else None)
+        tv_root = root_folders.root_folder_for(db, series.root_folder_id, "tv", s.tv_root)
+        dest = importer.import_episode(files, series, episode, tv_root, replace=episode.file_path if record.upgrade else None)
         if dest:
             episode.has_file = True
             episode.file_quality = record.quality

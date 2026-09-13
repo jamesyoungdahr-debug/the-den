@@ -2,12 +2,13 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 import logging
 
-from app import automation, plex_scan, settings as settings_module
+from app import automation, import_lists as import_lists_service, plex_scan, settings as settings_module
 from app.db import SessionLocal
 
 scheduler = AsyncIOScheduler()
 JOB_ID = "automation_cycle"
 PLEX_JOB_ID = "plex_scan"
+IMPORT_LISTS_JOB_ID = "import_lists_sync"
 log = logging.getLogger(__name__)
 
 
@@ -33,15 +34,26 @@ async def _plex_job() -> None:
         db.close()
 
 
+async def _import_lists_job() -> None:
+    db = SessionLocal()
+    try:
+        await import_lists_service.sync_all(db)
+    except Exception:
+        log.warning("scheduled import list sync failed", exc_info=True)
+    finally:
+        db.close()
+
+
 def start() -> None:
     db = SessionLocal()
     try:
         s = settings_module.effective(db)
-        interval, plex_minutes = s.automation_interval_seconds, s.plex_scan_interval_minutes
+        interval, plex_minutes, import_list_minutes = s.automation_interval_seconds, s.plex_scan_interval_minutes, s.import_list_interval_minutes
     finally:
         db.close()
     scheduler.add_job(_job, "interval", seconds=interval, id=JOB_ID)
     scheduler.add_job(_plex_job, "interval", minutes=plex_minutes, id=PLEX_JOB_ID)
+    scheduler.add_job(_import_lists_job, "interval", minutes=import_list_minutes, id=IMPORT_LISTS_JOB_ID)
     scheduler.start()
 
 
@@ -52,6 +64,10 @@ def reschedule(seconds: int) -> None:
 
 def reschedule_plex(minutes: int) -> None:
     scheduler.reschedule_job(PLEX_JOB_ID, trigger="interval", minutes=minutes)
+
+
+def reschedule_import_lists(minutes: int) -> None:
+    scheduler.reschedule_job(IMPORT_LISTS_JOB_ID, trigger="interval", minutes=minutes)
 
 
 def stop() -> None:
