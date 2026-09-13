@@ -32,20 +32,32 @@ URGENT BUG FOUND ON THE LIVE INSTALL: app/torrent/engine.py reads torrent_status
   tests/local_swarm.py on libtorrent 2.1.1.
 
 NEXT, in order:
-  1. Set up this machine. Liam needs to pick a backup folder for the git bundles and run
-     `sudo pacman -S --needed jdk17-openjdk android-tools`. Then: the-den venv with --system-site-packages, a dev
-     backend on 8687 and a test backend on 8688 (the installed copy owns 8686), Liam finishes /setup on the dev
-     instance and makes an admin token, rebuild the lost e2e and mock Plex scripts inside tests/, install the Android
-     SDK cmdline-tools (platform 35, build-tools 35.0.0) under ~/Android/Sdk, run the KDE tests/run_all.sh natively,
-     and update README and HANDOFF paths.
-  2. (FIXED 2026-09-13, committed locally, not released) The libtorrent 2.1 fix: engine.py now reads
+  1. Set up this machine. PARTLY DONE 2026-09-13.
+     Done: the-den venv (~/.venvs/the-den), the dev backend on 8687 with /setup finished by Liam (admin account
+     livetest; the password is Liam's and is not recorded anywhere), Liam's admin API token saved by Liam in
+     ~/the-den-dev/admin-token.txt (mode 600; Claude never writes tokens), and the KDE tests/run_all.sh at 12/12 against
+     the-den-client's new tests/fixture_backend.sh on 8688 (see DEV ENVIRONMENT below).
+     Still open: Liam picks a backup folder for the git bundles (none written yet); Liam runs
+     `sudo pacman -S --needed jdk17-openjdk android-tools`; install the Android SDK cmdline-tools (platform 35,
+     build-tools 35.0.0) under ~/Android/Sdk; rebuild the lost 72-check e2e and the mock Plex starter inside tests/;
+     update README and HANDOFF paths; fix the-den-client's tests/qml_harness.py, which rewrites the tracked
+     tests/_shell.qml with this machine's absolute path on every run (restore it with git checkout before committing).
+     Liam should revoke the admin token (it was pasted into chat) and save a new one; rerun tests/fixture_backend.sh
+     afterwards, since it copies users and tokens from the dev database.
+  2. (DONE 2026-09-13) The libtorrent 2.1 fix: engine.py now reads
      torrent_status.flags for paused and auto_managed, and drops torrent_status.states.allocating, a fourth break the
      live install never reached. Verified 11/11 on libtorrent 2.1.1 against tests/local_swarm.py: .torrent and magnet
      downloads, pause, resume, queued, seed limits enforced by the background loop, done, restart restore, and no loop
      errors. RELEASED 2026-09-13 with M33 as the-den v0.8.0a (e9104bd), alongside the-den-client v0.5.0a
-     (e29b06a). Both tags are pushed; the HoltOS updater installs them within 6 hours, or at once from Install now.
-  3. M34 (docs/connect-secure-plan.md): rewrite app/discovery.py and make deploy/the-den.service use WEB_HOST and
-     WEB_PORT instead of the hardcoded 127.0.0.1:8686.
+     (e29b06a). Both tags are pushed.
+     INSTALLED STATE (checked 2026-09-13 17:40): the updater installed v0.8.0a at 17:15 but history.log says
+     "v0.8.0a (FAILED to start)". That was the old updater, from before the HoltOS port fix; the cause is unknown
+     because the laptop rebooted at 17:23 and the journal only keeps the current boot. Since the reboot /opt/the-den runs
+     the v0.8.0a code on 127.0.0.1:8686 with no engine errors, but its /setup page is not finished yet (Liam). The
+     client v0.5.0a installed cleanly at 17:15.
+  3. M34 (docs/connect-secure-plan.md), NEXT UP, ships as the-den v0.8.1a: rewrite app/discovery.py, make
+     deploy/the-den.service use WEB_HOST and WEB_PORT instead of the hardcoded 127.0.0.1:8686, and add both keys to
+     deploy/the-den.env.example. Nothing of M34 is written or pushed yet; app/config.py only has the 40204 default.
   4. M37 device tokens can go before M35 while Liam answers the router questions (ports 80 and 443, NAT loopback,
      device approval).
   5. M35 HTTPS, M36 UPnP, M38 passkeys, M39 Android, M40 KDE, then the M14 shakedown, Tier 3 (M41-M47) and M48
@@ -61,10 +73,15 @@ LIVE TESTING THROUGH THE HOLTOS UPDATER (Liam, 2026-09-13): push a tagged releas
   ranks v0.8.0a above v0.8.0 but pacman's vercmp ranks it below, so never tag the plain base once letters exist (go
   to v0.8.1a). After z, move to the next patch number, because aa sorts before b. No -rc1 or .1 suffixes. The-den's
   PKGBUILD pkgver still says 0.7.0.
-  HoltOS port fix: holtos-update-apply hardcodes 8686 at lines 464 (the-den.desktop Exec), 517 (the post-update wait)
-  and 529 (the "up" message). M34 moves WEB_PORT to 40204, so the HoltOS agent was asked to fix this in its urgent
-  patch (read the port from /etc/the-den/the-den.env, probe /health, try https with -k for M35). Confirm it landed
-  before tagging M34.
+  HoltOS port fix (LANDED in HoltOS v0.0.6a-alpha, installed here 2026-09-13 17:36): holtos-update-apply now reads
+  WEB_HOST and WEB_PORT from /etc/the-den/the-den.env (port 8686 when unset), probes /health over http and then https
+  with -k, and rewrites the-den.desktop on every update, so M34's port move no longer reports a false failure.
+  Follow-up bug, FIXED in HoltOS v0.0.6b-alpha (e70999f): the updater's self-handover ran
+  `holtos-update-apply config <tag>` and the tag was read as an unknown item, so every handed-over config update
+  ended "Failed" and ignored the tag. A tag right after config is now that item's target. v0.0.6b-alpha was
+  published but not yet installed on the laptop at the time of writing.
+  GitHub sign-in: the gh token expired on 2026-09-13 and Liam signed in again; git pushes use that login. If a push
+  or fetch fails with "could not read Username", ask Liam to run gh auth login.
 
 LOCAL MODELS ON THIS MACHINE: two user-scope MCP servers in ~/.claude.json run ~/.claude/mcp-servers/lmstudio_mcp.py
   (stdlib only; tools list_models, chat and run_coding_task; writes are sandboxed to /home/liam/Projects; the result
