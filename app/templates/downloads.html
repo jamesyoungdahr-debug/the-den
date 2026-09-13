@@ -7,6 +7,7 @@
       <h1 class="holt-page-title">Downloads</h1>
       <div class="holt-meta" id="engine-line">torrent engine —</div>
     </div>
+    {% if unmatched_count %}<a class="holt-btn holt-btn-primary holt-btn-sm" href="/ui/downloads/unmatched">Manual import ({{ unmatched_count }})</a>{% endif %}
   </div>
 
   <div class="holt-panel holt-glass" style="padding:14px">

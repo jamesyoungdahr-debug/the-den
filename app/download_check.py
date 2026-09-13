@@ -102,7 +102,7 @@ async def _import(db: Session, record: DownloadRecord) -> None:
             imported = True
         else:
             names = [f.path.split("/")[-1].split("\\")[-1] for f in files if not f.path.lower().endswith((".txt", ".nfo", ".jpg", ".png", ".srt", ".sub"))]
-            record.unmatched_files = json.dumps(names)
+            record.unmatched_files = json.dumps(names) if names else None
             record.failure_reason = record.failure_reason or "no video file found in this torrent"
     elif record.series_id and record.season_number is not None:
         series = db.get(Series, record.series_id)
@@ -136,7 +136,7 @@ async def _import(db: Session, record: DownloadRecord) -> None:
             imported = True
         else:
             names = [f.path.split("/")[-1].split("\\")[-1] for f in files if not f.path.lower().endswith((".txt", ".nfo", ".jpg", ".png", ".srt", ".sub"))]
-            record.unmatched_files = json.dumps(names)
+            record.unmatched_files = json.dumps(names) if names else None
             record.failure_reason = record.failure_reason or "no video file found in this torrent"
     # "completed" = finished downloading but nothing importable in it (no video file).
     record.status = "imported" if imported else "completed"

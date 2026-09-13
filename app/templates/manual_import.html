@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title_suffix %} — Manual import{% endblock %}
+{% block content %}
+  <div class="holt-page-head">
+    <div>
+      <h1 class="holt-page-title">Manual import</h1>
+      <div class="holt-meta">Downloads The Den couldn't place on its own -- {{ entries|length }} to review</div>
+    </div>
+    <div class="holt-toolbar"><a class="holt-chip" href="/ui/downloads">‹ Downloads</a></div>
+  </div>
+
+  {% if not entries %}
+  <div class="holt-empty holt-panel">
+    <div class="holt-empty-title">Nothing to review</div>
+    <div class="holt-body">Every finished download has been imported or is still in the library queue.</div>
+  </div>
+  {% endif %}
+
+  {% for e in entries %}
+  <section class="holt-section">
+    <div class="holt-rail-head">
+      <div class="holt-eyebrow">{{ e.release_title }}</div>
+      <div class="holt-meta">
+        {% if e.kind == "movie" %}grabbed for {{ e.label }} -- no video file found{% endif %}
+        {% if e.kind == "episode" %}grabbed for {{ e.label }} -- no video file found{% endif %}
+        {% if e.kind == "season" %}season pack for {{ e.label }} -- some files matched no episode{% endif %}
+        {% if e.kind == "manual" %}added by hand -- never tied to a title{% endif %}
+      </div>
+    </div>
+    <div class="holt-panel">
+      <div class="holt-row-list">
+        {% for f in e.files %}
+        <div class="holt-row">
+          <div class="holt-row-main">
+            <div class="holt-row-title">{{ f.name }}</div>
+            <div class="holt-row-meta">{{ (f.size / 1048576) | round(1) }} MB</div>
+          </div>
+          <div class="holt-toolbar">
+            {% if e.kind == "movie" %}
+            <form method="post" action="/ui/downloads/unmatched/{{ e.id }}/assign" style="margin:0">
+              <input type="hidden" name="file" value="{{ f.name }}"><input type="hidden" name="kind" value="movie"><input type="hidden" name="target_id" value="{{ e.movie_id }}">
+              <button type="submit" class="holt-btn holt-btn-primary holt-btn-sm">Assign to {{ e.label }}</button>
+            </form>
+            {% elif e.kind == "episode" %}
+            <form method="post" action="/ui/downloads/unmatched/{{ e.id }}/assign" style="margin:0">
+              <input type="hidden" name="file" value="{{ f.name }}"><input type="hidden" name="kind" value="episode"><input type="hidden" name="target_id" value="{{ e.episode_id }}">
+              <button type="submit" class="holt-btn holt-btn-primary holt-btn-sm">Assign to {{ e.label }}</button>
+            </form>
+            {% elif e.kind == "season" %}
+            <form method="post" action="/ui/downloads/unmatched/{{ e.id }}/assign" style="margin:0" class="holt-toolbar">
+              <input type="hidden" name="file" value="{{ f.name }}"><input type="hidden" name="kind" value="episode">
+              <select name="target_id" class="holt-field" style="margin:0">
+                {% for ep in e.season_episodes %}<option value="{{ ep.id }}">{{ ep.label }}</option>{% endfor %}
+              </select>
+              <button type="submit" class="holt-btn holt-btn-primary holt-btn-sm">Assign</button>
+            </form>
+            {% endif %}
+            <form method="post" action="/ui/downloads/unmatched/{{ e.id }}/import-as-is" style="margin:0" class="holt-toolbar">
+              <input type="hidden" name="file" value="{{ f.name }}">
+              <select name="root" class="holt-field" style="margin:0">
+                <option value="movies">Movies folder</option>
+                <option value="tv">TV folder</option>
+              </select>
+              <button type="submit" class="holt-btn holt-btn-quiet holt-btn-sm">Import as-is</button>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+  {% endfor %}
+{% endblock %}

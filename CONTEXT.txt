@@ -20,15 +20,13 @@ HoltOS Glass UI. Companion apps: KDE client (the-den-client) and Android app (th
 LAST TASK: M22 - DISCOVER GROUPED (MOVIES / SERIES) AND PAGED "VIEW MORE" (2026-09-13, done, tagged). the-den v0.6.7, client v0.4.11, android v0.6.1. Tier 1 plan:
   docs/tier1-plan.md; Tier 2 candidates: docs/feature-research.md (E1-E10). M22 was the first post-Tier-1 item (Liam's request), rails in
   app/routers/discover.py RAILS, tmdb.* take page=.
-IN PROGRESS: M23 server backend done (2026-09-13, uncommitted-to-tag -- committed, no version bump yet since the UI isn't built). All six units landed and were tested:
-  migration d1e2f3a4b5c6 (download_records.unmatched_files, downgrade/upgrade round-trip verified), app/importer.py (import_movie/import_episode gained source_name=, new import_as_is()),
-  app/download_check.py (`_import` populates unmatched_files for a movie/episode with no video, a season pack's leftover files, and a manually-added torrent with no target;
-  `reap_seeded` skips records with pending unmatched_files so their data isn't deleted before an admin resolves them), app/routers/torrents.py (`POST /torrents` now creates a
-  DownloadRecord for manual adds so they enter the same poll/import loop), app/schemas.py (UnmatchedFileOut/UnmatchedDownloadOut/AssignBody/ImportAsIsBody), app/routers/downloads.py
-  (GET /downloads/unmatched, POST /downloads/{id}/assign, POST /downloads/{id}/import-as-is). Verified with m23_smoke.py (DB-level, fake engine.files): all 8 checks pass --
-  manual-add unmatched, movie-no-video unmatched+failure_reason, season-pack partial leftover, reap_seeded skips it, list_unmatched shape, assign links a file with Plex naming
-  and clears the episode, unknown-file rejected, import-as-is lands the file under "Manual imports/" with its original name. NEXT: web "Manual import" page (Downloads or its own
-  nav item), then the KDE and Android equivalents, then tag the milestone once at least the web UI exists.
+DONE 2026-09-13: M23 web UI done (server + web, tagged the-den v0.6.8). New template app/templates/manual_import.html and a "Manual import (N)" link on the Downloads page
+  (shown only when there's something to review) open GET /ui/downloads/unmatched: every unmatched download grouped by kind (movie/episode grab with no video, season-pack
+  leftovers, or a manually-added torrent with no target), each leftover file with an "Assign" button (fixed target for a movie/episode record, a season's episode picker for
+  a season pack) and an "Import as-is" button (root folder picker), both plain HTML forms POSTing to app/routers/ui.py and redirecting back -- no new JS. Also fixed a
+  download_check.py edge case: unmatched_files now stays null instead of "[]" when a torrent has nothing but ignorable files, so reap_seeded doesn't get stuck forever on
+  torrents with nothing to actually preserve. Verified live against the test backend (m23_web_smoke.sh): the link count, page render with a seeded movie record, and a bad
+  assign returning 400 instead of a crash. Server-side is fully working end to end; NEXT: the KDE and Android "manual import" equivalents.
 TIER 1 STATUS: M15 notifications, M16 health/stats, M17 custom formats, M18 upgrades, M19 failed downloads, M20 season packs, M21 Android push are
   DONE and pushed (server 0.6.0 -> 0.6.6, client 0.4.5 -> 0.4.10, android 0.5.2 -> 0.6.0, each tagged). Remaining: M14 shakedown on the HoltOS box
   (user); no 1.0.0 planned, the server stays on 0.x (Liam, 2026-09-13). Verification so far is API smokes, fake-engine probes, the KDE harness, Android JVM tests and builds; the local-swarm
