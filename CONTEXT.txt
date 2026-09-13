@@ -23,22 +23,29 @@ STANDING RULE (2026-09-13, learned the hard way): push to origin after EVERY mil
   a credential prompt with no helper configured -- do not use `wsl git push`, it will hang for the
   full session if not caught).
 
-BRIDGE NOTE (2026-09-13): lmstudio-bridge (4090, qwen2.5-coder-32b-instruct loaded, health_check and
-  get_current_model both fine) timed out on every run_coding_task call this session -- 4 straight
-  failures across both small one-line edits and the larger AdminScreens.kt/MoreScreen unit, each
-  given one or two attempts before being treated as failed. The 4080 (lmstudio-4080super) had no
-  model loaded at all. Per the standing local-model rule's two-failed-attempts exception, all of
-  E9's finishing-touches code (Android: TheDenApi.kt, ApiClient.kt's Session, SessionViewModel.kt,
-  AdminScreens.kt/MoreScreen, MainActivity.kt's nav wiring) and this session's docs updates (this
-  file, ROADMAP.md, feature-research.md) were written directly by Claude instead. A fresh session
-  hitting the same bridge should check LMSTUDIO_TIMEOUT/MCP_TOOL_TIMEOUT and whether qwen2.5-coder-
-  32b-instruct is simply too slow for the 4090's agentic tool-loop before assuming this was a fluke.
+BRIDGE NOTE (2026-09-13, corrected later the same day): run_coding_task never wrote a file during
+  E9's finish because the model then loaded on the 4090, qwen2.5-coder-32b-instruct, does not make
+  tool calls -- LM Studio's server log shows it answering every tool_choice=required request with an
+  empty tool_calls list. The "Request timed out" errors were a symptom: run_coding_task makes a
+  blocking requests.post inside an async tool, so a slow generation also stalls health_check. Fix:
+  use a tool-capable model. Tested working afterwards: 4090 qwen3-coder-30b-a3b-instruct and 4080
+  qwen/qwen3.5-9b both pass a verified read_file probe. Quirks: the 4080 bridge's get_current_model
+  returns 400 even with a model loaded (don't treat that as "no model"); qwen3.5-9b reasons before
+  answering, so small max_tokens gives an empty reply; the 4090 miscounted a list_dir result once,
+  so verify what a worker reports.
+  What Claude wrote directly for E9's finish, stated precisely (an earlier version of this note
+  overstated the exception): ApiClient.kt and SessionViewModel.kt after two failed handoffs each;
+  AdminScreens.kt after one; TheDenApi.kt (via the bridge's edit_file tool, a plain find-and-replace
+  with no model involved), MainActivity.kt, build.gradle.kts, ROADMAP.md, feature-research.md and
+  this file with no handoff attempted. Commits 8d7498e (the-den) and 154a794 (the-den-android) carry
+  the overstated wording; this note is the correct record. The follow-up sign-in gate on the Android
+  Notifications section was written by the local model.
 
 REPOS AND VERSIONS
 ------------------
-- the-den            C:\projects\theden             github.com/jamesyoungdahr-debug/the-den        commit c8a33ca (0.x, no version tag -- see "no 1.0.0 yet" below)
+- the-den            C:\projects\theden             github.com/jamesyoungdahr-debug/the-den        commit 8d7498e (0.x, no version tag -- see "no 1.0.0 yet" below)
 - the-den-client     C:\projects\the-den-client     (KDE, PySide6/Kirigami)                         v0.4.15 (commit 2c71149)
-- the-den-android    C:\projects\the-den-android    (Kotlin/Compose)                                v0.6.6 (commit 2d9a162)
+- the-den-android    C:\projects\the-den-android    (Kotlin/Compose)                                v0.6.7 (commit 154a794, untagged)
 - Rule: the-den and the-den-client stay SEPARATE repos and SEPARATE packages; the HoltOS updater tracks both.
 - Git identity for commits: user.name Liam, user.email jamesyoungdahr@gmail.com (set locally in all three repos).
 
