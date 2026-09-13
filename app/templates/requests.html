@@ -24,7 +24,7 @@
     <div class="holt-row {{ 'is-pending' if r.status == 'pending' else '' }}" style="{{ 'opacity:.75' if r.status == 'declined' else '' }}">
       <a class="holt-thumb" href="{{ r.href }}">{% if r.poster_path %}<img src="{{ r.poster_path|poster }}" alt="" loading="lazy">{% endif %}</a>
       <div class="holt-row-main">
-        <div class="holt-row-title"><a href="{{ r.href }}" style="color:inherit">{{ r.title }}</a> <span class="holt-meta">{{ r.year or '' }}</span></div>
+        <div class="holt-row-title"><a href="{{ r.href }}" style="color:inherit">{{ r.title }}</a> <span class="holt-meta">{{ r.year or '' }}</span>{% if r.is_4k %} <span class="holt-chip" style="padding:2px 8px;font-size:10px">4K</span>{% endif %}</div>
         <div class="holt-row-meta">
           {{ 'Movie' if r.media_type == 'movie' else 'Series' }}
           {% if r.status == 'pending' %} · requested {{ r.created_at[:10] if r.created_at else '' }}
@@ -49,8 +49,20 @@
         {% elif is_admin and r.status != 'pending' %}
         <form method="post" action="/ui/requests/{{ r.id }}/delete" style="margin:0" onsubmit="return confirm('Remove this request from the list?')"><button type="submit" class="holt-btn holt-btn-quiet holt-btn-sm">Remove</button></form>
         {% endif %}
+        {% if is_admin or (current_user and r.requested_by and r.requested_by.id == current_user.id) %}
+        <a href="#" class="holt-btn holt-btn-quiet holt-btn-sm" onclick="toggleComments({{ r.id }}); return false;">Comments</a>
+        {% endif %}
       </div>
     </div>
+    {% if is_admin or (current_user and r.requested_by and r.requested_by.id == current_user.id) %}
+    <div id="comments-{{ r.id }}" class="holt-panel" style="display:none;margin:0 0 var(--holt-space-3) 0">
+      <div id="comments-list-{{ r.id }}" class="holt-row-list"></div>
+      <div style="display:flex;gap:8px;margin-top:var(--holt-space-2)">
+        <input type="text" id="comment-input-{{ r.id }}" class="holt-field" style="flex:1;margin:0" placeholder="Add a comment…" maxlength="1000">
+        <button type="button" class="holt-btn holt-btn-secondary holt-btn-sm" onclick="postComment({{ r.id }})">Send</button>
+      </div>
+    </div>
+    {% endif %}
     {% if is_admin and r.status == 'pending' %}
     <dialog id="decline-{{ r.id }}" class="holt-dialog holt-glass-float">
       <form method="post" action="/ui/requests/{{ r.id }}/decline">
@@ -71,4 +83,33 @@
     </div>
     {% endfor %}
   </div>
+  <script>
+    // Request comments (E8): talks to /api/requests/{id}/comments directly.
+    const OPEN_COMMENTS = new Set();
+    async function loadComments(id) {
+      const res = await fetch(`/api/requests/${id}/comments`, { credentials: "same-origin" });
+      if (!res.ok) return;
+      const comments = await res.json();
+      const list = document.getElementById(`comments-list-${id}`);
+      list.innerHTML = comments.map(c => `
+        <div class="holt-row" style="padding:8px 12px">
+          <div class="holt-row-main"><div class="holt-row-meta">${new Date(c.created_at).toLocaleString()}</div><div>${c.body.replace(/</g, "&lt;")}</div></div>
+        </div>`).join("") || '<div class="holt-meta" style="padding:8px 12px">No comments yet.</div>';
+    }
+    function toggleComments(id) {
+      const el = document.getElementById(`comments-${id}`);
+      const open = el.style.display !== "none";
+      el.style.display = open ? "none" : "block";
+      if (!open) { OPEN_COMMENTS.add(id); loadComments(id); } else { OPEN_COMMENTS.delete(id); }
+    }
+    async function postComment(id) {
+      const input = document.getElementById(`comment-input-${id}`);
+      const body = input.value.trim();
+      if (!body) return;
+      const res = await fetch(`/api/requests/${id}/comments`, {
+        method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ body }),
+      });
+      if (res.ok) { input.value = ""; await loadComments(id); }
+    }
+  </script>
 {% endblock %}

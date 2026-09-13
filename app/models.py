@@ -246,11 +246,24 @@ class MediaRequest(Base):
     series_id = Column(Integer, ForeignKey("series.id"), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    is_4k = Column(Boolean, nullable=True)  # E8: "request 4K" as a variant, informational only (no separate quality-profile routing)
 
     @property
     def season_list(self) -> list[int]:
         import json as _json
         return _json.loads(self.seasons) if self.seasons else []
+
+
+class RequestComment(Base):
+    """A user-visible reply on a request (E8): the requester and any admin can post."""
+
+    __tablename__ = "request_comments"
+
+    id = Column(Integer, primary_key=True)
+    request_id = Column(Integer, ForeignKey("media_requests.id"), nullable=False, index=True)
+    author_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    body = Column(String, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 class NotificationAgent(Base):

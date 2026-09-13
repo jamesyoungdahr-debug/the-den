@@ -38,7 +38,7 @@
             {% elif is_admin %}
               <form method="post" action="/ui/discover/movie/{{ item.tmdb_id }}/add" style="margin:0"><button type="submit" class="holt-btn holt-btn-primary">Add to library</button></form>
             {% elif current_user %}
-              <form method="post" action="/ui/requests" style="margin:0"><input type="hidden" name="media_type" value="movie"><input type="hidden" name="tmdb_id" value="{{ item.tmdb_id }}"><button type="submit" class="holt-btn holt-btn-primary">Request</button></form>
+              <form method="post" action="/ui/requests" style="margin:0;display:flex;align-items:center;gap:8px"><input type="hidden" name="media_type" value="movie"><input type="hidden" name="tmdb_id" value="{{ item.tmdb_id }}"><label style="display:flex;align-items:center;gap:4px;text-transform:none;letter-spacing:0;font-family:var(--holt-font-core);font-size:12px;color:var(--holt-ink-70);cursor:pointer"><input type="checkbox" name="is_4k" value="1" style="width:auto;margin:0"> 4K</label><button type="submit" class="holt-btn holt-btn-primary">Request</button></form>
             {% else %}
               <a class="holt-btn holt-btn-primary" href="/login?next=/discover/movie/{{ item.tmdb_id }}">Sign in to request</a>
             {% endif %}
@@ -176,6 +176,7 @@
         {% endfor %}
       </div>
       <div class="holt-meta" style="margin-bottom: var(--holt-space-3)">{% if is_admin %}Added straight to the library; only these seasons will be searched for.{% else %}An admin approves requests; you'll see the status here and on Requests.{% endif %}</div>
+      <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-family:var(--holt-font-core);font-size:13px;color:var(--holt-ink-70);margin-bottom: var(--holt-space-3);cursor:pointer"><input type="checkbox" name="is_4k" value="1" style="width:auto;margin:0"> {{ 'Mark as 4K' if is_admin else 'Request in 4K' }}</label>
       <div style="display:flex; gap: 8px; justify-content: flex-end">
         <button type="button" class="holt-btn holt-btn-quiet" data-close-dialog>Cancel</button>
         <button type="submit" class="holt-btn holt-btn-primary">{{ 'Add selected' if is_admin else 'Request selected' }}</button>

@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 
 from app import plex_scan, tmdb, tvmaze
 from app import settings as settings_module
-from app.models import Episode, MediaRequest, Movie, Series, User
+from app.models import Episode, MediaRequest, Movie, RequestComment, Series, User
 from app.notifier import notify_event
 
 OPEN_STATUSES = ("pending", "approved")
@@ -133,7 +133,7 @@ def _check_quota(db: Session, user: User, media_type: str) -> None:
 
 # ---- create ----------------------------------------------------------------------------
 
-async def create_request(db: Session, user: User, media_type: str, tmdb_id: int, seasons: list[int] | None) -> MediaRequest:
+async def create_request(db: Session, user: User, media_type: str, tmdb_id: int, seasons: list[int] | None, is_4k: bool = False) -> MediaRequest:
     if media_type not in ("movie", "tv"):
         raise RequestError(400, "media_type must be movie or tv")
     s = settings_module.effective(db)
@@ -174,7 +174,7 @@ async def create_request(db: Session, user: User, media_type: str, tmdb_id: int,
     req = MediaRequest(
         media_type=media_type, tmdb_id=tmdb_id, title=details["title"], year=details.get("year"),
         poster_path=details.get("poster_path"), seasons=json.dumps(seasons) if media_type == "tv" else None,
-        status="pending", requested_by=user.id,
+        status="pending", requested_by=user.id, is_4k=is_4k,
     )
     db.add(req)
     db.commit()
@@ -296,3 +296,26 @@ async def decline(db: Session, req: MediaRequest, admin: User, note: str | None 
 
 def label(req: MediaRequest) -> str:
     return _label(req)
+
+
+# ---- comments (E8) ------------------------------------------------------------------
+
+def comments_for(db: Session, req: MediaRequest) -> list[RequestComment]:
+    return db.query(RequestComment).filter(RequestComment.request_id == req.id).order_by(RequestComment.id).all()
+
+
+def add_comment(db: Session, req: MediaRequest, author: User, body: str) -> RequestComment:
+    comment = RequestComment(request_id=req.id, author_id=author.id, body=body.strip()[:1000])
+    db.add(comment)
+    db.commit()
+    db.refresh(comment)
+    return comment
+
+
+def delete_request(db: Session, req: MediaRequest) -> None:
+    """Delete a request and its comment thread together -- SQLite doesn't cascade-delete
+    on its own, and a deleted request's id can be reused, so an orphaned comment would
+    otherwise resurface under a different request."""
+    db.query(RequestComment).filter(RequestComment.request_id == req.id).delete(synchronize_session=False)
+    db.delete(req)
+    db.commit()

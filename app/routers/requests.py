@@ -25,7 +25,7 @@ def _out(db: Session, req: MediaRequest, users: dict[int, User]) -> dict:
     return {
         "id": req.id, "media_type": req.media_type, "tmdb_id": req.tmdb_id, "title": req.title, "year": req.year,
         "poster_path": req.poster_path, "seasons": req.season_list, "status": req.status,
-        "display_status": "available" if done else req.status, "note": req.note,
+        "display_status": "available" if done else req.status, "note": req.note, "is_4k": bool(req.is_4k),
         "requested_by": {"id": requester.id, "username": requester.username, "initial": requester.initial} if requester else None,
         "decided_by": decider.username if decider else None,
         "decided_at": req.decided_at.isoformat() if req.decided_at else None,
@@ -60,6 +60,11 @@ def _require_me(request: Request) -> User:
     return me
 
 
+def _can_see_comments(request: Request, req: MediaRequest, me: User) -> bool:
+    """The requester and any admin can read/post comments; nobody else."""
+    return auth.is_admin(request) or req.requested_by == me.id
+
+
 # ---- HTML -------------------------------------------------------------------------
 
 @router.get("/requests", response_class=HTMLResponse, dependencies=USER)
@@ -80,12 +85,12 @@ def requests_page(request: Request, status: str = "all", db: Session = Depends(g
 @router.post("/ui/requests", dependencies=USER)
 async def ui_create(
     request: Request, media_type: str = Form(...), tmdb_id: int = Form(...), seasons: list[int] = Form([]),
-    db: Session = Depends(get_db),
+    is_4k: str = Form(""), db: Session = Depends(get_db),
 ):
     me = _require_me(request)
     back = f"/discover/{media_type}/{tmdb_id}"
     try:
-        req = await svc.create_request(db, db.get(User, me.id), media_type, tmdb_id, seasons)
+        req = await svc.create_request(db, db.get(User, me.id), media_type, tmdb_id, seasons, is_4k=is_4k == "1")
     except svc.RequestError as exc:
         return RedirectResponse(f"{back}?error={exc.message.replace(' ', '+')}", status_code=303)
     what = "approved and added to the library" if req.status == "approved" else "sent for approval"
@@ -123,8 +128,7 @@ def ui_delete(request: Request, req_id: int, db: Session = Depends(get_db)):
         return RedirectResponse("/requests", status_code=303)
     if not auth.is_admin(request) and (req.requested_by != me.id or req.status != "pending"):
         raise auth.Forbidden()
-    db.delete(req)
-    db.commit()
+    svc.delete_request(db, req)
     return RedirectResponse("/requests?notice=Request+withdrawn.", status_code=303)
 
 
@@ -134,6 +138,7 @@ class RequestCreate(BaseModel):
     media_type: str
     tmdb_id: int
     seasons: list[int] | None = None
+    is_4k: bool = False
 
 
 class DeclineBody(BaseModel):
@@ -162,7 +167,7 @@ async def api_create(body: RequestCreate, request: Request, db: Session = Depend
     if me is None:
         raise HTTPException(401, "Sign in to request")
     try:
-        req = await svc.create_request(db, db.get(User, me.id), body.media_type, body.tmdb_id, body.seasons)
+        req = await svc.create_request(db, db.get(User, me.id), body.media_type, body.tmdb_id, body.seasons, is_4k=body.is_4k)
     except svc.RequestError as exc:
         raise HTTPException(exc.status, exc.message)
     return _out(db, req, _users(db, [req]))
@@ -203,5 +208,41 @@ def api_delete(request: Request, req_id: int, db: Session = Depends(get_db)):
     me = getattr(request.state, "user", None)
     if not auth.is_admin(request) and (me is None or req.requested_by != me.id or req.status != "pending"):
         raise HTTPException(403, "Only your own pending requests can be withdrawn")
-    db.delete(req)
-    db.commit()
+    svc.delete_request(db, req)
+
+
+class CommentCreate(BaseModel):
+    body: str
+
+
+def _comment_out(c) -> dict:
+    return {"id": c.id, "request_id": c.request_id, "author_id": c.author_id, "body": c.body, "created_at": c.created_at.isoformat() if c.created_at else None}
+
+
+@router.get("/api/requests/{req_id}/comments", dependencies=[Depends(auth.require_user)])
+def api_list_comments(request: Request, req_id: int, db: Session = Depends(get_db)):
+    req = db.get(MediaRequest, req_id)
+    if req is None:
+        raise HTTPException(404, "Request not found")
+    me = getattr(request.state, "user", None)
+    if me is None:
+        raise HTTPException(401, "Sign in to see comments")
+    if not _can_see_comments(request, req, me):
+        raise HTTPException(403, "You can only see comments on your own requests")
+    return [_comment_out(c) for c in svc.comments_for(db, req)]
+
+
+@router.post("/api/requests/{req_id}/comments", status_code=201, dependencies=[Depends(auth.require_user)])
+def api_add_comment(request: Request, req_id: int, body: CommentCreate, db: Session = Depends(get_db)):
+    req = db.get(MediaRequest, req_id)
+    if req is None:
+        raise HTTPException(404, "Request not found")
+    me = getattr(request.state, "user", None)
+    if me is None:
+        raise HTTPException(401, "Sign in to comment")
+    if not _can_see_comments(request, req, me):
+        raise HTTPException(403, "You can only comment on your own requests")
+    if not body.body.strip():
+        raise HTTPException(400, "Comment can't be empty")
+    comment = svc.add_comment(db, req, me, body.body)
+    return _comment_out(comment)
