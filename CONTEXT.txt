@@ -19,7 +19,8 @@ NEXT, in order:
      backend runs on 8686 (DB migrated to head; pre-migration copy ~/the-den-dev/den.db.pre-e10-upgrade,
      log server-e10.log) and the Windows portproxy points at the current WSL IP. Needs Liam: the phone is
      locked, and its saved API token may predate the rebuilt dev DB (owner-token.txt is gone).
-  4. M14 shakedown on the HoltOS box is Liam's. Tagging a release waits for his "push and tag".
+  4. M14 shakedown on the HoltOS box is Liam's. Tagging a release waits for his "push and tag" (last
+     tagged 2026-09-13: the-den v0.7.0, client v0.4.16, android v0.6.8; PKGBUILD pkgver now matches).
 
 STANDING RULE (2026-09-13, learned the hard way): push to origin after EVERY milestone commit, not
   just at natural stopping points -- see the NOTE below about the rm -rf incident. Never let more than
@@ -47,9 +48,9 @@ BRIDGE NOTE (2026-09-13, corrected later the same day): run_coding_task never wr
 
 REPOS AND VERSIONS
 ------------------
-- the-den            C:\projects\theden             github.com/jamesyoungdahr-debug/the-den        commit 92d4255 (0.x, no version tag -- see "no 1.0.0 yet" below)
-- the-den-client     C:\projects\the-den-client     (KDE, PySide6/Kirigami)                         v0.4.16 (commit 62ff0c9)
-- the-den-android    C:\projects\the-den-android    (Kotlin/Compose)                                v0.6.8 (commit 4de2bfe, untagged)
+- the-den            C:\projects\theden             github.com/jamesyoungdahr-debug/the-den        v0.7.0 (commit ff5fc9d, tagged; stays 0.x -- see "no 1.0.0 yet" below)
+- the-den-client     C:\projects\the-den-client     (KDE, PySide6/Kirigami)                         v0.4.16 (commit f410c6f, tagged)
+- the-den-android    C:\projects\the-den-android    (Kotlin/Compose)                                v0.6.8 (commit 4de2bfe, tagged)
 - Rule: the-den and the-den-client stay SEPARATE repos and SEPARATE packages; the HoltOS updater tracks both.
 - Git identity for commits: user.name Liam, user.email jamesyoungdahr@gmail.com (set locally in all three repos).
 
