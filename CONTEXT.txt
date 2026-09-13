@@ -38,7 +38,11 @@ NEXT, in order:
      instance and makes an admin token, rebuild the lost e2e and mock Plex scripts inside tests/, install the Android
      SDK cmdline-tools (platform 35, build-tools 35.0.0) under ~/Android/Sdk, run the KDE tests/run_all.sh natively,
      and update README and HANDOFF paths.
-  2. The libtorrent 2.1 fix, released together with M33 as the-den v0.8.0a so the HoltOS updater installs it here.
+  2. (FIXED 2026-09-13, committed locally, not released) The libtorrent 2.1 fix: engine.py now reads
+     torrent_status.flags for paused and auto_managed, and drops torrent_status.states.allocating, a fourth break the
+     live install never reached. Verified 11/11 on libtorrent 2.1.1 against tests/local_swarm.py: .torrent and magnet
+     downloads, pause, resume, queued, seed limits enforced by the background loop, done, restart restore, and no loop
+     errors. Ships with M33 as the-den v0.8.0a once Liam says go.
   3. M34 (docs/connect-secure-plan.md): rewrite app/discovery.py and make deploy/the-den.service use WEB_HOST and
      WEB_PORT instead of the hardcoded 127.0.0.1:8686.
   4. M37 device tokens can go before M35 while Liam answers the router questions (ports 80 and 443, NAT loopback,
@@ -68,6 +72,23 @@ LOCAL MODELS ON THIS MACHINE: two user-scope MCP servers in ~/.claude.json run ~
   qwen3-coder-30b-a3b also worked when loaded). lmstudio-4080super is http://192.168.0.39:1234 (qwen/qwen3.5-9b at
   92,672 context; use it for big files like this one). Machine-wide rules for every session are in
   ~/.claude/CLAUDE.md.
+
+DEV ENVIRONMENT ON THIS MACHINE (set up 2026-09-13):
+  - Venv: ~/.venvs/the-den, made with python -m venv --system-site-packages so it sees the system libtorrent 2.1.1,
+    then pip install -r requirements.txt.
+  - Dev backend: 127.0.0.1:8687, data in ~/the-den-dev (den.db, state, downloads, movies, tv), torrent port 6893,
+    log ~/the-den-dev/server.log.
+  - Test backend: 127.0.0.1:8688, data in ~/the-den-test, torrent port 6894, log ~/the-den-test/server.log.
+  - Start each from the repo root with DATABASE_URL, STATE_DIR, DOWNLOADS_ROOT, MOVIES_ROOT, TV_ROOT, TORRENT_PORT,
+    WEB_HOST and WEB_PORT exported, run ~/.venvs/the-den/bin/python -m alembic upgrade head, then
+    setsid nohup ~/.venvs/the-den/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port <port>.
+    Neither has finished /setup yet; Liam does that and makes an admin token.
+  - Local swarm: SWARM_DIR=~/the-den-swarm ~/.venvs/the-den/bin/python -m uvicorn tests.local_swarm:app --port 8083,
+    seeding on 6891. Releases are numbered from 1 (/download/1.torrent, /magnet/1).
+  - Ports already taken: 8686 and 6881 by the HoltOS-installed copy, 8083 and 6891 by the swarm.
+  - Offline tests pass here: tests/test_formats.py, tests/test_importer.py and tests/test_native_indexers.py.
+  - Gotcha: from app.torrent import engine gives the shared TorrentEngine instance, not the module. Scripts that
+    need EngineConfig or TorrentEngine should import the module and use sys.modules["app.torrent.engine"].
 
 PREVIOUS PICK UP HERE (2026-09-13, Tier 2 complete: E1-E10 all done and pushed)
 -------------------------------------------------------------------------------------------
