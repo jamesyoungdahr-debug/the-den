@@ -145,6 +145,7 @@ class DownloadRecord(Base):
     score = Column(Integer, nullable=False, default=0)  # custom-format score when grabbed
     upgrade = Column(Boolean, nullable=False, default=False)  # replaces an existing file when imported
     failure_reason = Column(String, nullable=True)  # why status became failed (stalled, dead, error, blocklisted by hand)
+    unmatched_files = Column(Text, nullable=True)  # JSON list of file names in the torrent that couldn't be placed automatically (M23)
     last_progress = Column(Float, nullable=False, default=0.0)  # 0..1 at the last check
     last_progress_at = Column(DateTime, nullable=True)  # when progress last moved
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))

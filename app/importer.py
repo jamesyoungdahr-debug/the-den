@@ -37,8 +37,8 @@ def _largest_video_file(files: list[TorrentFile]) -> Path | None:
     return max(candidates, key=lambda p: p.stat().st_size, default=None)
 
 
-def _link_into(files: list[TorrentFile], dest_dir: Path, name: str | None = None, replace: Path | None = None) -> Path | None:
-    source = _largest_video_file(files)
+def _link_into(files: list[TorrentFile], dest_dir: Path, name: str | None = None, replace: Path | None = None, source_name: str | None = None) -> Path | None:
+    source = next((Path(f.path) for f in files if Path(f.path).name == source_name and Path(f.path).is_file()), None) if source_name else _largest_video_file(files)
     if source is None:
         return None
     dest_dir.mkdir(parents=True, exist_ok=True)
@@ -75,16 +75,16 @@ def _link_into(files: list[TorrentFile], dest_dir: Path, name: str | None = None
     return dest
 
 
-def import_movie(files: list[TorrentFile], movie: Movie, movies_root: str, replace: str | None = None) -> Path | None:
+def import_movie(files: list[TorrentFile], movie: Movie, movies_root: str, replace: str | None = None, source_name: str | None = None) -> Path | None:
     name = movie_name(movie)
     dest_dir = Path(movies_root) / name
-    return _link_into(files, dest_dir, name=name, replace=Path(replace) if replace else None)
+    return _link_into(files, dest_dir, name=name, replace=Path(replace) if replace else None, source_name=source_name)
 
 
-def import_episode(files: list[TorrentFile], series: Series, episode: Episode, tv_root: str, replace: str | None = None) -> Path | None:
+def import_episode(files: list[TorrentFile], series: Series, episode: Episode, tv_root: str, replace: str | None = None, source_name: str | None = None) -> Path | None:
     dest_dir = Path(tv_root) / _safe_name(series.title) / f"Season {episode.season_number:02d}"
     name = episode_name(series, episode)
-    return _link_into(files, dest_dir, name=name, replace=Path(replace) if replace else None)
+    return _link_into(files, dest_dir, name=name, replace=Path(replace) if replace else None, source_name=source_name)
 
 
 def import_season_pack(files: list[TorrentFile], series: Series, season_number: int, episodes: dict[int, Episode], tv_root: str) -> tuple[dict[int, Path], list[str]]:
@@ -111,3 +111,22 @@ def import_season_pack(files: list[TorrentFile], series: Series, season_number: 
         if dest is not None:
             imported[parsed[1]] = dest
     return imported, unmatched
+
+
+def import_as_is(files: list[TorrentFile], source_name: str, dest_root: str) -> Path | None:
+    """Link one named file from the torrent straight into `dest_root` (movies_root or
+    tv_root) under its own original name, no Plex renaming, no library record touched.
+    For files the parser or the admin can't confidently map to a title yet."""
+    source = next((Path(f.path) for f in files if Path(f.path).name == source_name and Path(f.path).is_file()), None)
+    if source is None:
+        return None
+    dest_dir = Path(dest_root) / "Manual imports"
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    dest = dest_dir / source.name
+    if dest.exists():
+        return dest
+    try:
+        os.link(source, dest)
+    except OSError:
+        shutil.copy2(source, dest)
+    return dest if dest.exists() and dest.stat().st_size > 0 else None

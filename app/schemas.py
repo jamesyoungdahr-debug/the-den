@@ -78,6 +78,34 @@ class DownloadRecordOut(BaseModel):
         from_attributes = True
 
 
+class UnmatchedFileOut(BaseModel):
+    name: str
+    size: int
+
+
+class UnmatchedDownloadOut(BaseModel):
+    id: int
+    release_title: str
+    status: str
+    failure_reason: str | None = None
+    movie_id: int | None = None
+    episode_id: int | None = None
+    series_id: int | None = None
+    season_number: int | None = None
+    files: list[UnmatchedFileOut] = []
+
+
+class AssignBody(BaseModel):
+    file: str  # exact file name from UnmatchedFileOut.name
+    kind: str  # "movie" | "episode"
+    id: int  # movie id or episode id to link the file to
+
+
+class ImportAsIsBody(BaseModel):
+    file: str  # exact file name from UnmatchedFileOut.name
+    root: str  # "movies" | "tv" -- which root folder gets a "Manual imports" subfolder
+
+
 class SeriesCreate(BaseModel):
     tvmaze_id: int
     tmdb_id: int | None = None

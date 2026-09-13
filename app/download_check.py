@@ -1,6 +1,7 @@
 """Advance one DownloadRecord against the built-in torrent engine, importing it when
 done -- and, separately, clean up torrents that have finished their seeding duty."""
 
+import json
 from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 
@@ -82,6 +83,11 @@ async def _import(db: Session, record: DownloadRecord) -> None:
     files = engine.files(record.info_hash)
     done = {}
     imported = False
+    if not record.movie_id and not record.episode_id and not (record.series_id and record.season_number is not None):
+        names = [f.path.split("/")[-1].split("\\")[-1] for f in files if not f.path.lower().endswith((".txt", ".nfo", ".jpg", ".png", ".srt", ".sub"))]
+        record.unmatched_files = json.dumps(names) if names else None
+        record.status = "completed"
+        return
     if record.movie_id:
         movie = db.get(Movie, record.movie_id)
         if movie is None:
@@ -94,6 +100,10 @@ async def _import(db: Session, record: DownloadRecord) -> None:
             movie.file_score = record.score or 0
             movie.file_path = str(dest)
             imported = True
+        else:
+            names = [f.path.split("/")[-1].split("\\")[-1] for f in files if not f.path.lower().endswith((".txt", ".nfo", ".jpg", ".png", ".srt", ".sub"))]
+            record.unmatched_files = json.dumps(names)
+            record.failure_reason = record.failure_reason or "no video file found in this torrent"
     elif record.series_id and record.season_number is not None:
         series = db.get(Series, record.series_id)
         if series is None:
@@ -109,6 +119,7 @@ async def _import(db: Session, record: DownloadRecord) -> None:
                 e.file_path = str(done[e.episode_number])
         imported = bool(done)
         if unmatched:
+            record.unmatched_files = json.dumps(unmatched)
             record.failure_reason = f"{len(unmatched)} file(s) matched no episode: " + ", ".join(unmatched[:5])
     elif record.episode_id:
         episode = db.get(Episode, record.episode_id)
@@ -123,6 +134,10 @@ async def _import(db: Session, record: DownloadRecord) -> None:
             episode.file_score = record.score or 0
             episode.file_path = str(dest)
             imported = True
+        else:
+            names = [f.path.split("/")[-1].split("\\")[-1] for f in files if not f.path.lower().endswith((".txt", ".nfo", ".jpg", ".png", ".srt", ".sub"))]
+            record.unmatched_files = json.dumps(names)
+            record.failure_reason = record.failure_reason or "no video file found in this torrent"
     # "completed" = finished downloading but nothing importable in it (no video file).
     record.status = "imported" if imported else "completed"
     if imported:
@@ -140,7 +155,7 @@ def reap_seeded(db: Session) -> int:
     added by hand (no record) and anything still seeding are left alone."""
     reaped = 0
     records = db.query(DownloadRecord).filter(
-        DownloadRecord.status == "imported", DownloadRecord.info_hash.isnot(None)
+        DownloadRecord.status == "imported", DownloadRecord.info_hash.isnot(None), DownloadRecord.unmatched_files.is_(None)
     ).all()
     for record in records:
         st = engine.status(record.info_hash)

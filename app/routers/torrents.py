@@ -12,6 +12,7 @@ from app import settings as settings_module
 from app.deps import get_db
 from app.models import DownloadRecord, Episode, Movie, Series
 from app.torrent import TorrentStatus, engine
+from app.parser import parse_quality
 
 router = APIRouter(prefix="/torrents", tags=["torrents"], dependencies=[Depends(auth.require_admin)])
 
@@ -104,6 +105,9 @@ async def add_torrent(payload: TorrentAdd, db: Session = Depends(get_db)):
         raise HTTPException(502, f"could not fetch torrent: {exc}")
     except RuntimeError as exc:
         raise HTTPException(503, str(exc))
+    name = engine.status(key).name if engine.status(key) else source
+    db.add(DownloadRecord(download_url=source, info_hash=key, release_title=name, status="queued", quality=parse_quality(name)))
+    db.commit()
     st = engine.status(key)
     if st is None:
         raise HTTPException(500, "torrent was added but is not visible")
