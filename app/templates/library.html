@@ -49,6 +49,7 @@
       <a class="holt-chip {{ 'is-on' if filter == 'all' else '' }}" href="/library">All</a>
       <a class="holt-chip {{ 'is-on' if filter == 'missing' else '' }}" href="/library?filter=missing">Missing</a>
       <a class="holt-chip {{ 'is-on' if filter == 'have' else '' }}" href="/library?filter=have">Have</a>
+      {% if counts.upgradable %}<a class="holt-chip {{ 'is-on' if filter == 'upgradable' else '' }}" href="/library?filter=upgradable">Upgradable</a>{% endif %}
       {% if counts.plex %}<a class="holt-chip {{ 'is-on' if filter == 'plex' else '' }}" href="/library?filter=plex">On Plex</a>{% endif %}
     </div>
   </div>
@@ -62,6 +63,7 @@
         {% if m.poster_path %}<img src="{{ m.poster_path|poster }}" alt="" loading="lazy">{% else %}<span class="holt-poster-letter">{{ m.title[:1] }}</span>{% endif %}
         {% if m.downloading %}<span class="holt-badge holt-badge-solid holt-badge-processing"><span class="dot"></span>downloading</span>
         {% elif m.source == 'plex' %}<span class="holt-badge holt-badge-solid holt-badge-available"><span class="dot"></span>on Plex</span>
+        {% elif m.has_file and m.upgradable %}<span class="holt-badge holt-badge-solid holt-badge-partial"><span class="dot"></span>{{ m.file_quality or 'have' }} · upgradable</span>
         {% elif m.has_file %}<span class="holt-badge holt-badge-solid holt-badge-available"><span class="dot"></span>have{% if m.on_plex %} · Plex{% endif %}</span>
         {% elif m.on_plex %}<span class="holt-badge holt-badge-solid holt-badge-available"><span class="dot"></span>on Plex · wanted</span>
         {% else %}<span class="holt-badge holt-badge-solid holt-badge-missing"><span class="dot"></span>missing</span>{% endif %}
@@ -77,7 +79,7 @@
             </form>
             {% endif %}
           {% else %}
-            {% if not m.has_file %}<a href="/ui/movies/{{ m.id }}/candidates" class="holt-btn holt-btn-primary holt-btn-sm">Find releases</a>{% endif %}
+            {% if not m.has_file or m.upgradable %}<a href="/ui/movies/{{ m.id }}/candidates" class="holt-btn holt-btn-primary holt-btn-sm">Find releases</a>{% endif %}
             <form method="post" action="/ui/movies/{{ m.id }}/delete" onsubmit="return confirm('Remove {{ m.title|e }} from the library?')">
               <button type="submit" class="holt-btn holt-btn-quiet holt-btn-sm">Remove</button>
             </form>

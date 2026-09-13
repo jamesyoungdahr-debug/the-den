@@ -24,6 +24,7 @@ class ProfileIn(BaseModel):
     allowed_qualities: str | None = None
     cutoff: str | None = None
     min_format_score: int | None = None
+    upgrade_until_score: int | None = None
     scores: dict[int, int] | None = None
 
 
@@ -43,6 +44,7 @@ def _profile_out(db, profile) -> dict:
         "allowed_qualities": profile.allowed_qualities,
         "cutoff": profile.cutoff,
         "min_format_score": profile.min_format_score,
+        "upgrade_until_score": profile.upgrade_until_score,
         "scores": {row.format_id: row.score for row in db.query(ProfileFormatScore).filter(ProfileFormatScore.profile_id == profile.id)}
     }
 
@@ -86,6 +88,9 @@ def update_profile(profile_id: int, payload: ProfileIn, db: Session = Depends(ge
 
     if payload.min_format_score is not None:
         profile.min_format_score = payload.min_format_score
+
+    if payload.upgrade_until_score is not None:
+        profile.upgrade_until_score = payload.upgrade_until_score
 
     if payload.scores is not None:
         for format_id, score in payload.scores.items():

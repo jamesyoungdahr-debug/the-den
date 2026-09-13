@@ -2,7 +2,7 @@
 downloads folder share a filesystem (instant, no extra space) and falls back to a
 copy -- either way the torrent keeps seeding from where it is. Files are renamed to
 Plex's conventions (`Title (Year).ext`, `Show - S01E02 - Episode.ext`) inside the
-existing folder layout."""
+existing folder layout. An upgrade links the new file next to the old one, swaps it in atomically and removes the old file afterwards."""
 
 import os
 import re
@@ -36,28 +36,51 @@ def _largest_video_file(files: list[TorrentFile]) -> Path | None:
     return max(candidates, key=lambda p: p.stat().st_size, default=None)
 
 
-def _link_into(files: list[TorrentFile], dest_dir: Path, name: str | None = None) -> bool:
+def _link_into(files: list[TorrentFile], dest_dir: Path, name: str | None = None, replace: Path | None = None) -> Path | None:
     source = _largest_video_file(files)
     if source is None:
-        return False
+        return None
     dest_dir.mkdir(parents=True, exist_ok=True)
     dest = dest_dir / (name + source.suffix.lower()) if name else dest_dir / source.name
-    if dest.exists():
-        return True  # already imported -- e.g. re-checked after a restart
+    if replace is None and dest.exists():
+        return dest  # already imported -- e.g. re-checked after a restart
+    tmp = dest.with_name(dest.name + ".upgrading")
     try:
-        os.link(source, dest)
+        os.unlink(tmp)
     except OSError:
-        shutil.copy2(source, dest)  # different filesystem, or one without hard links
-    return True
+        pass
+    try:
+        os.link(source, tmp)
+    except OSError:
+        shutil.copy2(source, tmp)  # different filesystem, or one without hard links
+    if tmp.stat().st_size <= 0:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        return None
+    os.replace(tmp, dest)
+    if replace is not None and replace != dest and replace.exists():
+        try:
+            replace.unlink()
+        except OSError:
+            pass
+        # Clean up empty parent directory if needed
+        if replace.parent != dest.parent and not any(replace.parent.iterdir()):
+            try:
+                replace.parent.rmdir()
+            except OSError:
+                pass
+    return dest
 
 
-def import_movie(files: list[TorrentFile], movie: Movie, movies_root: str) -> bool:
+def import_movie(files: list[TorrentFile], movie: Movie, movies_root: str, replace: str | None = None) -> Path | None:
     name = movie_name(movie)
     dest_dir = Path(movies_root) / name
-    return _link_into(files, dest_dir, name=name)
+    return _link_into(files, dest_dir, name=name, replace=Path(replace) if replace else None)
 
 
-def import_episode(files: list[TorrentFile], series: Series, episode: Episode, tv_root: str) -> bool:
+def import_episode(files: list[TorrentFile], series: Series, episode: Episode, tv_root: str, replace: str | None = None) -> Path | None:
     dest_dir = Path(tv_root) / _safe_name(series.title) / f"Season {episode.season_number:02d}"
     name = episode_name(series, episode)
-    return _link_into(files, dest_dir, name=name)
+    return _link_into(files, dest_dir, name=name, replace=Path(replace) if replace else None)

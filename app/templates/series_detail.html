@@ -46,10 +46,10 @@
             <div class="holt-row-title"><span class="holt-meta" style="margin-right:6px">E{{ '%02d'|format(e.episode_number) }}</span>{{ e.title or "Untitled" }}</div>
             <div class="holt-row-meta">{{ e.air_date or 'no air date' }}</div>
           </div>
-          {% if e.has_file %}<span class="holt-badge holt-badge-available"><span class="dot"></span>have</span>
-          {% elif e.air_date and e.air_date > today %}<span class="holt-badge holt-badge-pending"><span class="dot"></span>upcoming</span>
+          {% if e.has_file and e.id in upgradable_ids %}<span class="holt-badge holt-badge-partial"><span class="dot"></span>{{ e.file_quality or 'have' }} · upgradable</span>
+          {% elif e.has_file %}<span class="holt-badge holt-badge-available"><span class="dot"></span>have{% if e.file_quality %} · {{ e.file_quality }}{% endif %}</span>
           {% else %}<span class="holt-badge holt-badge-missing"><span class="dot"></span>missing</span>{% endif %}
-          {% if is_admin and not e.has_file %}<a href="/ui/episodes/{{ e.id }}/candidates" class="holt-btn holt-btn-quiet holt-btn-sm">Find releases</a>{% endif %}
+          {% if is_admin and (not e.has_file or e.id in upgradable_ids) %}<a href="/ui/episodes/{{ e.id }}/candidates" class="holt-btn holt-btn-quiet holt-btn-sm">Find releases</a>{% endif %}
         </div>
         {% endfor %}
       </div>

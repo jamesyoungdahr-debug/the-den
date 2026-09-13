@@ -17,6 +17,12 @@ restores torrents from resume data. See ROADMAP.md's M10 section for the details
 two loopback-swarm gotchas that cost the most debugging time.
 
 ## Currently working on
+**M18 -- upgrades (2026-09-12).** Titles that have a file but sit below the profile's
+cutoff quality or its score target are "upgradable": automation re-searches them daily,
+grabs only a release that clearly beats the file on disk, imports over it with an atomic
+swap, and fires "upgraded". Library pages get an Upgradable filter and badge; both apps
+show the badge and let you pick a release by hand. Plan: `docs/tier1-plan.md`.
+
 **M17 -- custom formats (2026-09-12).** Release titles are parsed into source / codec /
 HDR / audio / language / group; 16 built-in custom formats (editable, plus your own rule
 sets) each carry a score per quality profile, and the profile has a minimum score below

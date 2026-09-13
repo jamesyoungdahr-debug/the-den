@@ -49,6 +49,9 @@ class MovieCreate(BaseModel):
 class MovieOut(MovieCreate):
     id: int
     has_file: bool
+    file_quality: str | None = None
+    file_score: int = 0
+    upgradable: bool = False
 
     class Config:
         from_attributes = True
@@ -95,6 +98,9 @@ class EpisodeOut(BaseModel):
     title: str | None = None
     air_date: str | None = None
     has_file: bool
+    file_quality: str | None = None
+    file_score: int = 0
+    upgradable: bool = False
 
     class Config:
         from_attributes = True

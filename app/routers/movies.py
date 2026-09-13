@@ -8,8 +8,9 @@ from app import tmdb
 from app.candidates import movie_query, profile_for, scored_candidates
 from app.deps import get_db
 from app.grabber import grab_movie as do_grab_movie
-from app.models import DownloadRecord, Movie
+from app.models import DownloadRecord, Movie, QualityProfile
 from app.schemas import DownloadRecordOut, GrabRequest, MovieCreate, MovieOut, ScoredReleaseOut
+from app.scoring import is_upgradable
 
 router = APIRouter(prefix="/movies", tags=["movies"])
 
@@ -22,7 +23,14 @@ async def search_tmdb(q: str, db: Session = Depends(get_db)):
 
 @router.get("", response_model=list[MovieOut], dependencies=[Depends(auth.require_user)])
 def list_movies(db: Session = Depends(get_db)):
-    return db.query(Movie).all()
+    default = db.query(QualityProfile).first()
+    out = []
+    for movie in db.query(Movie).all():
+        item = MovieOut.model_validate(movie)
+        profile = profile_for(db, movie.quality_profile_id, default=default)
+        item.upgradable = bool(movie.has_file and profile and is_upgradable(movie.file_quality, movie.file_score, profile))
+        out.append(item)
+    return out
 
 
 @router.post("", response_model=MovieOut, status_code=201, dependencies=[Depends(auth.require_admin)])

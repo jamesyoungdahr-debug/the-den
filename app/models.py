@@ -31,6 +31,7 @@ class QualityProfile(Base):
     allowed_qualities = Column(String, nullable=False)  # comma-separated, best first
     cutoff = Column(String, nullable=False)  # stop searching once this quality is had
     min_format_score = Column(Integer, nullable=False, default=0)  # releases scoring below this are rejected
+    upgrade_until_score = Column(Integer, nullable=False, default=0)  # keep upgrading a title's file until its format score reaches this (0 = quality cutoff only)
 
 
 class Movie(Base):
@@ -43,6 +44,10 @@ class Movie(Base):
     overview = Column(String, nullable=True)
     poster_path = Column(String, nullable=True)
     has_file = Column(Boolean, nullable=False, default=False)
+    file_quality = Column(String, nullable=True)  # quality of the file on disk, from the imported release title
+    file_score = Column(Integer, nullable=False, default=0)  # its custom-format score at import time
+    file_path = Column(String, nullable=True)  # the library file the last import wrote
+    last_upgrade_search = Column(DateTime, nullable=True)
     quality_profile_id = Column(Integer, ForeignKey("quality_profiles.id"), nullable=True)
 
 
@@ -69,6 +74,10 @@ class Episode(Base):
     title = Column(String, nullable=True)
     air_date = Column(String, nullable=True)
     has_file = Column(Boolean, nullable=False, default=False)
+    file_quality = Column(String, nullable=True)  # quality of the file on disk, from the imported release title
+    file_score = Column(Integer, nullable=False, default=0)  # its custom-format score at import time
+    file_path = Column(String, nullable=True)  # the library file the last import wrote
+    last_upgrade_search = Column(DateTime, nullable=True)
     # Automation only grabs monitored episodes; a season request monitors just its seasons.
     monitored = Column(Boolean, nullable=False, default=True)
 
@@ -129,6 +138,9 @@ class DownloadRecord(Base):
     # advanced any more and get marked failed on their next check.
     info_hash = Column(String, nullable=True, index=True)
     status = Column(String, nullable=False, default="queued")  # queued|downloading|completed|imported|failed
+    quality = Column(String, nullable=True)  # parsed from release_title when grabbed
+    score = Column(Integer, nullable=False, default=0)  # custom-format score when grabbed
+    upgrade = Column(Boolean, nullable=False, default=False)  # replaces an existing file when imported
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 

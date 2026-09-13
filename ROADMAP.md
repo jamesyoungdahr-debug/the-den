@@ -25,7 +25,8 @@ Deploy target: native systemd service on Arch Linux (no Docker).
 - [x] M15 -- Notification agents (done 2026-09-12): Discord, ntfy, webhook, Telegram, Pushover with per-agent event subscriptions, on every surface
 - [x] M16 -- Health + indexer stats (done 2026-09-12): per-day search stats, health checks each cycle, banner + stats + enable/disable on every surface
 - [x] M17 -- Custom formats (done 2026-09-12): release parser, 16 built-in formats with per-profile scores, minimum score floor, Settings editor, score on every Releases page
-- [ ] M14, M18-M21 -- Tier 1: shakedown, upgrades, failed-download handling, season packs, Android search + push -- planned, see [docs/tier1-plan.md](docs/tier1-plan.md)
+- [x] M18 -- Upgrades (done 2026-09-12): upgradable titles, daily upgrade search, atomic file swap, badges everywhere
+- [ ] M14, M19-M21 -- Tier 1: shakedown, upgrades, failed-download handling, season packs, Android search + push -- planned, see [docs/tier1-plan.md](docs/tier1-plan.md)
 - [ ] UI redesign track ("HoltOS Glass": left sidebar shell, glass/blur surfaces, poster-first pages, across web + KDE + Android) -- planned, see [docs/ui-redesign-plan.md](docs/ui-redesign-plan.md); sequenced ahead of M11's pages
 
 ## Notes

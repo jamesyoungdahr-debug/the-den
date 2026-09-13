@@ -10,6 +10,7 @@ from app import auth, config, library_service
 from app import settings as settings_module
 from app import tmdb, torznab, tvmaze
 from app.candidates import episode_query, movie_query, profile_for, scored_candidates
+from app.scoring import is_upgradable
 from app.deps import get_db
 from app.download_check import check_and_import
 from app.grabber import grab_episode as do_grab_episode
@@ -101,6 +102,7 @@ async def library(request: Request, q: str | None = None, filter: str = "all", d
         "plex": sum(1 for m in all_movies if m["on_plex"]),
         "plex_only": sum(1 for m in all_movies if m["source"] == "plex"),
         "tracked": sum(1 for m in all_movies if m["id"]),
+        "upgradable": sum(1 for m in all_movies if m.get("upgradable")),
     }
     if filter == "missing":
         movies = [m for m in all_movies if not m["available"]]
@@ -108,6 +110,8 @@ async def library(request: Request, q: str | None = None, filter: str = "all", d
         movies = [m for m in all_movies if m["available"]]
     elif filter == "plex":
         movies = [m for m in all_movies if m["on_plex"]]
+    elif filter == "upgradable":
+        movies = [m for m in all_movies if m.get("upgradable")]
     else:
         filter, movies = "all", all_movies
     candidates = None
@@ -283,6 +287,8 @@ def ui_series_detail(series_id: int, request: Request, db: Session = Depends(get
         .order_by(Episode.season_number, Episode.episode_number)
         .all()
     )
+    profile = profile_for(db, series.quality_profile_id)
+    upgradable_ids = {e.id for e in episodes if e.has_file and profile and is_upgradable(e.file_quality, e.file_score, profile)}
     seasons: list[dict] = []
     for e in episodes:
         if not seasons or seasons[-1]["number"] != e.season_number:
@@ -295,6 +301,7 @@ def ui_series_detail(series_id: int, request: Request, db: Session = Depends(get
         {
             "request": request, "series": series, "seasons": seasons,
             "have": sum(s["have"] for s in seasons), "total": len(episodes),
+            "upgradable_ids": upgradable_ids,
             "today": date.today().isoformat(), "active_nav": "tv",
         },
     )

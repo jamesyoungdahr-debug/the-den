@@ -31,6 +31,7 @@ async function loadFormats() {
     PROFILE = profiles[0] || null;
     document.getElementById("profile-qualities").value = PROFILE ? PROFILE.allowed_qualities : "";
     document.getElementById("profile-min-score").value = PROFILE ? PROFILE.min_format_score : 0;
+    document.getElementById("profile-upgrade-score").value = PROFILE ? PROFILE.upgrade_until_score : 0;
     renderCutoff();
     renderFormats();
     document.getElementById("profile-qualities").oninput = renderCutoff;
@@ -161,6 +162,7 @@ async function saveProfile() {
     if (allowedQualities !== undefined) payload.allowed_qualities = allowedQualities;
     if (cutoff !== undefined) payload.cutoff = cutoff;
     if (minScore !== undefined) payload.min_format_score = minScore;
+    payload.upgrade_until_score = Number(document.getElementById("profile-upgrade-score").value);
 
     PROFILE = await fapi("PATCH", `/profiles/${PROFILE.id}`, payload);
     fshow("format-result", "Profile saved", true);

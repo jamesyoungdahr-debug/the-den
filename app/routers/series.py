@@ -8,6 +8,7 @@ from app.deps import get_db
 from app.grabber import grab_episode as do_grab_episode
 from app.models import DownloadRecord, Episode, Series
 from app.schemas import DownloadRecordOut, EpisodeOut, GrabRequest, ScoredReleaseOut, SeriesCreate, SeriesOut
+from app.scoring import is_upgradable
 
 router = APIRouter(tags=["series"])
 
@@ -69,7 +70,14 @@ def delete_series(series_id: int, db: Session = Depends(get_db)):
 
 @router.get("/series/{series_id}/episodes", response_model=list[EpisodeOut], dependencies=[Depends(auth.require_user)])
 def list_episodes(series_id: int, db: Session = Depends(get_db)):
-    return db.query(Episode).filter(Episode.series_id == series_id).order_by(Episode.season_number, Episode.episode_number).all()
+    series = db.get(Series, series_id)
+    profile = profile_for(db, series.quality_profile_id if series else None)
+    out = []
+    for episode in db.query(Episode).filter(Episode.series_id == series_id).order_by(Episode.season_number, Episode.episode_number).all():
+        item = EpisodeOut.model_validate(episode)
+        item.upgradable = bool(episode.has_file and profile and is_upgradable(episode.file_quality, episode.file_score, profile))
+        out.append(item)
+    return out
 
 
 @router.get("/episodes/{episode_id}/candidates", response_model=list[ScoredReleaseOut], dependencies=[Depends(auth.require_admin)])

@@ -21,7 +21,9 @@ import re
 
 from sqlalchemy.orm import Session
 
-from app.models import DownloadRecord, Episode, Movie, PlexMedia, Series
+from app.models import DownloadRecord, Episode, Movie, PlexMedia, QualityProfile, Series
+from app.candidates import profile_for
+from app.scoring import is_upgradable
 
 
 def _norm(title: str | None) -> str:
@@ -44,17 +46,21 @@ def merged_movies(db: Session) -> list[dict]:
     plex_by_tmdb = {p.tmdb_id: p for p in plex_rows if p.tmdb_id}
     plex_by_title = {(_norm(p.title), p.year): p for p in plex_rows}
     downloading = _downloading_movie_ids(db)
+    default_profile = db.query(QualityProfile).first()
     out: list[dict] = []
     matched: set[str] = set()
     for m in db.query(Movie).order_by(Movie.id.desc()).all():
         p = plex_by_tmdb.get(m.tmdb_id) or plex_by_title.get((_norm(m.title), m.year))
         if p is not None:
             matched.add(p.rating_key)
+        profile = profile_for(db, m.quality_profile_id, default=default_profile)
+        upgradable = bool(m.has_file and profile and is_upgradable(m.file_quality, m.file_score, profile))
         out.append({
             "source": "both" if p else "den", "id": m.id, "tmdb_id": m.tmdb_id, "title": m.title, "year": m.year,
             "poster_path": m.poster_path or (plex_thumb_url(p) if p else ""), "has_file": bool(m.has_file),
             "downloading": m.id in downloading, "on_plex": p is not None, "plex_rating_key": p.rating_key if p else None,
             "available": bool(m.has_file) or p is not None,
+            "file_quality": m.file_quality or "", "file_score": m.file_score or 0, "upgradable": upgradable,
         })
     plex_only = [p for p in plex_rows if p.rating_key not in matched]
     for p in sorted(plex_only, key=lambda r: _norm(r.title)):
@@ -62,6 +68,7 @@ def merged_movies(db: Session) -> list[dict]:
             "source": "plex", "id": None, "tmdb_id": p.tmdb_id, "title": p.title, "year": p.year,
             "poster_path": plex_thumb_url(p), "has_file": False, "downloading": False, "on_plex": True,
             "plex_rating_key": p.rating_key, "available": True,
+            "file_quality": "", "file_score": 0, "upgradable": False,
         })
     return out
 

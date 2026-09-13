@@ -45,22 +45,32 @@ async def _import(db: Session, record: DownloadRecord) -> None:
         if movie is None:
             record.status = "failed"
             return
-        imported = importer.import_movie(files, movie, s.movies_root)
-        if imported:
+        dest = importer.import_movie(files, movie, s.movies_root, replace=movie.file_path if record.upgrade else None)
+        if dest:
             movie.has_file = True
+            movie.file_quality = record.quality
+            movie.file_score = record.score or 0
+            movie.file_path = str(dest)
+            imported = True
     elif record.episode_id:
         episode = db.get(Episode, record.episode_id)
         series = db.get(Series, episode.series_id) if episode else None
         if episode is None or series is None:
             record.status = "failed"
             return
-        imported = importer.import_episode(files, series, episode, s.tv_root)
-        if imported:
+        dest = importer.import_episode(files, series, episode, s.tv_root, replace=episode.file_path if record.upgrade else None)
+        if dest:
             episode.has_file = True
+            episode.file_quality = record.quality
+            episode.file_score = record.score or 0
+            episode.file_path = str(dest)
+            imported = True
     # "completed" = finished downloading but nothing importable in it (no video file).
     record.status = "imported" if imported else "completed"
     if imported:
-        await notify_event(db, "imported", f"Imported: {record.release_title}", legacy_discord_url=s.discord_webhook_url)
+        event = "upgraded" if record.upgrade else "imported"
+        prefix = "Upgraded" if record.upgrade else "Imported"
+        await notify_event(db, event, f"{prefix}: {record.release_title}", legacy_discord_url=s.discord_webhook_url)
 
 
 def reap_seeded(db: Session) -> int:

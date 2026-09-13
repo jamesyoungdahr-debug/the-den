@@ -64,6 +64,8 @@ Output: a list of defects, fixed as they appear. Gate for everything below.
 
 ### M18 Upgrades (server, all surfaces)
 
+**Done 2026-09-12 (server 0.6.3, client 0.4.8, android 0.5.5).** Profiles gain `upgrade_until_score`; movies and episodes record `file_quality`, `file_score`, `file_path` and `last_upgrade_search`; download records carry `quality`, `score`, `upgrade`. `is_upgradable` (below the cutoff quality, or below the score target) and `beats_current` (strictly better allowed quality, or same quality and +10 score) in `app/scoring.py`. The grabber records the release's quality and score and marks a grab for a title that already has a file as an upgrade; the importer links the new file beside the old one, swaps it in atomically and removes the old file; the download check stores the file fields and fires "upgraded". `automation._upgrade_titles` re-searches each upgradable title at most once a day and grabs only a candidate that beats the file on disk. `/movies` and `/series/{id}/episodes` return `file_quality`, `file_score`, `upgradable`. Web: library "Upgradable" filter and badge, series detail badge, "Find releases" on upgradable titles, settings field for the score target. KDE and Android: badges and the Find/Releases button on upgradable titles. Verified: helper probes, an on-disk swap probe (same-name file replaced, no leftovers), `m18_smoke.sh` (flags, filter page, profile field), KDE harness, Android build. Not done: the local-swarm two-release e2e; the "upgraded" path was not exercised against the real torrent engine.
+
 - Profile gains `cutoff` (quality) and `upgrade_until_score`. A title with a file is
   "upgradable" while below either. `DownloadRecord` records the score of what is on
   disk.
