@@ -1,13 +1,56 @@
 THE DEN - WORKING CONTEXT
 =========================
 Kept up to date by Claude at every milestone so a fresh session can resume without
-the chat history. Newest entries at the top of each section. Last updated: 2026-09-12.
+the chat history. Newest entries at the top of each section. Last updated: 2026-09-13.
+
+PICK UP HERE (2026-09-13, session handoff)
+-------------------------------------------
+Tier 2 (docs/feature-research.md, E1-E10) is being worked through in table order, autonomously, per
+Liam's "just continue until all milestones are done." Done so far this session: E1, E2, E3 (earlier
+session), E4, E5, E6, E7, E8 -- see the DONE entries below for each. All three repos are clean and
+FULLY PUSHED as of this handoff (the-den @ c8a33ca, the-den-client @ 2c71149, the-den-android @
+2d9a162) -- verify with `git log origin/master..HEAD` in each repo before assuming otherwise.
+NEXT UP: E9 (per-user notification settings for request outcomes) -- research already done this
+session (not yet implemented). Key findings to reuse, so the next session doesn't have to re-research:
+  - app/notifier.py's notify_event() broadcasts to every enabled NotificationAgent globally; there is
+    NO per-user targeting today and no "email" kind actually implemented anywhere (KINDS is discord|
+    ntfy|webhook|telegram|pushover only -- no smtplib/email library in requirements.txt either).
+    E9 should therefore be scoped to a per-user ntfy topic only (matches the "no config sprawl"
+    pattern already used this session to drop Trakt/NZBGet/a 3rd usenet client) -- do NOT try to
+    build SMTP email sending from scratch, that's a much bigger separate feature and the doc's
+    "email or ntfy" was written as an either/or, not a mandate for both.
+  - The 4 request-outcome events are request_submitted/request_approved/request_declined/
+    request_available, fired from app/requests_service.py at lines ~99, ~186, ~269, ~293 (grep
+    notify_event in that file to find them precisely, line numbers may have drifted).
+  - Precedent for "nullable per-user override of a global default": User.movie_limit/series_limit/
+    limit_days (nullable Integer columns on User, None = use Settings' global default), merged in
+    requests_service.py's quota() function. Mirror this shape: a nullable User.notify_ntfy_topic
+    column, and a new notifier.notify_user(db, user, event, message, link) helper that sends
+    straight to that topic via the existing send("ntfy", ...) function (no new sending code needed,
+    just new per-user targeting) -- called alongside (not instead of) the existing global
+    notify_event() broadcast at each of the 4 call sites above.
+  - Web: extend app/templates/profile.html (a user's own account page, GET/POST via
+    app/routers/auth.py's /ui/profile routes) with a new field/panel for the ntfy topic, following
+    its existing holt-panel + <form method="post" action="/ui/profile/..."> pattern (the password-
+    change form there is the closest existing example).
+  - Android: no dedicated "my account" screen exists yet for this; PushSection.kt is a *device-level*
+    ntfy config (different concern, client-side, don't confuse with this). A small new field/screen
+    is needed, or extend wherever the Android equivalent of the web profile page is (check MoreScreen/
+    SettingsScreen's own-account area first before assuming a new screen is needed).
+AFTER E9: E10 (backup/restore of the SQLite DB + settings export, server + web only per the
+  feature-research.md surfaces column) is the last Tier 2 item. Once E10 is done, all of E1-E10 are
+  complete and Tier 2 as a whole can be marked done in feature-research.md's header/summary section.
+STANDING RULE (2026-09-13, learned the hard way): push to origin after EVERY milestone commit, not
+  just at natural stopping points -- see the NOTE below about the rm -rf incident. Never let more than
+  one commit sit unpushed. Use Windows git via the Bash tool for push (WSL git hangs indefinitely on
+  a credential prompt with no helper configured -- do not use `wsl git push`, it will hang for the
+  full session if not caught).
 
 REPOS AND VERSIONS
 ------------------
-- the-den            C:\projects\The den            github.com/jamesyoungdahr-debug/the-den        v0.4.3 (commit e5b67f7)
-- the-den-client     C:\projects\the-den-client     (KDE, PySide6/Kirigami)                         v0.4.3 (commit ea54296)
-- the-den-android    C:\projects\the-den-android    (Kotlin/Compose)                                 master 0bc47b5 + uncommitted U5 work
+- the-den            C:\projects\theden             github.com/jamesyoungdahr-debug/the-den        commit c8a33ca (0.x, no version tag -- see "no 1.0.0 yet" below)
+- the-den-client     C:\projects\the-den-client     (KDE, PySide6/Kirigami)                         v0.4.15 (commit 2c71149)
+- the-den-android    C:\projects\the-den-android    (Kotlin/Compose)                                v0.6.6 (commit 2d9a162)
 - Rule: the-den and the-den-client stay SEPARATE repos and SEPARATE packages; the HoltOS updater tracks both.
 - Git identity for commits: user.name Liam, user.email jamesyoungdahr@gmail.com (set locally in all three repos).
 
@@ -30,6 +73,15 @@ DONE 2026-09-13: E5 - PER-TITLE HISTORY (DONE, all three surfaces). New `history
   JSON through) and is verified clean via the QML harness. Android's TheDenApi.kt gained a HistoryEntry data class and DetailResponse.history, and
   DetailScreen.kt gets a History GlassPanel with a tone-mapped Badge per event; verified with a debug build. the-den (commit 0a8d9b4, untagged), client
   v0.4.13, android v0.6.3.
+DONE 2026-09-13: E6 - SUBTITLES (DONE, server only -- documentation gap fixed 2026-09-13: this was implemented and pushed in the same commit as E1/
+  E2/E4 during the rm -rf recovery, but never got a DONE entry here or in ROADMAP.md/feature-research.md at the time; code has been live and working
+  since commit 582763e). New Settings.opensubtitles_api_key/subtitle_languages; app/opensubtitles.py is a thin OpenSubtitles REST v1 client (search +
+  download by TMDB id); app/subtitles.py's fetch_missing() writes missing-language .srt files as siblings of each movie/episode's video file (Plex's
+  own convention, e.g. `Movie (Year).en.srt`), called as a best-effort step at the end of every automation cycle. A Subtitles panel on web Settings
+  (API key + comma-separated language list). No KDE/Android UI was built for this (feature-research.md's surfaces column says "settings on all
+  surfaces", so this is a real scope gap, not a documented cut like E4/E7/E8's KDE/Android omissions -- worth doing if picked back up). Verified via
+  a DB-level smoke test with mocked OpenSubtitles calls (no live API key available in this environment): no-key no-op, per-language dedupe (a
+  pre-existing language's file is left alone), correct sibling filename, idempotent re-runs.
 DONE 2026-09-13: E1 - IMPORT LISTS (DONE, all three surfaces). New `import_lists` table (migration f3a4b5c6d7e8, mirrors NotificationAgent's shape) and
   app/import_lists.py (sync_one/sync_all), synced on a timer via a new scheduler job (settings.import_list_interval_minutes, default 360 min).
   tmdb.get_list() adds v3-list fetching (movies only); plex.watchlist() reads the connected owner account's Discover watchlist. Requests approval logic in
