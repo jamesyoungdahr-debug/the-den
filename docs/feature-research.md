@@ -35,11 +35,11 @@ quotas and approval, accounts and API tokens, a Glass UI on all three surfaces.
 
 | # | Feature | Surfaces |
 |---|---|---|
-| E1 | **Import lists**: auto-add from a TMDB list, Trakt list or Plex watchlist; the Seerr "watchlist -> request" flow. | server, web (settings), KDE/Android (toggle) |
-| E2 | **Root folders per profile / multiple libraries**: e.g. Kids movies vs Movies, 4K vs 1080p libraries with their own folders and profiles. | server (models, importer), web, clients (chooser on add) |
+| E1 (done 2026-09-13, M25) | **Import lists**: auto-add from a TMDB list, Trakt list or Plex watchlist; the Seerr "watchlist -> request" flow. Shipped: TMDB list and Plex watchlist (v3 TMDB lists are movies-only; Trakt needs its own OAuth app registration and was left out to avoid new external-service config sprawl). | server, web (settings), KDE/Android (toggle) |
+| E2 (done 2026-09-13, M26) | **Root folders per profile / multiple libraries**: e.g. Kids movies vs Movies, 4K vs 1080p libraries with their own folders and profiles. Shipped: named root folders per media type with a default. Not shipped: a per-title root-folder picker on add -- there is no quality-profile picker on any surface today either, so this was scoped out to match that existing precedent rather than build a new one-off picker pattern. | server (models, importer), web, clients (chooser on add) |
 | E3 (done 2026-09-13, M23) | **Manual import / unmatched downloads**: a queue of finished torrents The Den could not match, with "assign to title" and "import as-is". | server, web (Downloads), KDE/Android |
-| E4 | **Rename existing files** to the Plex convention on demand, with a preview (M13 only renames new imports). | server, web (library actions) |
-| E5 | **Blocklist and history**: every grab, import, failure and removal with timestamps; per-title history on the detail page; "blocklist this release". | server (table), web/KDE/Android (history tab) |
+| E4 (done 2026-09-13, M27) | **Rename existing files** to the Plex convention on demand, with a preview (M13 only renames new imports). | server, web (library actions) |
+| E5 (done 2026-09-13, M24) | **Blocklist and history**: every grab, import, failure and removal with timestamps; per-title history on the detail page; "blocklist this release". | server (table), web/KDE/Android (history tab) |
 | E6 | **Subtitles**: Bazarr-style OpenSubtitles fetch per language preference. | server, settings on all surfaces |
 | E7 | **Usenet download client**: the presets already list 13 Newznab indexers, but there is no NZB downloader (SABnzbd/NZBGet integration, or a built-in one). Until then the usenet presets only work for people who also run an NZB client. | server (downloader abstraction), settings |
 | E8 | **Request comments and reasons**: decline with a note (exists) plus a user-visible thread; "request 4K" as a variant. | server, web, Android |

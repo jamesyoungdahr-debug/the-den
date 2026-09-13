@@ -21,13 +21,45 @@ LAST TASK: M22 - DISCOVER GROUPED (MOVIES / SERIES) AND PAGED "VIEW MORE" (2026-
   docs/tier1-plan.md; Tier 2 candidates: docs/feature-research.md (E1-E10). M22 was the first post-Tier-1 item (Liam's request), rails in
   app/routers/discover.py RAILS, tmdb.* take page=.
 DONE 2026-09-13: M23 - MANUAL IMPORT (DONE, all three surfaces). the-den v0.6.9, client v0.4.12, android v0.6.2. See ROADMAP.md for the summary.
-IN PROGRESS: E5 - PER-TITLE HISTORY (server done 2026-09-13, uncommitted-to-tag). New `history_events` table (migration e2f3a4b5c6d7) and app/history.py
+DONE 2026-09-13: E5 - PER-TITLE HISTORY (DONE, all three surfaces). New `history_events` table (migration e2f3a4b5c6d7) and app/history.py
   (record/for_movie/for_episode/for_series/as_dicts). Recording added at every lifecycle point: grabber._grab ("grabbed"/"upgraded"), download_check._import
   ("imported"/"upgraded"), download_check.fail_download ("download_failed"), download_check.reap_seeded and routers/torrents.py remove_torrent ("removed",
   only when the torrent had a title). discover.py's _detail() (used by the web page and the JSON API both clients share) now returns `item["history"]`, and
   discover_detail.html shows a History panel. Verified: e5_smoke.py (DB-level, full grab->import->fail->remove->detail pipeline, 5/5), e5_web_smoke.sh (live
-  detail page and JSON API both carry history). NEXT: KDE (DetailPage.qml reads detailController.data.history directly, no model change needed) and Android
-  (DetailResponse gains a history field, DetailScreen.kt gets a History section).
+  detail page and JSON API both carry history). KDE's DetailPage.qml reads page.item.history directly (no model change needed, JsonRecord passes the raw
+  JSON through) and is verified clean via the QML harness. Android's TheDenApi.kt gained a HistoryEntry data class and DetailResponse.history, and
+  DetailScreen.kt gets a History GlassPanel with a tone-mapped Badge per event; verified with a debug build. the-den (commit 0a8d9b4, untagged), client
+  v0.4.13, android v0.6.3.
+DONE 2026-09-13: E1 - IMPORT LISTS (DONE, all three surfaces). New `import_lists` table (migration f3a4b5c6d7e8, mirrors NotificationAgent's shape) and
+  app/import_lists.py (sync_one/sync_all), synced on a timer via a new scheduler job (settings.import_list_interval_minutes, default 360 min).
+  tmdb.get_list() adds v3-list fetching (movies only); plex.watchlist() reads the connected owner account's Discover watchlist. Requests approval logic in
+  requests_service.py was refactored into reusable get_or_create_movie/get_or_create_series, now shared with import_lists.sync_one so a list add goes
+  through the same path as approving a request. New /api/import-lists CRUD + manual sync endpoint; an Import Lists panel on web Settings (mirrors the
+  Notifications panel). Verified: migration round-trip, a DB-level smoke test (both kinds, dedupe, unknown kind, TVmaze-mapping failure), a live HTTP
+  smoke test of the full API, and a live browser pass with a real sync against TMDB. KDE gained an ImportListsModel and an Import Lists Section/dialog on
+  SettingsPage.qml, verified via the QML harness (15 pages clean); client v0.4.14. Android's TheDenApi.kt gained ImportList/ImportListRequest and the
+  CRUD+sync endpoints, ImportListsViewModel mirrors NotificationsViewModel, and ImportListsSection on the Settings screen mirrors NotificationsSection;
+  verified with a debug build. android v0.6.4.
+DONE 2026-09-13: E2 - ROOT FOLDERS (DONE, all three surfaces). New `root_folders` table (name, media_type, path, is_default) plus a nullable
+  root_folder_id FK on Movie and Series (migration a4b5c6d7e8f9). app/root_folders.py's root_folder_for() resolves a title's own folder, else the
+  media type's marked default, else the existing global Settings.movies_root/tv_root -- mirroring candidates.profile_for()'s fallback pattern, so an
+  install with zero root folders behaves exactly as before. Wired into every import call site that previously hardcoded s.movies_root/s.tv_root
+  (download_check.py's three branches, routers/downloads.py's manual assign endpoint). New /api/root-folders CRUD (only one default per media type).
+  No per-title root-folder picker UI exists yet on any surface (matches the same gap quality profiles already have) -- scoped out, noted in
+  feature-research.md. KDE gained a RootFoldersModel and a Root Folders Section/dialog on SettingsPage.qml, verified via the QML harness (15 pages
+  clean); client v0.4.15. Android's TheDenApi.kt gained RootFolder/RootFolderRequest and the CRUD endpoints, RootFoldersViewModel mirrors
+  ImportListsViewModel, RootFoldersSection mirrors ImportListsSection; verified with a debug build. android v0.6.5.
+DONE 2026-09-13: E4 - RENAME EXISTING FILES (DONE, server + web only, per feature-research.md's surfaces column -- no KDE/Android for this one).
+  app/renamer.py reuses importer.py's movie_name/episode_name to diff a title's current file_path against what it should be, filenames only (no
+  folder restructuring). Same-filesystem rename preserves the inode (a hardlink to a still-seeding torrent copy is unaffected); copy+delete fallback
+  across filesystems. New /api/rename (preview/apply/apply-all) and a plain server-rendered /ui/rename review-then-confirm page (linked from
+  Settings), since nothing else in the app had a preview/confirm flow to reuse. Verified: DB-level smoke test with real files, live HTTP smoke test,
+  and a full browser pass (seeded a mismatched file, previewed, clicked Rename, confirmed the move on disk).
+NOTE 2026-09-13: this repo (the-den server only) suffered an accidental `rm -rf` mid-session that deleted the whole working directory including .git,
+  after E1/E2/E4 had been committed locally but before any of it was pushed. Recovered by re-cloning the last-pushed commit and reconstructing every
+  file change from the diffs already verified earlier in the same session; all four milestones' smoke tests were re-run and passed identically
+  post-recovery. Recorded here as a standing lesson: push to origin more often, not just at natural stopping points, so local-only commits are never
+  the sole copy of a session's work for long.
 TIER 1 STATUS: M15 notifications, M16 health/stats, M17 custom formats, M18 upgrades, M19 failed downloads, M20 season packs, M21 Android push are
   DONE and pushed (server 0.6.0 -> 0.6.6, client 0.4.5 -> 0.4.10, android 0.5.2 -> 0.6.0, each tagged). Remaining: M14 shakedown on the HoltOS box
   (user); no 1.0.0 planned, the server stays on 0.x (Liam, 2026-09-13). Verification so far is API smokes, fake-engine probes, the KDE harness, Android JVM tests and builds; the local-swarm
