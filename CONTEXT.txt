@@ -10,13 +10,15 @@ see its DONE entry below. feature-research.md's summary now notes that everythin
 real-world shakedown has shipped.
 
 NEXT, in order:
-  1. E6 gap: subtitle settings (OpenSubtitles API key + languages) have no KDE or Android UI, although
-     E6's surfaces column asks for all surfaces. Mirror the existing settings sections on each client.
+  1. (DONE 2026-09-13) E6 gap closed: subtitle settings on Android 0.6.8 and KDE 0.4.16, see the DONE
+     entry "E6 GAP" below.
   2. (DONE 2026-09-13) Plex bug: /api/plex/servers and /api/plex/sections 500 on a rejected token --
      fixed, see the DONE entry "PLEX 401 FIX" below.
-  3. Android: nobody has looked at E9's account-page Notifications section on a real screen yet. The
-     debug APK (0.6.7 plus the sign-in gate, commit 821e1b9) is installed on the Pixel 9 Pro Fold; it
-     needs a signed-in account on a reachable backend (dev backend 8686 via the Windows portproxy).
+  3. Android: nobody has looked at E9's Notifications section or E6's Subtitles section on a real screen
+     yet. The 0.6.8 debug APK is installed on the Pixel 9 Pro Fold (in place, app data kept). The dev
+     backend runs on 8686 (DB migrated to head; pre-migration copy ~/the-den-dev/den.db.pre-e10-upgrade,
+     log server-e10.log) and the Windows portproxy points at the current WSL IP. Needs Liam: the phone is
+     locked, and its saved API token may predate the rebuilt dev DB (owner-token.txt is gone).
   4. M14 shakedown on the HoltOS box is Liam's. Tagging a release waits for his "push and tag".
 
 STANDING RULE (2026-09-13, learned the hard way): push to origin after EVERY milestone commit, not
@@ -45,9 +47,9 @@ BRIDGE NOTE (2026-09-13, corrected later the same day): run_coding_task never wr
 
 REPOS AND VERSIONS
 ------------------
-- the-den            C:\projects\theden             github.com/jamesyoungdahr-debug/the-den        commit 8d7498e (0.x, no version tag -- see "no 1.0.0 yet" below)
-- the-den-client     C:\projects\the-den-client     (KDE, PySide6/Kirigami)                         v0.4.15 (commit 2c71149)
-- the-den-android    C:\projects\the-den-android    (Kotlin/Compose)                                v0.6.7 (commit 154a794, untagged)
+- the-den            C:\projects\theden             github.com/jamesyoungdahr-debug/the-den        commit 92d4255 (0.x, no version tag -- see "no 1.0.0 yet" below)
+- the-den-client     C:\projects\the-den-client     (KDE, PySide6/Kirigami)                         v0.4.16 (commit 62ff0c9)
+- the-den-android    C:\projects\the-den-android    (Kotlin/Compose)                                v0.6.8 (commit 4de2bfe, untagged)
 - Rule: the-den and the-den-client stay SEPARATE repos and SEPARATE packages; the HoltOS updater tracks both.
 - Git identity for commits: user.name Liam, user.email jamesyoungdahr@gmail.com (set locally in all three repos).
 
@@ -60,6 +62,14 @@ HoltOS Glass UI. Companion apps: KDE client (the-den-client) and Android app (th
 LAST TASK: M22 - DISCOVER GROUPED (MOVIES / SERIES) AND PAGED "VIEW MORE" (2026-09-13, done, tagged). the-den v0.6.7, client v0.4.11, android v0.6.1. Tier 1 plan:
   docs/tier1-plan.md; Tier 2 candidates: docs/feature-research.md (E1-E10). M22 was the first post-Tier-1 item (Liam's request), rails in
   app/routers/discover.py RAILS, tmdb.* take page=.
+DONE 2026-09-13: E6 GAP - SUBTITLE SETTINGS ON KDE AND ANDROID (DONE). Closes the gap E6 left (its surfaces column asked
+  for settings on every surface; only the web had them). Android 0.6.8 (commit 27a927d): a Subtitles section on Settings
+  (OpenSubtitles API key as a secret + languages); SettingsViewModel only sends the key when typed. KDE 0.4.16 (commit
+  526bfdf): a Subtitles section on SettingsPage.qml, the key added to settings_controller.SECRETS and cleared after a
+  save. Both STATUS.md files got entries (Android also got the missing 0.6.7 one). Written by the local models from
+  exact specs, reviewed per diff. Verified: Android assembleDebug + unit tests 10/10; KDE QML harness clean on
+  SettingsPage.qml and check_settings_controller.py passes (both against a throwaway server on 8687). Not yet seen
+  on a real screen.
 DONE 2026-09-13: PLEX 401 FIX (server only). app/plex.py list_servers now raises PlexError instead of letting httpx
   errors escape: a 401 gives "Plex rejected the saved token; reconnect the Plex account in Settings", other HTTP or
   connection failures and an unreadable body are wrapped too. app/routers/plex.py api_sections now catches PlexError
