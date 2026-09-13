@@ -51,7 +51,6 @@ def _request_context(request: Request) -> dict:
     return {
         "current_user": user,
         "is_admin": auth.is_admin(request),
-        "auth_required": auth.required(),
         "pending_requests": _pending_requests(request),
     }
 

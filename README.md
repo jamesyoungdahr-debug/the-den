@@ -42,10 +42,10 @@ are set. Without either, the app still runs, just against nothing real.
 
 The Den has local accounts with two roles. **Admins** see everything (Indexers, Downloads,
 Users, Settings, add/remove/grab actions); **users** can browse the library, and in M11
-will request titles. Sign-in is **optional by default** (`AUTH_REQUIRED=false`): anyone who
-isn't signed in is treated as an admin, exactly as before accounts existed, so the desktop
-and Android apps keep working until they gain a login step. Set `AUTH_REQUIRED=true` to
-require sign-in everywhere; the first visit then shows `/setup` to create the admin.
+will request titles. Sign-in is **always required**. On a fresh install the first visit runs a
+two-step setup (create the admin with a password or Plex, then name the server and pick the
+library folders); until it's finished the server serves only the setup and sign-in pages and
+answers every app or API call with 503 "setup required".
 
 Companion apps authenticate with a per-user **API token** (generate one on `/ui/profile`,
 send it as `X-Api-Key`) or a session from `POST /api/auth/login`. `GET /api/auth/me` tells a
@@ -81,9 +81,8 @@ $EDITOR /etc/the-den/the-den.env
 systemctl enable --now the-den
 ```
 
-The web UI binds to `127.0.0.1:8686` only. Sign-in is optional by default (see
-Accounts); set `AUTH_REQUIRED=true` and put a TLS reverse proxy in front of it before
-exposing it beyond localhost. The torrent client listens on `TORRENT_PORT` (default 6881,
+The web UI binds to `127.0.0.1:8686` only. Sign-in is always required (see Accounts); put a
+TLS reverse proxy in front of it before exposing it beyond localhost. The torrent client listens on `TORRENT_PORT` (default 6881,
 TCP+UDP) on all interfaces; forward that port on your router for better peer connectivity.
 The built-in Cloudflare solver opens Chromium headed when a display is available (that
 clears the check most reliably); set `DEN_SOLVER_HEADLESS=1` to keep it windowless anyway,
@@ -133,11 +132,10 @@ live at `/api/requests`, `/api/requests/quota` and `/api/plex/scan`.
 
 ## Accounts
 
-Sign-in is optional out of the box (`AUTH_REQUIRED=false`): anyone who isn't signed in is
-treated as an admin so the desktop and Android apps keep working. Create accounts on
-Users, or let people sign in with Plex, then turn on **Require sign-in** in Settings →
-Accounts (it overrides the env var, and only a signed-in admin can flip it). The apps
-authenticate with the API token from each person's profile, sent as `X-Api-Key`.
+Sign-in is always required; there is no anonymous access. The first visit to a fresh install
+runs the setup (admin account, then server name and library folders). Create accounts on
+Users, or let people sign in with Plex. The apps authenticate with the API token from each
+person's profile, sent as `X-Api-Key`.
 
 ## How the built-in torrent client works
 

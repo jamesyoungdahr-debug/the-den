@@ -641,19 +641,6 @@ def ui_save_settings(
     return RedirectResponse("/ui/settings?saved=1", status_code=303)
 
 
-@router.post("/ui/settings/accounts", dependencies=ADMIN)
-def ui_save_accounts(request: Request, require_signin: str = Form(""), db: Session = Depends(get_db)):
-    """Settings -> Accounts: require sign-in everywhere (overrides the AUTH_REQUIRED env var)."""
-    want = require_signin == "1"
-    if want and getattr(request.state, "user", None) is None:
-        return RedirectResponse("/ui/settings?error=Sign+in+as+an+admin+first,+or+you%27d+lock+yourself+out#accounts", status_code=303)
-    row = settings_module.get_row(db)
-    row.auth_required = want
-    db.commit()
-    auth.set_required_override(want)
-    return RedirectResponse("/ui/settings?saved=1#accounts", status_code=303)
-
-
 @router.get("/ui/downloads/unmatched", response_class=HTMLResponse, dependencies=ADMIN)
 def ui_downloads_unmatched(request: Request, db: Session = Depends(get_db)):
     entries = [e for r in _unmatched_records(db) if (e := _unmatched_entry(db, r)) is not None]

@@ -1,14 +1,9 @@
 """Accounts: password hashing, who-is-this resolution, and the guards routes depend on.
 
-Two audiences, two failure modes:
+Sign-in is always required (M33). Two audiences, two failure modes:
   * JSON API routes use require_user / require_admin, which raise 401 / 403.
   * HTML pages use page_user / page_admin, which raise LoginRequired / Forbidden; app.main
     turns those into a redirect to /login (or /setup on a fresh install) and a 403 page.
-
-AUTH_REQUIRED=false (the env default) means an anonymous visitor is treated as an admin,
-so nothing that worked before accounts stops working. Anyone who does sign in is still
-tracked by their real role. Settings -> Accounts can override the env flag (M11g); the
-override is loaded at startup and whenever it is saved, see required().
 """
 
 from __future__ import annotations
@@ -31,19 +26,6 @@ SESSION_MAX_AGE = 30 * 24 * 3600
 API_KEY_HEADER = "x-api-key"
 
 _SCRYPT_N, _SCRYPT_R, _SCRYPT_P = 2**14, 8, 1
-
-# Settings-level override of config.AUTH_REQUIRED (None = follow the env var).
-_required_override: bool | None = None
-
-
-def required() -> bool:
-    """Is sign-in required right now? The Settings override wins over the env var."""
-    return config.AUTH_REQUIRED if _required_override is None else _required_override
-
-
-def set_required_override(value: bool | None) -> None:
-    global _required_override
-    _required_override = value
 
 
 class LoginRequired(Exception):
@@ -137,46 +119,40 @@ def _state_user(request: Request) -> User | None:
 
 def is_admin(request: Request) -> bool:
     user = _state_user(request)
-    if user is not None:
-        return user.is_admin
-    return not required()  # anonymous is admin only while auth is optional
+    return user is not None and user.is_admin
 
 
 # ---- guards: JSON API ------------------------------------------------------------
 
-def require_user(request: Request) -> User | None:
+def require_user(request: Request) -> User:
     user = _state_user(request)
-    if user is not None or not required():
-        return user
-    raise HTTPException(401, "Sign in required")
+    if user is None:
+        raise HTTPException(401, "Sign in required")
+    return user
 
 
-def require_admin(request: Request) -> User | None:
+def require_admin(request: Request) -> User:
     user = _state_user(request)
-    if user is not None:
-        if user.is_admin:
-            return user
+    if user is None:
+        raise HTTPException(401, "Sign in required")
+    if not user.is_admin:
         raise HTTPException(403, "Admin only")
-    if not required():
-        return None
-    raise HTTPException(401, "Sign in required")
+    return user
 
 
 # ---- guards: HTML pages ----------------------------------------------------------
 
-def page_user(request: Request) -> User | None:
+def page_user(request: Request) -> User:
     user = _state_user(request)
-    if user is not None or not required():
-        return user
-    raise LoginRequired(str(request.url.path))
+    if user is None:
+        raise LoginRequired(str(request.url.path))
+    return user
 
 
-def page_admin(request: Request) -> User | None:
+def page_admin(request: Request) -> User:
     user = _state_user(request)
-    if user is not None:
-        if user.is_admin:
-            return user
+    if user is None:
+        raise LoginRequired(str(request.url.path))
+    if not user.is_admin:
         raise Forbidden()
-    if not required():
-        return None
-    raise LoginRequired(str(request.url.path))
+    return user

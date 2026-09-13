@@ -40,7 +40,7 @@ class EffectiveSettings:
     request_movie_limit: int
     request_series_limit: int
     request_limit_days: int
-    auth_required: bool
+    server_name: str | None
     flaresolverr_url: str
 
     def engine_config(self) -> EngineConfig:
@@ -106,6 +106,6 @@ def effective(db: Session) -> EffectiveSettings:
         request_movie_limit=_pick(row.request_movie_limit, config.REQUEST_MOVIE_LIMIT),
         request_series_limit=_pick(row.request_series_limit, config.REQUEST_SERIES_LIMIT),
         request_limit_days=_pick(row.request_limit_days, config.REQUEST_LIMIT_DAYS),
-        auth_required=_pick(row.auth_required, config.AUTH_REQUIRED),
+        server_name=row.server_name,
         flaresolverr_url=_pick(row.flaresolverr_url, config.FLARESOLVERR_URL),
     )

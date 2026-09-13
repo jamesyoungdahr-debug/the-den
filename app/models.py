@@ -140,8 +140,10 @@ class Settings(Base):
     request_limit_days = Column(Integer, nullable=True)
     # FlareSolverr / Byparr base URL for Cloudflare-fronted public trackers (M12)
     flaresolverr_url = Column(String, nullable=True)
-    # Null = follow the AUTH_REQUIRED env var; set from Settings -> Accounts.
-    auth_required = Column(Boolean, nullable=True)
+    # The name the apps show for this server when it isn't tied to Plex (M33 setup); null = SERVER_NAME or the hostname.
+    server_name = Column(String, nullable=True)
+    # Set when the first-run setup wizard is finished; until then only the setup pages are served (M33).
+    setup_completed_at = Column(DateTime, nullable=True)
 
 
 class DownloadRecord(Base):

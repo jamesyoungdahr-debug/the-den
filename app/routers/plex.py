@@ -79,8 +79,8 @@ _THUMB_CACHE_MAX = 400
 async def plex_thumb(rating_key: str, request: Request, api_key: str | None = None, db: Session = Depends(get_db)):
     """A Plex poster, fetched with the owner's token so browsers and the apps never see
     it. Auth: the usual session/X-Api-Key, or ?api_key= because <img> and QML Image
-    can't send headers -- or nothing at all while sign-in is optional."""
-    allowed = not auth.required() or getattr(request.state, "user", None) is not None
+    can't send headers."""
+    allowed = getattr(request.state, "user", None) is not None
     if not allowed and api_key:
         allowed = db.query(User).filter(User.api_token == api_key).first() is not None
     if not allowed:

@@ -60,11 +60,8 @@
           <a href="/ui/profile" style="font-size:12.5px;font-weight:700;color:var(--holt-ink)">{{ current_user.username }}</a>
           <form method="post" action="/logout" style="margin:0"><button type="submit" class="holt-meta" style="background:none;border:0;padding:0;cursor:pointer;line-height:1">{{ current_user.role }} · sign out</button></form>
         </div>
-        {% elif auth_required %}
-        <a class="holt-btn holt-btn-secondary holt-btn-sm" href="/login">Sign in</a>
         {% else %}
-        <span class="holt-ringmark" style="width:22px;height:22px;border-width:5px"></span>
-        <a class="holt-meta" href="/login" style="line-height:1;color:var(--holt-ink-42)">sign in</a>
+        <a class="holt-btn holt-btn-secondary holt-btn-sm" href="/login">Sign in</a>
         {% endif %}
         <button class="holt-sidebar-toggle" type="button" title="Collapse sidebar" aria-label="Collapse sidebar">{{ icon("chevron") }}</button>
       </div>

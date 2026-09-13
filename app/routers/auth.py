@@ -1,13 +1,17 @@
 """Sign in / sign out / first-run setup, as HTML pages and as JSON for the companion apps."""
 
+import socket
+
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app import auth, plex, plex_access, requests_service
+from app import auth, plex, plex_access, requests_service, setup_state
+from app import settings as settings_module
 from app.deps import get_db
 from app.models import User
+from app.routers.api_settings import apply_runtime_changes
 from app.templating import templates
 
 router = APIRouter(tags=["auth"])
@@ -29,19 +33,23 @@ def _user_out(user: User) -> dict:
     }
 
 
-# ---- HTML -------------------------------------------------------------------------
+# ---- first-run setup ----------------------------------------------------------------
+# Step 1 creates the admin (password here, or Plex via /login/plex). Step 2 names the server
+# and sets the library folders. Until step 2 is saved, app.main serves only these pages.
 
 @router.get("/setup", response_class=HTMLResponse)
 def setup_page(request: Request, db: Session = Depends(get_db)):
+    if setup_state.is_complete(db):
+        return RedirectResponse("/", status_code=303)
     if auth.users_exist(db):
-        return RedirectResponse("/login", status_code=303)
+        return RedirectResponse("/setup/server", status_code=303)
     return templates.TemplateResponse("setup.html", {"request": request, "error": None})
 
 
 @router.post("/setup")
 def setup_submit(request: Request, username: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
     if auth.users_exist(db):
-        return RedirectResponse("/login", status_code=303)
+        return RedirectResponse("/setup", status_code=303)
     username = username.strip()
     if len(username) < 2 or len(password) < 8:
         return templates.TemplateResponse(
@@ -51,8 +59,46 @@ def setup_submit(request: Request, username: str = Form(...), password: str = Fo
     db.add(user)
     db.commit()
     auth.sign_in(request, db, user)
+    return RedirectResponse("/setup/server", status_code=303)
+
+
+def _setup_server_page(request: Request, values: dict, error: str | None = None, status: int = 200):
+    return templates.TemplateResponse(
+        "setup_server.html", {"request": request, "values": values, "hostname": socket.gethostname(), "error": error}, status_code=status
+    )
+
+
+@router.get("/setup/server", response_class=HTMLResponse)
+def setup_server_page(request: Request, user: User = Depends(auth.page_admin), db: Session = Depends(get_db)):
+    if setup_state.is_complete(db):
+        return RedirectResponse("/", status_code=303)
+    s = settings_module.effective(db)
+    values = {"server_name": s.server_name or "", "movies_root": s.movies_root, "tv_root": s.tv_root, "downloads_root": s.downloads_root}
+    return _setup_server_page(request, values)
+
+
+@router.post("/setup/server")
+def setup_server_submit(
+    request: Request, server_name: str = Form(""), movies_root: str = Form(""), tv_root: str = Form(""),
+    downloads_root: str = Form(""), user: User = Depends(auth.page_admin), db: Session = Depends(get_db),
+):
+    if setup_state.is_complete(db):
+        return RedirectResponse("/", status_code=303)
+    values = {"server_name": server_name.strip(), "movies_root": movies_root.strip(), "tv_root": tv_root.strip(), "downloads_root": downloads_root.strip()}
+    if not (values["movies_root"] and values["tv_root"] and values["downloads_root"]):
+        return _setup_server_page(request, values, "All three folders are needed.", status=400)
+    old = settings_module.effective(db)
+    row = settings_module.get_row(db)
+    row.server_name = values["server_name"] or None
+    row.movies_root = values["movies_root"]
+    row.tv_root = values["tv_root"]
+    row.downloads_root = values["downloads_root"]
+    setup_state.mark_complete(db)
+    apply_runtime_changes(old, settings_module.effective(db))
     return RedirectResponse("/", status_code=303)
 
+
+# ---- sign in / out ------------------------------------------------------------------
 
 @router.get("/login", response_class=HTMLResponse)
 def login_page(request: Request, next: str | None = None, db: Session = Depends(get_db)):
@@ -132,7 +178,7 @@ async def login_plex_callback(request: Request, db: Session = Depends(get_db)):
         if not auth.is_admin(request):
             raise auth.Forbidden()
         plex_access.store_owner(db, account, token)
-        if me is not None and me.plex_id is None:
+        if me.plex_id is None:
             plex_access.link_account(db, db.get(User, me.id), account)
         return RedirectResponse("/ui/settings?saved=1#plex", status_code=303)
     if purpose == "link":
@@ -185,10 +231,10 @@ async def api_plex_login(body: PlexPinBody, request: Request, db: Session = Depe
     return _user_out(user)
 
 
+# ---- profile ------------------------------------------------------------------------
+
 @router.get("/ui/profile", response_class=HTMLResponse)
-def profile_page(request: Request, user: User | None = Depends(auth.page_user), db: Session = Depends(get_db)):
-    if user is None:
-        raise auth.LoginRequired("/ui/profile")
+def profile_page(request: Request, user: User = Depends(auth.page_user), db: Session = Depends(get_db)):
     return templates.TemplateResponse(
         "profile.html",
         {"request": request, "user": user, "new_token": None, "quota": requests_service.quota(db, user),
@@ -197,9 +243,7 @@ def profile_page(request: Request, user: User | None = Depends(auth.page_user), 
 
 
 @router.post("/ui/profile/token", response_class=HTMLResponse)
-def profile_new_token(request: Request, user: User | None = Depends(auth.page_user), db: Session = Depends(get_db)):
-    if user is None:
-        raise auth.LoginRequired("/ui/profile")
+def profile_new_token(request: Request, user: User = Depends(auth.page_user), db: Session = Depends(get_db)):
     user = db.get(User, user.id)
     token = auth.new_api_token()
     user.api_token = token
@@ -211,10 +255,8 @@ def profile_new_token(request: Request, user: User | None = Depends(auth.page_us
 @router.post("/ui/profile/password")
 def profile_change_password(
     request: Request, current_password: str = Form(""), new_password: str = Form(...),
-    user: User | None = Depends(auth.page_user), db: Session = Depends(get_db),
+    user: User = Depends(auth.page_user), db: Session = Depends(get_db),
 ):
-    if user is None:
-        raise auth.LoginRequired("/ui/profile")
     user = db.get(User, user.id)
     if user.password_hash and not auth.verify_password(current_password, user.password_hash):
         return templates.TemplateResponse(
@@ -232,10 +274,8 @@ def profile_change_password(
 @router.post("/ui/profile/notifications")
 def profile_notifications(
     request: Request, notify_ntfy_topic: str = Form(""),
-    user: User | None = Depends(auth.page_user), db: Session = Depends(get_db),
+    user: User = Depends(auth.page_user), db: Session = Depends(get_db),
 ):
-    if user is None:
-        raise auth.LoginRequired("/ui/profile")
     user = db.get(User, user.id)
     user.notify_ntfy_topic = notify_ntfy_topic.strip() or None
     db.commit()
@@ -264,22 +304,14 @@ def api_logout(request: Request):
 
 
 @router.get("/api/auth/me")
-def api_me(request: Request, db: Session = Depends(get_db)):
-    """Who the caller is. Anonymous while sign-in is optional is reported as an admin
-    with no account, so clients can gate their UI the same way the web UI does."""
-    user = getattr(request.state, "user", None)
-    if user is None:
-        if auth.is_admin(request):
-            return {"id": None, "username": None, "role": "admin", "is_admin": True, "anonymous": True, "auth_required": False, "quota": None}
-        raise HTTPException(401, "Sign in required")
-    return {**_user_out(user), "anonymous": False, "auth_required": auth.required(), "quota": requests_service.quota(db, user)}
+def api_me(user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    """Who the caller is, with their request quota."""
+    return {**_user_out(user), "quota": requests_service.quota(db, user)}
 
 
 @router.post("/api/auth/token")
-def api_new_token(request: Request, user: User | None = Depends(auth.require_user), db: Session = Depends(get_db)):
+def api_new_token(user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
     """Regenerate the caller's API token. The token is returned once, here only."""
-    if user is None:
-        raise HTTPException(401, "Sign in required")
     user = db.get(User, user.id)
     user.api_token = auth.new_api_token()
     db.commit()
@@ -291,10 +323,8 @@ class NotificationSettingsBody(BaseModel):
 
 
 @router.post("/api/auth/notifications")
-def api_notification_settings(body: NotificationSettingsBody, user: User | None = Depends(auth.require_user), db: Session = Depends(get_db)):
+def api_notification_settings(body: NotificationSettingsBody, user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
     """A personal ntfy.sh topic for this user's own request outcomes (E9)."""
-    if user is None:
-        raise HTTPException(401, "Sign in required")
     user = db.get(User, user.id)
     user.notify_ntfy_topic = (body.notify_ntfy_topic or "").strip() or None
     db.commit()

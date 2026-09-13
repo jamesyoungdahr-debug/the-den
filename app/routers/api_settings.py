@@ -1,6 +1,6 @@
 import json
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -44,9 +44,6 @@ class SettingsUpdate(BaseModel):
     request_movie_limit: int | None = Field(default=None, ge=0)
     request_series_limit: int | None = Field(default=None, ge=0)
     request_limit_days: int | None = Field(default=None, ge=1)
-    # Require sign-in everywhere (overrides the AUTH_REQUIRED env var). Only a signed-in
-    # admin may turn it on, so nobody locks themselves out.
-    auth_required: bool | None = None
     # FlareSolverr / Byparr for Cloudflare-fronted public trackers (M12); blank = none
     flaresolverr_url: str | None = None
     # OpenSubtitles (E6); blank api key = no fetch. subtitle_languages is a comma-separated
@@ -98,7 +95,6 @@ def get_settings(db: Session = Depends(get_db)):
         "request_movie_limit": s.request_movie_limit,
         "request_series_limit": s.request_series_limit,
         "request_limit_days": s.request_limit_days,
-        "auth_required": auth.required(),
         "flaresolverr_url": s.flaresolverr_url,
         "has_opensubtitles_api_key": bool(row.opensubtitles_api_key),
         "subtitle_languages": ",".join(s.subtitle_languages),
@@ -132,15 +128,10 @@ def apply_runtime_changes(old: settings_module.EffectiveSettings, new: settings_
 
 
 @router.post("/settings")
-def save_settings(payload: SettingsUpdate, request: Request, db: Session = Depends(get_db)):
+def save_settings(payload: SettingsUpdate, db: Session = Depends(get_db)):
     row = settings_module.get_row(db)
     old = settings_module.effective(db)
 
-    if payload.auth_required is not None:
-        if payload.auth_required and getattr(request.state, "user", None) is None:
-            raise HTTPException(400, "Sign in as an admin before requiring sign-in, or you'd lock yourself out")
-        row.auth_required = payload.auth_required
-        auth.set_required_override(payload.auth_required)
     for field in ("request_movie_limit", "request_series_limit", "request_limit_days"):
         value = getattr(payload, field)
         if value is not None:

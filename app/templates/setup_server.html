@@ -1,0 +1,17 @@
+{% extends "auth_base.html" %}
+{% block title_suffix %} — Set up{% endblock %}
+{% block card %}
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <div class="holt-eyebrow">First run · step 2 of 2</div>
+    <div class="holt-page-title" style="font-size:24px">Name the server and pick folders</div>
+    <div class="holt-body" style="font-size:14px">The desktop and Android apps list this server by this name when they find it on your network; once it's connected to Plex they show the Plex server's name instead. Finished downloads are hard-linked from the downloads folder into the library folders, so keep all three on the same filesystem.</div>
+  </div>
+  {% if error %}<div class="holt-message holt-message-warning">{{ error }}</div>{% endif %}
+  <form method="post" action="/setup/server" style="display:flex;flex-direction:column;gap:var(--holt-space-3)">
+    <div class="holt-field" style="margin:0"><label for="server_name">Server name</label><input id="server_name" name="server_name" value="{{ values.server_name }}" placeholder="{{ hostname }}" autofocus><div class="holt-meta">Leave blank to use this machine's name, {{ hostname }}.</div></div>
+    <div class="holt-field" style="margin:0"><label for="movies_root">Movies folder</label><input id="movies_root" name="movies_root" value="{{ values.movies_root }}" required></div>
+    <div class="holt-field" style="margin:0"><label for="tv_root">TV folder</label><input id="tv_root" name="tv_root" value="{{ values.tv_root }}" required></div>
+    <div class="holt-field" style="margin:0"><label for="downloads_root">Downloads folder</label><input id="downloads_root" name="downloads_root" value="{{ values.downloads_root }}" required></div>
+    <button type="submit" class="holt-btn holt-btn-primary">Finish setup</button>
+  </form>
+{% endblock %}

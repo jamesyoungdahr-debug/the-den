@@ -1,11 +1,11 @@
 from fastapi import Depends, FastAPI, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
 
-from app import auth, automation, backup, formats, health, scheduler
+from app import auth, automation, backup, formats, health, scheduler, setup_state
 from app import settings as settings_module
 from app.db import SessionLocal, engine as db_engine
 from app.deps import get_db
@@ -41,15 +41,22 @@ app.include_router(ui.router)
 
 @app.middleware("http")
 async def load_current_user(request: Request, call_next):
-    """Resolve the signed-in user (session cookie or X-Api-Key) once per request so
-    guards and templates can read request.state.user without touching the DB again."""
+    """Resolve the signed-in user (session cookie or X-Api-Key) once per request so guards and
+    templates can read request.state.user, and hold back everything but the setup and sign-in
+    pages until first-run setup is finished (M33): browsers go to /setup, apps get a 503."""
     request.state.user = None
-    if not request.url.path.startswith("/static/"):
+    path = request.url.path
+    if not path.startswith("/static/"):
         db = SessionLocal()
         try:
             request.state.user = auth.resolve_user(request, db)
+            complete = setup_state.is_complete(db)
         finally:
             db.close()
+        if not complete and not setup_state.open_during_setup(path):
+            if "text/html" in request.headers.get("accept", ""):
+                return RedirectResponse("/setup", status_code=303)
+            return JSONResponse({"detail": "setup required"}, status_code=503)
     return await call_next(request)
 
 
@@ -87,16 +94,6 @@ def apply_staged_restore():
     kept = backup.apply_pending_restore()
     if kept is not None:
         print(f"The Den: swapped in the staged database restore; the previous database was kept as {kept}", flush=True)
-
-
-@app.on_event("startup")
-def load_auth_override():
-    """Settings -> Accounts may override the AUTH_REQUIRED env var (M11g)."""
-    db = SessionLocal()
-    try:
-        auth.set_required_override(settings_module.get_row(db).auth_required)
-    finally:
-        db.close()
 
 
 @app.on_event("startup")
@@ -148,9 +145,11 @@ async def run_automation_now(db: Session = Depends(get_db)):
 
 @app.get("/health")
 def health_check(db: Session = Depends(get_db)):
+    """Unauthenticated on purpose: the apps check it before signing in, and it's how they learn
+    that setup isn't finished yet."""
     with db_engine.connect() as conn:
         conn.execute(text("SELECT 1"))
-    return {"status": "ok", "api_version": 2, "auth_required": auth.required(), "torrent_engine": torrent_engine.info(), "checks": health.current(db)}
+    return {"status": "ok", "api_version": 2, "setup_complete": setup_state.is_complete(db), "torrent_engine": torrent_engine.info(), "checks": health.current(db)}
 
 
 @app.get("/forbidden", response_class=HTMLResponse, include_in_schema=False)

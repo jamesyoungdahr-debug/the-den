@@ -32,13 +32,16 @@ AUTOMATION_INTERVAL_SECONDS = int(os.environ.get("AUTOMATION_INTERVAL_SECONDS", 
 # A Discord "Webhook URL" from a channel's Integrations settings. Left blank, notifications are a no-op.
 DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "")
 
-# Accounts. AUTH_REQUIRED=false (the default until the companion apps gain a login step)
-# keeps every page and API open exactly as before accounts existed, while still letting
-# people sign in. Set it to true to require a login everywhere; the first run then shows
-# /setup to create the admin. SESSION_SECRET signs the session cookie; left blank, one is
-# generated once and kept under STATE_DIR.
-AUTH_REQUIRED = os.environ.get("AUTH_REQUIRED", "false").strip().lower() in ("1", "true", "yes", "on")
+# Accounts. Sign-in is always required; the first run shows /setup to create the admin.
+# SESSION_SECRET signs the session cookie; left blank, one is generated once and kept under STATE_DIR.
 SESSION_SECRET = os.environ.get("SESSION_SECRET", "")
+
+# Where uvicorn listens (deploy/the-den.service passes these to --host/--port). LAN discovery and
+# remote access only work when WEB_HOST isn't a loopback address.
+WEB_HOST = os.environ.get("WEB_HOST", "127.0.0.1")
+WEB_PORT = int(os.environ.get("WEB_PORT", "40204"))
+# The name the apps show when this server isn't tied to a Plex server; blank = this machine's hostname.
+SERVER_NAME = os.environ.get("SERVER_NAME", "")
 
 # Plex. The owner's token and server are normally set from Settings (stored in the DB);
 # these env defaults exist for headless setups. The two URLs only change for tests/mock_plex.py.
