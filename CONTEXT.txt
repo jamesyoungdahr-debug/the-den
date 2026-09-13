@@ -3,19 +3,22 @@ THE DEN - WORKING CONTEXT
 Kept up to date by Claude at every milestone so a fresh session can resume without
 the chat history. Newest entries at the top of each section. Last updated: 2026-09-13.
 
-PICK UP HERE (2026-09-13, E9 done and pushed, E10 is next)
+PICK UP HERE (2026-09-13, Tier 2 complete: E1-E10 all done and pushed)
 -------------------------------------------------------------------------------------------
-Tier 2 (docs/feature-research.md, E1-E10) is being worked through in table order, autonomously, per
-Liam's "just continue until all milestones are done." Done and pushed so far: E1, E2, E3 (earlier
-session), E4, E5, E6, E7, E8, E9 -- see the DONE entries below for each. E9 finished a session that
-had been paused mid-feature with uncommitted work (the pause and resume are both recorded in its
-DONE entry below).
+Tier 2 (docs/feature-research.md, E1-E10) is finished; E10 (backup/restore, M32) was the last item,
+see its DONE entry below. feature-research.md's summary now notes that everything except the N9
+real-world shakedown has shipped.
 
-NEXT: E10 (backup/restore of the SQLite DB + settings export, server + web only per
-feature-research.md's surfaces column) is the last Tier 2 item. No research has been done on E10
-yet -- start fresh with a research agent the same way every other E-item did. Once E10 is done, all
-of E1-E10 are complete; consider whether feature-research.md's own header/summary section should be
-updated to reflect that Tier 2 as a whole is done.
+NEXT, in order:
+  1. E6 gap: subtitle settings (OpenSubtitles API key + languages) have no KDE or Android UI, although
+     E6's surfaces column asks for all surfaces. Mirror the existing settings sections on each client.
+  2. Plex bug found during E10's browser pass: GET /api/plex/servers (and /api/plex/sections) return a
+     500 when plex.tv rejects the stored token, because app/plex.py lets httpx.HTTPStatusError escape
+     instead of raising PlexError. It should come back as a clean JSON error the Settings page can show.
+  3. Android: nobody has looked at E9's account-page Notifications section on a real screen yet. The
+     debug APK (0.6.7 plus the sign-in gate, commit 821e1b9) is installed on the Pixel 9 Pro Fold; it
+     needs a signed-in account on a reachable backend (dev backend 8686 via the Windows portproxy).
+  4. M14 shakedown on the HoltOS box is Liam's. Tagging a release waits for his "push and tag".
 
 STANDING RULE (2026-09-13, learned the hard way): push to origin after EVERY milestone commit, not
   just at natural stopping points -- see the NOTE below about the rm -rf incident. Never let more than
@@ -58,6 +61,22 @@ HoltOS Glass UI. Companion apps: KDE client (the-den-client) and Android app (th
 LAST TASK: M22 - DISCOVER GROUPED (MOVIES / SERIES) AND PAGED "VIEW MORE" (2026-09-13, done, tagged). the-den v0.6.7, client v0.4.11, android v0.6.1. Tier 1 plan:
   docs/tier1-plan.md; Tier 2 candidates: docs/feature-research.md (E1-E10). M22 was the first post-Tier-1 item (Liam's request), rails in
   app/routers/discover.py RAILS, tmdb.* take page=.
+DONE 2026-09-13: E10 - BACKUP AND RESTORE (DONE, M32, server + web only per feature-research.md's surfaces column).
+  New app/backup.py: snapshot() copies the live database with SQLite's backup API (consistent while the app writes);
+  validate() checks an upload (SQLite header, PRAGMA integrity_check, the alembic_version/settings/users/indexers
+  tables, and a schema revision equal to this install's alembic head -- older backups are refused, not migrated);
+  stage_restore() writes it beside the live DB as den.db.restore-pending; apply_pending_restore() runs as the first
+  startup hook in app/main.py, keeps the old DB (and any rollback journal) as den.db.pre-restore-<timestamp>, and
+  swaps the staged copy in; indexers_export() lists indexers without api_key. New app/routers/backup.py (page_admin):
+  GET /ui/backup/database, /ui/backup/settings.json (reuses api_settings.get_settings, so secrets stay masked),
+  /ui/backup/indexers.json, POST /ui/backup/restore (multipart upload + confirm=yes), POST /ui/backup/restore/cancel.
+  Web: a Backup panel on Settings (nav link, downloads, upload form, or a "restore staged" state with Cancel);
+  ui_settings passes restore_pending. Restore needs a restart on purpose: the scheduler and torrent engine hold the
+  live DB, and systemd's Restart=on-failure won't bring a clean exit back. All E10 code and docs were written by the
+  local models (4090 qwen3-coder-30b-a3b-instruct, 4080 qwen/qwen3.5-9b) from exact specs; Claude reviewed each
+  diff. Verified: app.main imports; a DB-level smoke test (20/20: snapshot, every validate refusal, stage/cancel,
+  swap-and-keep, export has no api_key); a live HTTP test on a throwaway DB copy (21/21, including a real restart
+  that applied a staged restore); a browser pass of the panel, the staged state and Cancel.
 DONE 2026-09-13: E9 - PER-USER NTFY TOPIC (DONE, M31, server + web + Android per feature-research.md's surfaces column --
   no KDE for this one). New User.notify_ntfy_topic column (migration e8f9a0b1c2d3), notifier.notify_user() (a personal
   ntfy.sh push, alongside not instead of the admin-configured agents
@@ -257,9 +276,11 @@ RULES AND DECISIONS TO REMEMBER
   and QML Image cannot send headers.
 - Push to GitHub and tag a release when a milestone lands; the user says "push and tag".
 - Keep this file (CONTEXT.txt) updated after EVERY completed to-do item, and before context compaction.
+- Liam, 2026-09-13: work straight down the open list without asking for confirmation between items.
+  Still ask before destructive or shared-state actions no standing rule covers; tagging still waits for "push and tag".
 
 STILL OPEN / LATER
 ------------------
 - Real-desktop pass of the KDE client on HoltOS.
 - Nothing has been tested against real plex.tv (only the mock).
-- Reset the in-app Browser pane viewport to the desktop preset when next used.
+- (Done 2026-09-13) The in-app Browser pane viewport is back on the desktop preset.

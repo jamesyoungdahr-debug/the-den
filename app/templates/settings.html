@@ -25,6 +25,7 @@
       <a href="#notifications">Notifications</a>
       <a href="#plex">Plex</a>
       <a href="#accounts">Accounts</a>
+      <a href="#backup">Backup</a>
     </nav>
 
     <form id="settings-form" method="post" action="/ui/settings" class="den-settings-body">
@@ -232,6 +233,28 @@
         <a class="holt-btn holt-btn-quiet holt-btn-sm" href="/ui/users">Manage users</a>
       </form>
       {% if not current_user %}<div class="holt-meta" style="margin-top:var(--holt-space-2)">You're browsing anonymously; sign in as an admin before turning this on or you'd lock yourself out.</div>{% endif %}
+    </section>
+
+    <section class="holt-panel" id="backup" style="grid-column: 2">
+      <div class="holt-panel-head"><div class="holt-eyebrow">Backup</div>{% if restore_pending %}<span class="holt-badge holt-badge-missing"><span class="dot"></span>restore staged</span>{% endif %}</div>
+      <p class="holt-body" style="font-size:13.5px;margin:0 0 var(--holt-space-3)">The database backup holds everything, including passwords, API keys and tokens, so keep it somewhere private. The two JSON exports leave secrets out.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <a class="holt-btn holt-btn-secondary holt-btn-sm" href="/ui/backup/database">Download database</a>
+        <a class="holt-btn holt-btn-quiet holt-btn-sm" href="/ui/backup/settings.json">Export settings</a>
+        <a class="holt-btn holt-btn-quiet holt-btn-sm" href="/ui/backup/indexers.json">Export indexers</a>
+      </div>
+      {% if restore_pending %}
+      <div class="holt-message holt-message-warning" style="margin-top:var(--holt-space-3)">A restore is staged. Restart The Den to swap it in.</div>
+      <form method="post" action="/ui/backup/restore/cancel" style="margin-top:var(--holt-space-2)">
+        <button type="submit" class="holt-btn holt-btn-quiet holt-btn-sm">Cancel staged restore</button>
+      </form>
+      {% else %}
+      <form method="post" action="/ui/backup/restore" enctype="multipart/form-data" style="margin-top:var(--holt-space-3)">
+        <div class="holt-field"><label for="restore-file">Restore from a database backup</label><input id="restore-file" type="file" name="file" accept=".db" required></div>
+        <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-family:var(--holt-font-core);font-size:13px;color:var(--holt-ink-70)"><input type="checkbox" name="confirm" value="yes" required style="width:auto;margin:0"> Replace everything with this backup at the next restart</label>
+        <button type="submit" class="holt-btn holt-btn-secondary holt-btn-sm" style="margin-top:var(--holt-space-2)">Stage restore</button>
+      </form>
+      {% endif %}
     </section>
   </div>
   <script>

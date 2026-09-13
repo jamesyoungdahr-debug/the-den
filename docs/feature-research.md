@@ -17,6 +17,8 @@ and scoring, built-in torrent client, hard-link import with Plex-style names, TV
 metadata, calendar, Discord notifications, Plex login and library scan, requests with
 quotas and approval, accounts and API tokens, a Glass UI on all three surfaces.
 
+Update 2026-09-13: everything below has since shipped except N9, the real-world shakedown (M14, still open). Tier 1 N1-N8 landed as M15-M21 and all of Tier 2 (E1-E10) as M23-M32; ROADMAP.md has the per-milestone summary, and each Tier 2 row notes what shipped and what was left out.
+
 ## Tier 1: needed (people will hit these in the first week of real use)
 
 | # | Feature | Why it matters | Surfaces |
@@ -44,7 +46,7 @@ quotas and approval, accounts and API tokens, a Glass UI on all three surfaces.
 | E7 (done 2026-09-13, M28) | **Usenet download client**: the presets already list 13 Newznab indexers, but there is no NZB downloader (SABnzbd/NZBGet integration, or a built-in one). Until then the usenet presets only work for people who also run an NZB client. Shipped: SABnzbd integration (URL + API key, matching the FlareSolverr precedent). Not shipped: NZBGet (one client was enough scope; SABnzbd is the more common choice) and a distinct usenet queue view on the Downloads page (grab/check/import works, but the page still only shows torrents). | server (downloader abstraction), settings |
 | E8 (done 2026-09-13, M29) | **Request comments and reasons**: decline with a note (exists) plus a user-visible thread; "request 4K" as a variant. | server, web, Android |
 | E9 (done 2026-09-13, M31) | **Per-user notification settings** for request outcomes: a personal ntfy.sh topic (no email capability exists anywhere in the app, so this shipped ntfy-only), alongside the admin-configured notification agents rather than instead of them. Shipped: server (`users.notify_ntfy_topic`, `notifier.notify_user()`, wired into request_available/approved/declined), web (Notifications panel on the profile page), Android (a Notifications section on the account page, under the header, distinct from the per-device push settings already there). No KDE for this one, matching this row's own surfaces column. | server, web (profile), Android |
-| E10 | **Backup and restore** of the SQLite database and settings from the web UI, and an export of the indexer list. | server, web |
+| E10 (done 2026-09-13, M32) | **Backup and restore** of the SQLite database and settings from the web UI, and an export of the indexer list. Shipped: a database download (SQLite's backup API, so the copy is consistent while the app runs), settings and indexer-list JSON exports with secrets left out, and a restore that checks the upload (SQLite header, integrity check, The Den's tables, the same schema revision as the install), stages it, and swaps it in at the next startup while keeping the old database as a .pre-restore copy. Not shipped: restoring a backup from an older schema (refused with a message; restore it by hand and run alembic upgrade head) and importing the indexer JSON back (restore the database instead). | server, web |
 
 ## Tier 3: nice to have
 

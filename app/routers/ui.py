@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app import indexers as indexer_engine
 from app import auth, config, library_service
-from app import renamer
+from app import backup, renamer
 from app import settings as settings_module
 from app import tmdb, torznab, tvmaze
 from app.candidates import episode_query, movie_query, profile_for, scored_candidates, season_candidates
@@ -559,6 +559,7 @@ def ui_settings(request: Request, db: Session = Depends(get_db)):
             "has_opensubtitles_api_key": bool(row.opensubtitles_api_key),
             "has_sabnzbd_api_key": bool(row.sabnzbd_api_key),
             "state_dir": config.STATE_DIR,
+            "restore_pending": backup.pending_restore(),
             "saved": request.query_params.get("saved") == "1",
             "notice": request.query_params.get("notice"),
             "error": request.query_params.get("error"),

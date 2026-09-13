@@ -5,12 +5,12 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
 
-from app import auth, automation, formats, health, scheduler
+from app import auth, automation, backup, formats, health, scheduler
 from app import settings as settings_module
 from app.db import SessionLocal, engine as db_engine
 from app.deps import get_db
 from app.models import QualityProfile
-from app.routers import api_settings, discover, downloads, import_lists as import_lists_routes, indexers, library, movies, notifications, plex as plex_routes, rename as rename_routes, requests as request_routes, root_folders as root_folders_routes, search, series, torrents, ui, users, formats as format_routes
+from app.routers import api_settings, backup as backup_routes, discover, downloads, import_lists as import_lists_routes, indexers, library, movies, notifications, plex as plex_routes, rename as rename_routes, requests as request_routes, root_folders as root_folders_routes, search, series, torrents, ui, users, formats as format_routes
 from app.routers import auth as auth_routes
 from app.templating import templates
 from app.torrent import engine as torrent_engine
@@ -35,6 +35,7 @@ app.include_router(import_lists_routes.router)
 app.include_router(root_folders_routes.router)
 app.include_router(rename_routes.router)
 app.include_router(format_routes.router)
+app.include_router(backup_routes.router)
 app.include_router(ui.router)
 
 
@@ -78,6 +79,14 @@ async def _login_required(request: Request, exc: auth.LoginRequired):
 @app.exception_handler(auth.Forbidden)
 async def _forbidden(request: Request, exc: auth.Forbidden):
     return templates.TemplateResponse("forbidden.html", {"request": request}, status_code=403)
+
+
+@app.on_event("startup")
+def apply_staged_restore():
+    """Settings -> Backup stages an uploaded database; it replaces the live one here, before any other startup hook opens it (E10)."""
+    kept = backup.apply_pending_restore()
+    if kept is not None:
+        print(f"The Den: swapped in the staged database restore; the previous database was kept as {kept}", flush=True)
 
 
 @app.on_event("startup")
