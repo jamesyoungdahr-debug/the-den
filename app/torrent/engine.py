@@ -300,18 +300,18 @@ class TorrentEngine:
         error = st.errc.message() if st.errc.value() != 0 else None
         if error:
             state = "error"
-        elif st.paused:
+        elif st.flags & lt.torrent_flags.paused:
             # Auto-managed + paused is libtorrent's queue; paused with auto-management
             # off is a deliberate stop. "done" (finished, stopped, and past the seed
             # limits) is what the reaper in app.download_check looks for -- a torrent
             # the user paused before its limits were met stays "paused" and is kept.
-            if st.auto_managed:
+            if st.flags & lt.torrent_flags.auto_managed:
                 state = "queued"
             elif st.is_finished and self._seed_limits_met(st):
                 state = "done"
             else:
                 state = "paused"
-        elif st.state in (states.checking_files, states.checking_resume_data, states.allocating):
+        elif st.state in (states.checking_files, states.checking_resume_data):
             state = "checking"
         elif st.state == states.downloading_metadata:
             state = "metadata"
@@ -435,7 +435,7 @@ class TorrentEngine:
             if not handle.is_valid():
                 continue
             st = handle.status()
-            if not st.is_finished or st.paused:
+            if not st.is_finished or st.flags & lt.torrent_flags.paused:
                 continue
             if self._seed_limits_met(st):
                 log.info("seed limits met for %s -- stopping", st.name)
