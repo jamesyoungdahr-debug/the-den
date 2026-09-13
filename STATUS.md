@@ -18,6 +18,8 @@ two loopback-swarm gotchas that cost the most debugging time.
 
 ## Currently working on
 
+**M23 -- manual import for unmatched downloads (2026-09-13).** Downloads The Den couldn't fully place -- a movie or episode grab with no video, a season pack with leftover files, or a torrent added by hand with no target -- land in one queue with two actions per leftover file: assign it to a title, or import it as-is under its own name. Server 0.6.9, client 0.4.12, android 0.6.2. The first Tier 2 milestone (E3 in `docs/feature-research.md`).
+
 **M22 -- Discover grouped and paged (2026-09-13).** Discover now separates movies from series (a Movies group and a Series group, with an All / Movies / Series filter in the apps), adds trending and top-rated rails for each, and every rail has a "View more" that opens the full TMDB list as a paged grid (`/discover/rail/{key}?page=N` on the web, `GET /api/discover/{rail}?page=N` for the apps, 20 cards a page, Load more appends). Server 0.6.7, client 0.4.11, android 0.6.1.
 
 **M21 -- Android search from Detail, push, deep links (2026-09-13).** Every notification the server sends now carries a `theden://` deep link (ntfy `Click` header, webhook `link` field). The Android app (0.6.0) subscribes to the ntfy topic itself from a foreground service, shows each event on its own notification channel, opens the linked request, download or title when tapped, and lets admins open Releases from a tracked movie or season on Detail. Plan: `docs/tier1-plan.md`.

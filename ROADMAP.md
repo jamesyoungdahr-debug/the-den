@@ -30,6 +30,7 @@ Deploy target: native systemd service on Arch Linux (no Docker).
 - [x] M20 -- Season packs and season actions (done 2026-09-13): pack import, pack-first search, monitor/search/mark-have per season everywhere
 - [x] M21 -- Android search from Detail, ntfy push, deep links (done 2026-09-13): theden:// links on every notification, foreground ntfy subscriber with a channel per event, Releases from Detail
 - [x] M22 -- Discover: movies and series apart, "View more" (done 2026-09-13): four new TMDB rails (trending movies / series, top rated movies / series), every rail paged (`?page=`), a full-grid rail page with Load more, Movies / Series groups plus an All / Movies / Series filter on the web, KDE and Android
+- [x] M23 -- Manual import for unmatched downloads (done 2026-09-13, E3 in docs/feature-research.md): a movie/episode grab with no video, a season pack with leftover files, or a torrent added by hand with no target all land in one queue with Assign and Import-as-is actions, on the web, KDE and Android
 - [ ] M14 -- Tier 1 shakedown on the HoltOS box (user); defects fixed as 0.6.x -- see [docs/tier1-plan.md](docs/tier1-plan.md)
 - [ ] UI redesign track ("HoltOS Glass": left sidebar shell, glass/blur surfaces, poster-first pages, across web + KDE + Android) -- planned, see [docs/ui-redesign-plan.md](docs/ui-redesign-plan.md); sequenced ahead of M11's pages
 

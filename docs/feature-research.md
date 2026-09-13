@@ -37,7 +37,7 @@ quotas and approval, accounts and API tokens, a Glass UI on all three surfaces.
 |---|---|---|
 | E1 | **Import lists**: auto-add from a TMDB list, Trakt list or Plex watchlist; the Seerr "watchlist -> request" flow. | server, web (settings), KDE/Android (toggle) |
 | E2 | **Root folders per profile / multiple libraries**: e.g. Kids movies vs Movies, 4K vs 1080p libraries with their own folders and profiles. | server (models, importer), web, clients (chooser on add) |
-| E3 | **Manual import / unmatched downloads**: a queue of finished torrents The Den could not match, with "assign to title" and "import as-is". | server, web (Downloads), KDE/Android |
+| E3 (done 2026-09-13, M23) | **Manual import / unmatched downloads**: a queue of finished torrents The Den could not match, with "assign to title" and "import as-is". | server, web (Downloads), KDE/Android |
 | E4 | **Rename existing files** to the Plex convention on demand, with a preview (M13 only renames new imports). | server, web (library actions) |
 | E5 | **Blocklist and history**: every grab, import, failure and removal with timestamps; per-title history on the detail page; "blocklist this release". | server (table), web/KDE/Android (history tab) |
 | E6 | **Subtitles**: Bazarr-style OpenSubtitles fetch per language preference. | server, settings on all surfaces |
