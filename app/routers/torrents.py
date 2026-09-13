@@ -13,6 +13,7 @@ from app.deps import get_db
 from app.models import DownloadRecord, Episode, Movie, Series
 from app.torrent import TorrentStatus, engine
 from app.parser import parse_quality
+from app import history
 
 router = APIRouter(prefix="/torrents", tags=["torrents"], dependencies=[Depends(auth.require_admin)])
 
@@ -142,6 +143,9 @@ def resume_torrent(info_hash: str):
 def remove_torrent(info_hash: str, delete_files: bool = False, db: Session = Depends(get_db)):
     if engine.status(info_hash) is None:
         raise HTTPException(404, "Torrent not found")
+    titled = db.query(DownloadRecord).filter(DownloadRecord.info_hash == info_hash).order_by(DownloadRecord.id.desc()).first()
+    if titled and (titled.movie_id or titled.episode_id or titled.series_id):
+        history.record(db, "removed", titled.release_title, movie_id=titled.movie_id, episode_id=titled.episode_id, series_id=titled.series_id, season_number=titled.season_number, message="removed by hand" + (" (files deleted)" if delete_files else ""))
     engine.remove(info_hash, delete_files=delete_files)
     # Any record still waiting on it can't finish now; say so instead of leaving it
     # "downloading" until the next automation cycle notices the torrent is gone.

@@ -140,6 +140,26 @@
     </aside>
   </div>
 
+  {% if item.history %}
+  {% set tone_map = {"grabbed": "processing", "imported": "available", "upgraded": "available", "download_failed": "error", "removed": "missing"} %}
+  <section class="holt-section">
+    <div class="holt-rail-head"><div class="holt-eyebrow">History</div><div class="holt-meta">{{ item.history|length }} event{{ '' if item.history|length == 1 else 's' }}</div></div>
+    <div class="holt-panel">
+      <div class="holt-row-list">
+        {% for h in item.history %}
+        <div class="holt-row">
+          <div class="holt-row-main">
+            <div class="holt-row-title">{{ h.release_title }}{% if h.season_number %} · Season {{ h.season_number }}{% endif %}</div>
+            <div class="holt-row-meta">{{ h.message or '' }}{% if h.created_at %} · {{ h.created_at[:16].replace('T', ' ') }}{% endif %}</div>
+          </div>
+          <span class="holt-badge holt-badge-{{ tone_map.get(h.event, 'missing') }}"><span class="dot"></span>{{ h.event }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
   {% if kind == 'tv' and item.requestable_seasons and current_user %}
   <dialog id="request-seasons" class="holt-dialog holt-glass-float">
     <form method="post" action="/ui/requests">

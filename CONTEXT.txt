@@ -20,15 +20,14 @@ HoltOS Glass UI. Companion apps: KDE client (the-den-client) and Android app (th
 LAST TASK: M22 - DISCOVER GROUPED (MOVIES / SERIES) AND PAGED "VIEW MORE" (2026-09-13, done, tagged). the-den v0.6.7, client v0.4.11, android v0.6.1. Tier 1 plan:
   docs/tier1-plan.md; Tier 2 candidates: docs/feature-research.md (E1-E10). M22 was the first post-Tier-1 item (Liam's request), rails in
   app/routers/discover.py RAILS, tmdb.* take page=.
-DONE 2026-09-13: M23 - MANUAL IMPORT (DONE, all three surfaces). the-den v0.6.9, client v0.4.12, android v0.6.2. A queue at GET /ui/downloads/unmatched (web) /
-  GET /downloads/unmatched (JSON, now carrying kind/label/season_episodes from one shared app/routers/downloads.py:_unmatched_entry() builder) groups every
-  download The Den couldn't fully place -- a movie/episode grab with no video, a season pack with leftover files, or a torrent added by hand with no target --
-  each leftover file gets Assign (POST /downloads/{id}/assign) or Import-as-is (POST /downloads/{id}/import-as-is) actions. Web: manual_import.html, plain
-  forms, a "Manual import (N)" link on Downloads. KDE: ManualImportModel + ManualImportPage.qml, opened from a button on DownloadsPage. Android:
-  ManualImportViewModel + ManualImportScreen (episode picker as a bottom sheet), opened from a button on DownloadsScreen. Verified: DB-level smoke
-  (m23_smoke.py, 8/8), live web smoke (m23_web_smoke.sh, m23_api_smoke.sh), KDE QML harness (14/15 clean, DiscoverPage's known offscreen-poster issue
-  unrelated), Android assembleDebug clean. This was the first Tier 2 item (E3 in docs/feature-research.md). NEXT: E5 (blocklist/grab/import/failure/removal
-  history, per-title history on Detail).
+DONE 2026-09-13: M23 - MANUAL IMPORT (DONE, all three surfaces). the-den v0.6.9, client v0.4.12, android v0.6.2. See ROADMAP.md for the summary.
+IN PROGRESS: E5 - PER-TITLE HISTORY (server done 2026-09-13, uncommitted-to-tag). New `history_events` table (migration e2f3a4b5c6d7) and app/history.py
+  (record/for_movie/for_episode/for_series/as_dicts). Recording added at every lifecycle point: grabber._grab ("grabbed"/"upgraded"), download_check._import
+  ("imported"/"upgraded"), download_check.fail_download ("download_failed"), download_check.reap_seeded and routers/torrents.py remove_torrent ("removed",
+  only when the torrent had a title). discover.py's _detail() (used by the web page and the JSON API both clients share) now returns `item["history"]`, and
+  discover_detail.html shows a History panel. Verified: e5_smoke.py (DB-level, full grab->import->fail->remove->detail pipeline, 5/5), e5_web_smoke.sh (live
+  detail page and JSON API both carry history). NEXT: KDE (DetailPage.qml reads detailController.data.history directly, no model change needed) and Android
+  (DetailResponse gains a history field, DetailScreen.kt gets a History section).
 TIER 1 STATUS: M15 notifications, M16 health/stats, M17 custom formats, M18 upgrades, M19 failed downloads, M20 season packs, M21 Android push are
   DONE and pushed (server 0.6.0 -> 0.6.6, client 0.4.5 -> 0.4.10, android 0.5.2 -> 0.6.0, each tagged). Remaining: M14 shakedown on the HoltOS box
   (user); no 1.0.0 planned, the server stays on 0.x (Liam, 2026-09-13). Verification so far is API smokes, fake-engine probes, the KDE harness, Android JVM tests and builds; the local-swarm

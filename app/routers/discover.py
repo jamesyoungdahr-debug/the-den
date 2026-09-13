@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from app import health
 from app import auth, plex_scan, requests_service, tmdb, tvmaze
+from app import history
 from app import settings as settings_module
 from app.deps import get_db
 from app.models import DownloadRecord, Episode, MediaRequest, Movie, Series, User
@@ -232,6 +233,7 @@ async def _detail(kind: str, tmdb_id: int, db: Session, me: User | None = None) 
         for r in open_reqs:
             taken |= set(r.season_list) if r.season_list else {s["season_number"] for s in item["seasons"]}
         item["requestable_seasons"] = [s["season_number"] for s in item["seasons"] if s["season_number"] > 0 and s["season_number"] not in taken]
+    item["history"] = history.as_dicts(history.for_movie(db, av["den"]["id"]) if kind == "movie" and av["den"] else history.for_series(db, av["den"]["id"]) if kind == "tv" and av["den"] else [])
     return item
 
 

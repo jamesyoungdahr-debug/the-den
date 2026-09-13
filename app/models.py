@@ -311,3 +311,20 @@ class BlocklistEntry(Base):
     episode_id = Column(Integer, ForeignKey("episodes.id", ondelete="SET NULL"), nullable=True)
     created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
     expires_at = Column(DateTime, nullable=True)
+
+
+class HistoryEvent(Base):
+    """One thing that happened to a title (E5): grabbed, imported, upgraded, a download
+    that failed, or a torrent removed. Per-title history on the detail page reads this."""
+
+    __tablename__ = "history_events"
+
+    id = Column(Integer, primary_key=True)
+    event = Column(String, nullable=False)  # grabbed | upgraded | imported | download_failed | removed
+    release_title = Column(String, nullable=False)
+    message = Column(String, nullable=True)
+    movie_id = Column(Integer, ForeignKey("movies.id"), nullable=True)
+    episode_id = Column(Integer, ForeignKey("episodes.id"), nullable=True)
+    series_id = Column(Integer, ForeignKey("series.id"), nullable=True)
+    season_number = Column(Integer, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))

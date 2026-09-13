@@ -5,7 +5,7 @@ import json
 from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 
-from app import blocklist, importer, settings as settings_module
+from app import blocklist, history, importer, settings as settings_module
 from app.models import DownloadRecord, Episode, Movie, Series
 from app.notifier import notify_event
 from app.torrent import engine
@@ -35,6 +35,7 @@ async def fail_download(db: Session, record: DownloadRecord, reason: str, blockl
     record.status = "failed"
     record.failure_reason = reason
     db.commit()
+    history.record(db, "download_failed", record.release_title, movie_id=record.movie_id, episode_id=record.episode_id, series_id=record.series_id, season_number=record.season_number, message=reason)
     await notify_event(db, "download_failed", f"Download failed ({reason}): {record.release_title}", legacy_discord_url=s.discord_webhook_url, link="theden://downloads")
 
 
@@ -146,6 +147,7 @@ async def _import(db: Session, record: DownloadRecord) -> None:
         what = record.release_title
         if record.series_id and record.season_number is not None:
             what = f"{record.release_title} ({len(done)} episodes)"
+        history.record(db, event, record.release_title, movie_id=record.movie_id, episode_id=record.episode_id, series_id=record.series_id, season_number=record.season_number, message=what)
         await notify_event(db, event, f"{prefix}: {what}", legacy_discord_url=s.discord_webhook_url, link="theden://downloads")
 
 
@@ -161,5 +163,7 @@ def reap_seeded(db: Session) -> int:
         st = engine.status(record.info_hash)
         if st is not None and st.state == "done":
             engine.remove(record.info_hash, delete_files=True)
+            if record.movie_id or record.episode_id or record.series_id:
+                history.record(db, "removed", record.release_title, movie_id=record.movie_id, episode_id=record.episode_id, series_id=record.series_id, season_number=record.season_number, message="seeding finished, removed from client")
             reaped += 1
     return reaped

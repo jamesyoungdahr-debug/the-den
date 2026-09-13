@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app import settings as settings_module
 from app import formats
+from app import history
 from app.models import DownloadRecord, Episode, Movie, Series
 from app.candidates import profile_for
 from app.notifier import notify_event
@@ -34,6 +35,7 @@ async def _grab(
     db.add(record)
     db.commit()
     db.refresh(record)
+    history.record(db, "upgraded" if upgrade else "grabbed", release_title, movie_id=movie_id, episode_id=episode_id, series_id=series_id, season_number=season_number, message=label)
     await notify_event(db, "grabbed", f"{'Upgrade grabbed' if upgrade else 'Grabbed'} **{label}** -- {release_title}", legacy_discord_url=s.discord_webhook_url, link="theden://downloads")
     return record
 
