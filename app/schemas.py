@@ -83,16 +83,24 @@ class UnmatchedFileOut(BaseModel):
     size: int
 
 
+class SeasonEpisodeOut(BaseModel):
+    id: int
+    label: str
+
+
 class UnmatchedDownloadOut(BaseModel):
     id: int
     release_title: str
     status: str
     failure_reason: str | None = None
+    kind: str  # "movie" | "episode" | "season" | "manual"
+    label: str
     movie_id: int | None = None
     episode_id: int | None = None
     series_id: int | None = None
     season_number: int | None = None
     files: list[UnmatchedFileOut] = []
+    season_episodes: list[SeasonEpisodeOut] = []
 
 
 class AssignBody(BaseModel):

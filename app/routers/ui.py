@@ -19,7 +19,7 @@ from app.grabber import grab_episode as do_grab_episode, grab_season as do_grab_
 from app.grabber import grab_movie as do_grab_movie
 from app.models import BlocklistEntry, DownloadRecord, Episode, Indexer, Movie, Series
 from app.routers.api_settings import apply_runtime_changes
-from app.routers.downloads import assign_download as _assign_download_action, import_as_is as _import_as_is_action
+from app.routers.downloads import assign_download as _assign_download_action, import_as_is as _import_as_is_action, _unmatched_entry
 from app.schemas import AssignBody, ImportAsIsBody
 from app.templating import templates
 from app.torrent import engine as torrent_engine
@@ -640,37 +640,7 @@ def ui_save_accounts(request: Request, require_signin: str = Form(""), db: Sessi
 
 @router.get("/ui/downloads/unmatched", response_class=HTMLResponse, dependencies=ADMIN)
 def ui_downloads_unmatched(request: Request, db: Session = Depends(get_db)):
-    entries = []
-    for r in _unmatched_records(db):
-        names = json.loads(r.unmatched_files or "[]")
-        sizes = {}
-        if r.info_hash:
-            try:
-                sizes = {f.path.split("/")[-1].split("\\")[-1]: f.size for f in torrent_engine.files(r.info_hash)}
-            except Exception:
-                sizes = {}
-        files = [{"name": n, "size": sizes.get(n, 0)} for n in names]
-        kind = "manual"
-        label = r.release_title
-        season_episodes = []
-        if r.movie_id and (movie := db.get(Movie, r.movie_id)):
-            kind = "movie"
-            label = f"{movie.title} ({movie.year})" if movie.year else movie.title
-        elif r.episode_id and (episode := db.get(Episode, r.episode_id)):
-            kind = "episode"
-            series = db.get(Series, episode.series_id)
-            label = f"{series.title if series else '?'} S{episode.season_number:02d}E{episode.episode_number:02d}"
-        elif r.series_id and r.season_number is not None and (series := db.get(Series, r.series_id)):
-            kind = "season"
-            label = f"{series.title} Season {r.season_number}"
-            season_episodes = [
-                {"id": e.id, "label": f"S{e.season_number:02d}E{e.episode_number:02d}" + (f" - {e.title}" if e.title else "")}
-                for e in db.query(Episode).filter(Episode.series_id == series.id, Episode.season_number == r.season_number).order_by(Episode.episode_number).all()
-            ]
-        entries.append({
-            "id": r.id, "release_title": r.release_title, "kind": kind, "label": label,
-            "movie_id": r.movie_id, "episode_id": r.episode_id, "files": files, "season_episodes": season_episodes,
-        })
+    entries = [e for r in _unmatched_records(db) if (e := _unmatched_entry(db, r)) is not None]
     return templates.TemplateResponse("manual_import.html", {"request": request, "entries": entries, "active_nav": "downloads"})
 
 

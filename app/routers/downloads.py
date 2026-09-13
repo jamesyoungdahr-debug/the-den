@@ -7,7 +7,7 @@ from app import auth, automation, blocklist, importer, settings as settings_modu
 from app.deps import get_db
 from app.download_check import check_and_import, fail_download
 from app.models import DownloadRecord, BlocklistEntry, Episode, Movie, Series
-from app.schemas import AssignBody, DownloadRecordOut, ImportAsIsBody, UnmatchedDownloadOut, UnmatchedFileOut
+from app.schemas import AssignBody, DownloadRecordOut, ImportAsIsBody, SeasonEpisodeOut, UnmatchedDownloadOut, UnmatchedFileOut
 from app.torrent import engine
 
 router = APIRouter(prefix="/downloads", tags=["downloads"], dependencies=[Depends(auth.require_admin)])
@@ -74,30 +74,50 @@ async def check_download(download_id: int, db: Session = Depends(get_db)):
     return record
 
 
+def _unmatched_entry(db: Session, r: DownloadRecord) -> UnmatchedDownloadOut | None:
+    """Builds one queue entry for a download with leftover files: its file list (with
+    live sizes read from the engine when the torrent is still there), what kind of gap
+    it is, a human label, and -- for a season pack -- the season's episodes to pick from.
+    Returns None when there is nothing left to show (the JSON list came back empty)."""
+    names = json.loads(r.unmatched_files or "[]")
+    sizes = {}
+    if r.info_hash:
+        try:
+            sizes = {f.path.split("/")[-1].split("\\")[-1]: f.size for f in engine.files(r.info_hash)}
+        except Exception:
+            sizes = {}
+    files = [UnmatchedFileOut(name=n, size=sizes.get(n, 0)) for n in names]
+    if not files:
+        return None
+    kind, label, season_episodes = "manual", r.release_title, []
+    if r.movie_id and (movie := db.get(Movie, r.movie_id)):
+        kind = "movie"
+        label = f"{movie.title} ({movie.year})" if movie.year else movie.title
+    elif r.episode_id and (episode := db.get(Episode, r.episode_id)):
+        kind = "episode"
+        series = db.get(Series, episode.series_id)
+        label = f"{series.title if series else '?'} S{episode.season_number:02d}E{episode.episode_number:02d}"
+    elif r.series_id and r.season_number is not None and (series := db.get(Series, r.series_id)):
+        kind = "season"
+        label = f"{series.title} Season {r.season_number}"
+        season_episodes = [
+            SeasonEpisodeOut(id=e.id, label=f"S{e.season_number:02d}E{e.episode_number:02d}" + (f" - {e.title}" if e.title else ""))
+            for e in db.query(Episode).filter(Episode.series_id == series.id, Episode.season_number == r.season_number).order_by(Episode.episode_number).all()
+        ]
+    return UnmatchedDownloadOut(
+        id=r.id, release_title=r.release_title, status=r.status, failure_reason=r.failure_reason,
+        kind=kind, label=label, movie_id=r.movie_id, episode_id=r.episode_id, series_id=r.series_id,
+        season_number=r.season_number, files=files, season_episodes=season_episodes,
+    )
+
+
 @router.get("/unmatched", response_model=list[UnmatchedDownloadOut])
 def list_unmatched(db: Session = Depends(get_db)):
     """Every download with leftover files an admin needs to place by hand: a movie or
     episode grab that found no video, a season pack with files left over, or a torrent
     added by hand that was never tied to a title."""
     records = db.query(DownloadRecord).filter(DownloadRecord.unmatched_files.isnot(None)).all()
-    out = []
-    for r in records:
-        names = json.loads(r.unmatched_files or "[]")
-        by_name = {}
-        if r.info_hash:
-            try:
-                by_name = {f.path.split("/")[-1].split("\\")[-1]: f.size for f in engine.files(r.info_hash)}
-            except Exception:
-                by_name = {}
-        files = [UnmatchedFileOut(name=n, size=by_name.get(n, 0)) for n in names]
-        if not files:
-            continue
-        out.append(UnmatchedDownloadOut(
-            id=r.id, release_title=r.release_title, status=r.status, failure_reason=r.failure_reason,
-            movie_id=r.movie_id, episode_id=r.episode_id, series_id=r.series_id, season_number=r.season_number,
-            files=files,
-        ))
-    return out
+    return [e for r in records if (e := _unmatched_entry(db, r)) is not None]
 
 
 @router.post("/{download_id}/assign", response_model=DownloadRecordOut)
