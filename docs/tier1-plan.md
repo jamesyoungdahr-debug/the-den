@@ -78,6 +78,8 @@ Output: a list of defects, fixed as they appear. Gate for everything below.
 
 ### M19 Failed-download handling (server, all surfaces)
 
+**Done 2026-09-13 (server 0.6.4, client 0.4.9, android 0.5.6).** `blocklist` table (info hash and exact title, reason, optional expiry, 30 days by default) and `app/blocklist.py`; download records track `last_progress` / `last_progress_at` / `failure_reason`. The download check fails a torrent that reports an engine error, never resolves its magnet within 20 minutes, or makes no progress for 30 minutes with no seeders: the release is blocklisted, the torrent removed with its data, the record marked failed and "download_failed" sent; the next cycle searches again and blocklisted releases are dropped from every candidate list. Manual "blocklist and search again" on the Downloads page (live torrent rows, plus a Blocklist section with remove), the KDE Downloads page (button + confirm dialog) and the Android Downloads screen, all through `POST /downloads/by-hash/{hash}/blocklist` (also `/downloads/{id}/blocklist`, `GET /downloads/blocklist`, `DELETE /downloads/blocklist/{id}`). Expired entries are purged each cycle. Verified: a fake-engine stall probe (record failed, torrent removed with files, title and hash blocked, notification sent), `m19_smoke.sh` (manual blocklist, retry grabbed a new release, candidates exclude the title, no duplicate entries, page renders), KDE harness, Android build. Not done: the local-swarm "seeder disappears" e2e.
+
 - Torrent engine reports stalled (no progress for N min with zero seeders) and dead
   (metadata never arrives) states; automation marks the record failed, blocklists the
   release (info-hash and title), removes the torrent and data, and re-searches.

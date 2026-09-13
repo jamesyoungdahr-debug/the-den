@@ -69,6 +69,10 @@ class DownloadRecordOut(BaseModel):
     release_title: str
     info_hash: str | None = None  # key into /torrents for live progress
     status: str
+    failure_reason: str | None = None
+    quality: str | None = None
+    score: int = 0
+    upgrade: bool = False
 
     class Config:
         from_attributes = True

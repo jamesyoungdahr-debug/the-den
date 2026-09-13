@@ -141,6 +141,9 @@ class DownloadRecord(Base):
     quality = Column(String, nullable=True)  # parsed from release_title when grabbed
     score = Column(Integer, nullable=False, default=0)  # custom-format score when grabbed
     upgrade = Column(Boolean, nullable=False, default=False)  # replaces an existing file when imported
+    failure_reason = Column(String, nullable=True)  # why status became failed (stalled, dead, error, blocklisted by hand)
+    last_progress = Column(Float, nullable=False, default=0.0)  # 0..1 at the last check
+    last_progress_at = Column(DateTime, nullable=True)  # when progress last moved
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
@@ -288,3 +291,19 @@ class ProfileFormatScore(Base):
     profile_id = Column(Integer, ForeignKey("quality_profiles.id", ondelete="CASCADE"), nullable=False)
     format_id = Column(Integer, ForeignKey("custom_formats.id", ondelete="CASCADE"), nullable=False)
     score = Column(Integer, nullable=False, default=0)
+
+
+class BlocklistEntry(Base):
+    """A release automation must not grab again (M19): matched by info hash or exact
+    title. Expires so a temporarily dead torrent can be retried later."""
+
+    __tablename__ = "blocklist"
+
+    id = Column(Integer, primary_key=True)
+    info_hash = Column(String, nullable=True, index=True)
+    release_title = Column(String, nullable=False)
+    reason = Column(String, nullable=False)
+    movie_id = Column(Integer, ForeignKey("movies.id", ondelete="SET NULL"), nullable=True)
+    episode_id = Column(Integer, ForeignKey("episodes.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    expires_at = Column(DateTime, nullable=True)

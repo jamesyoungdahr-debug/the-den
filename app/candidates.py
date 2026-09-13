@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 
+from app import blocklist
 from app import formats
 from app import indexers as indexer_engine
 from app.models import Episode, Movie, QualityProfile, Series
@@ -27,6 +28,8 @@ def episode_query(series: Series, episode: Episode) -> str:
 async def scored_candidates(db: Session, query: str, profile: QualityProfile | None) -> list[dict]:
     """Search all enabled indexers for `query`, quality-tag every release, and flag the best one."""
     releases = await indexer_engine.search_all(db, query)
+    keys = blocklist.blocked_keys(db)
+    releases = [r for r in releases if not blocklist.is_blocked(r.title, r.download_url, keys)]
 
     scored_formats = formats.profile_scores(db, profile) if profile else []
     details = {r.title: formats.score_title(r.title, scored_formats) for r in releases}   # title -> (score, [format names])

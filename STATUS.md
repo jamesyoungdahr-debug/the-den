@@ -17,6 +17,12 @@ restores torrents from resume data. See ROADMAP.md's M10 section for the details
 two loopback-swarm gotchas that cost the most debugging time.
 
 ## Currently working on
+**M19 -- failed-download handling (2026-09-13).** Torrents that error out, never get
+metadata, or stall with no seeders are given up on automatically: the release goes on a
+blocklist (30 days by default), the torrent and its data are removed, and the next cycle
+searches again without it. "Blocklist and search again" is one click on the Downloads
+page and in both apps. Plan: `docs/tier1-plan.md`.
+
 **M18 -- upgrades (2026-09-12).** Titles that have a file but sit below the profile's
 cutoff quality or its score target are "upgradable": automation re-searches them daily,
 grabs only a release that clearly beats the file on disk, imports over it with an atomic

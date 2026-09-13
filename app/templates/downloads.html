@@ -46,9 +46,28 @@
         <div class="holt-row">
           <div class="holt-row-main">
             <div class="holt-row-title">{{ d.release_title }}</div>
-            <div class="holt-row-meta">{{ d.label or "added by hand" }}</div>
+            <div class="holt-row-meta">{{ d.label or "added by hand" }}{% if d.failure_reason %} · {{ d.failure_reason }}{% endif %}</div>
           </div>
           <span class="holt-badge holt-badge-{{ tone_map.get(d.status, 'missing') }}"><span class="dot"></span>{{ d.status }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  {% if blocklist %}
+  <section class="holt-section">
+    <div class="holt-rail-head"><div class="holt-eyebrow">Blocklist</div><div class="holt-meta">{{ blocklist|length }} releases automation will not grab again</div></div>
+    <div class="holt-panel">
+      <div class="holt-row-list">
+        {% for b in blocklist %}
+        <div class="holt-row">
+          <div class="holt-row-main">
+            <div class="holt-row-title">{{ b.release_title }}</div>
+            <div class="holt-row-meta">{{ b.reason }}{% if b.expires_at %} · until {{ b.expires_at[:10] }}{% endif %}</div>
+          </div>
+          <form method="post" action="/ui/downloads/blocklist/{{ b.id }}/delete" style="margin:0"><button type="submit" class="holt-btn holt-btn-quiet holt-btn-sm">Remove</button></form>
         </div>
         {% endfor %}
       </div>
@@ -133,6 +152,7 @@
                        : `<button class="holt-ibtn" title="Resume" onclick="act('${t.info_hash}','resume')">${ICON.play}</button>`}
             <button class="holt-ibtn" title="Remove (keep files)" onclick="remove('${t.info_hash}', false)">${ICON.trash}</button>
             <button class="holt-ibtn" title="Remove and delete files" onclick="remove('${t.info_hash}', true)">${ICON.trashx}</button>
+            ${t.is_finished ? "" : `<button class="holt-ibtn" title="Blocklist this release and search again" onclick="blocklistRetry('${t.info_hash}')">⛔</button>`}
           </div>
         </div>`;
     }
@@ -184,6 +204,14 @@
       if (!confirm(deleteFiles ? "Remove this torrent AND delete its downloaded files?" : "Remove this torrent? Downloaded files are kept.")) return;
       await fetch(`/torrents/${hash}?delete_files=${deleteFiles}`, { method: "DELETE" });
       denToast(deleteFiles ? "Torrent and files removed" : "Torrent removed");
+      refresh();
+    }
+    async function blocklistRetry(hash) {
+      if (!confirm("Blocklist this release, remove the torrent and its files, and search again?")) return;
+      const resp = await fetch(`/downloads/by-hash/${hash}/blocklist`, { method: "POST" });
+      let msg = resp.ok ? "Blocklisted" : "Failed";
+      try { const d = await resp.json(); if (resp.ok) msg = d.grabbed ? "Blocklisted · grabbed a new release" : "Blocklisted · nothing else found yet"; else if (d.detail) msg = d.detail; } catch (e) {}
+      if (window.denToast) denToast(msg, resp.ok ? "positive" : "warning");
       refresh();
     }
     async function addTorrent(ev) {

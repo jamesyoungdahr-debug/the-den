@@ -5,8 +5,7 @@ then search+grab anything still missing."""
 from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 
-from app import requests_service
-from app import health
+from app import blocklist, health, requests_service
 from app.candidates import episode_query, movie_query, profile_for, scored_candidates
 from app.download_check import check_and_import, reap_seeded
 from app.grabber import grab_episode, grab_movie
@@ -24,6 +23,32 @@ def _has_active_download(db: Session, *, movie_id: int | None = None, episode_id
     if episode_id is not None:
         query = query.filter(DownloadRecord.episode_id == episode_id)
     return query.first() is not None
+
+
+async def _search_and_grab_movie(db: Session, movie: Movie, profile: QualityProfile) -> bool:
+    """Search the movie's profile-filtered candidates and grab the best one. True when grabbed."""
+    candidates = await scored_candidates(db, movie_query(movie), profile)
+    best = next((c for c in candidates if c["is_best"]), None)
+    if not best:
+        return False
+    try:
+        await grab_movie(db, movie, best["download_url"], best["title"], score=best["score"])
+        return True
+    except Exception:
+        return False  # a dead download link shouldn't stop the cycle; next run retries
+
+
+async def _search_and_grab_episode(db: Session, episode: Episode, series: Series, profile: QualityProfile) -> bool:
+    """Search the episode's profile-filtered candidates and grab the best one. True when grabbed."""
+    candidates = await scored_candidates(db, episode_query(series, episode), profile)
+    best = next((c for c in candidates if c["is_best"]), None)
+    if not best:
+        return False
+    try:
+        await grab_episode(db, episode, best["download_url"], best["title"], score=best["score"])
+        return True
+    except Exception:
+        return False  # a dead download link shouldn't stop the cycle; next run retries
 
 
 async def _advance_downloads(db: Session) -> None:
@@ -84,6 +109,22 @@ async def _upgrade_titles(db: Session) -> None:
                 pass
 
 
+async def retry_download(db: Session, record: DownloadRecord) -> bool:
+    """Search again for the title behind a (failed) download record and grab the best
+    non-blocklisted candidate. True when something was grabbed."""
+    default_profile = db.query(QualityProfile).first()
+    if record.movie_id:
+        movie = db.get(Movie, record.movie_id)
+        profile = profile_for(db, movie.quality_profile_id, default=default_profile) if movie else None
+        return bool(movie and profile) and await _search_and_grab_movie(db, movie, profile)
+    if record.episode_id:
+        episode = db.get(Episode, record.episode_id)
+        series = db.get(Series, episode.series_id) if episode else None
+        profile = profile_for(db, series.quality_profile_id, default=default_profile) if series else None
+        return bool(episode and series and profile) and await _search_and_grab_episode(db, episode, series, profile)
+    return False
+
+
 async def _grab_missing_movies(db: Session) -> None:
     default_profile = db.query(QualityProfile).first()
     for movie in db.query(Movie).filter(Movie.has_file == False).all():  # noqa: E712
@@ -92,14 +133,7 @@ async def _grab_missing_movies(db: Session) -> None:
         profile = profile_for(db, movie.quality_profile_id, default=default_profile)
         if not profile:
             continue
-        query = movie_query(movie)
-        candidates = await scored_candidates(db, query, profile)
-        best = next((c for c in candidates if c["is_best"]), None)
-        if best:
-            try:
-                await grab_movie(db, movie, best["download_url"], best["title"], score=best["score"])
-            except Exception:
-                pass  # a dead download link shouldn't stop the cycle; next run retries
+        await _search_and_grab_movie(db, movie, profile)
 
 
 async def _grab_missing_episodes(db: Session) -> None:
@@ -111,17 +145,14 @@ async def _grab_missing_episodes(db: Session) -> None:
         profile = profile_for(db, series.quality_profile_id, default=default_profile)
         if not profile:
             continue
-        query = episode_query(series, episode)
-        candidates = await scored_candidates(db, query, profile)
-        best = next((c for c in candidates if c["is_best"]), None)
-        if best:
-            try:
-                await grab_episode(db, episode, best["download_url"], best["title"], score=best["score"])
-            except Exception:
-                pass
+        await _search_and_grab_episode(db, episode, series, profile)
 
 
 async def run_cycle(db: Session) -> None:
+    try:
+        blocklist.purge_expired(db)
+    except Exception:
+        pass
     await _advance_downloads(db)
     await _grab_missing_movies(db)
     await _grab_missing_episodes(db)

@@ -10,12 +10,13 @@ from app import auth, config, library_service
 from app import settings as settings_module
 from app import tmdb, torznab, tvmaze
 from app.candidates import episode_query, movie_query, profile_for, scored_candidates
+from app import blocklist
 from app.scoring import is_upgradable
 from app.deps import get_db
 from app.download_check import check_and_import
 from app.grabber import grab_episode as do_grab_episode
 from app.grabber import grab_movie as do_grab_movie
-from app.models import DownloadRecord, Episode, Indexer, Movie, Series
+from app.models import BlocklistEntry, DownloadRecord, Episode, Indexer, Movie, Series
 from app.routers.api_settings import apply_runtime_changes
 from app.templating import templates
 from app.torrent import engine as torrent_engine
@@ -370,10 +371,23 @@ def ui_downloads(request: Request, db: Session = Depends(get_db)):
         elif d.episode_id and (episode := db.get(Episode, d.episode_id)):
             series = db.get(Series, episode.series_id)
             label = f"{series.title if series else '?'} S{episode.season_number:02d}E{episode.episode_number:02d}"
-        history.append({"release_title": d.release_title, "status": d.status, "label": label})
+        history.append({"release_title": d.release_title, "status": d.status, "label": label, "failure_reason": d.failure_reason})
+    entries = [
+        {"id": b.id, "release_title": b.release_title, "reason": b.reason, "expires_at": b.expires_at.isoformat() if b.expires_at else None}
+        for b in blocklist.active(db)
+    ]
     return templates.TemplateResponse(
-        "downloads.html", {"request": request, "history": history, "active_nav": "downloads"}
+        "downloads.html", {"request": request, "history": history, "blocklist": entries, "active_nav": "downloads"}
     )
+
+
+@router.post("/ui/downloads/blocklist/{entry_id}/delete", dependencies=ADMIN)
+def ui_delete_blocklist(entry_id: int, db: Session = Depends(get_db)):
+    entry = db.get(BlocklistEntry, entry_id)
+    if entry:
+        db.delete(entry)
+        db.commit()
+    return RedirectResponse("/ui/downloads", status_code=303)
 
 
 @router.post("/ui/downloads/{download_id}/check", dependencies=ADMIN)

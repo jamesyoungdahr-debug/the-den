@@ -1,14 +1,40 @@
 """Advance one DownloadRecord against the built-in torrent engine, importing it when
 done -- and, separately, clean up torrents that have finished their seeding duty."""
 
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 
-from app import importer, settings as settings_module
+from app import blocklist, importer, settings as settings_module
 from app.models import DownloadRecord, Episode, Movie, Series
 from app.notifier import notify_event
 from app.torrent import engine
 
 TERMINAL_STATUSES = ("imported", "failed")
+
+STALL_MINUTES = 30  # no progress and no seeders for this long -> stalled
+METADATA_MINUTES = 20  # magnet never resolved -> dead
+
+
+def _utc(dt: datetime | None) -> datetime | None:
+    """SQLite hands back naive datetimes; treat them as UTC."""
+    return dt.replace(tzinfo=timezone.utc) if dt is not None and dt.tzinfo is None else dt
+
+
+async def fail_download(db: Session, record: DownloadRecord, reason: str, blocklist_days: int | None = 30) -> None:
+    """Give up on a download: blocklist the release, remove the torrent and its data, mark
+    the record failed and notify. The next automation cycle searches again."""
+    s = settings_module.effective(db)
+    if record.status != "failed":
+        blocklist.add(db, record, reason, days=blocklist_days)
+    if record.info_hash:
+        try:
+            engine.remove(record.info_hash, delete_files=True)
+        except Exception:
+            pass
+    record.status = "failed"
+    record.failure_reason = reason
+    db.commit()
+    await notify_event(db, "download_failed", f"Download failed ({reason}): {record.release_title}", legacy_discord_url=s.discord_webhook_url)
 
 
 async def check_and_import(db: Session, record: DownloadRecord) -> None:
@@ -23,11 +49,26 @@ async def check_and_import(db: Session, record: DownloadRecord) -> None:
         return
 
     st = engine.status(record.info_hash)
+    now = datetime.now(timezone.utc)
     if st is None:
         record.status = "failed"  # removed from the engine, or its state was lost
-    elif st.error:
-        record.status = "failed"
-    elif st.is_finished:
+        record.failure_reason = record.failure_reason or "gone from the engine"
+        db.commit()
+        return
+    if st.progress > (record.last_progress or 0.0) or record.last_progress_at is None:
+        record.last_progress = st.progress
+        record.last_progress_at = now
+    since_progress = now - (_utc(record.last_progress_at) or _utc(record.created_at) or now)
+    if st.error:
+        await fail_download(db, record, f"error: {st.error}")
+        return
+    if st.state == "metadata" and since_progress > timedelta(minutes=METADATA_MINUTES):
+        await fail_download(db, record, f"dead: no metadata after {METADATA_MINUTES} min")
+        return
+    if st.state in ("downloading", "queued") and not st.is_finished and st.num_seeds == 0 and st.download_rate == 0 and since_progress > timedelta(minutes=STALL_MINUTES):
+        await fail_download(db, record, f"stalled: no progress for {STALL_MINUTES} min with no seeders")
+        return
+    if st.is_finished:
         await _import(db, record)
     elif st.state in ("metadata", "checking", "queued"):
         record.status = "queued"
