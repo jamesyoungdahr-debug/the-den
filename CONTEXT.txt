@@ -13,6 +13,18 @@ CURRENT PLAN (2026-09-14): docs/port-40204-release-plan.md -- move the KDE clien
   `python -m app` run with no WEB_HOST/WEB_PORT answered /health on 127.0.0.1:40204 with no errors. PKGBUILD is 0.8.1a.
   INSTALLED 2026-09-14 13:27: the updater installed server v0.8.1a (now on 127.0.0.1:40204, no journal errors) and client
   v0.5.0b; the installed client moved its saved address from :8686 to :40204 and connected. Next: Phase 4 after Liam answers.
+  REVIEW FIXES 2026-09-14 (LiamPC session; committed locally, not pushed or tagged): a review of the pulled work found and
+  fixed four problems. (1) the-den-client tests/fixture_backend.sh defaulted to wiping ~/the-den-test and trusted anything
+  already answering on 8688; it now uses ~/the-den-client-fixture, deletes only a folder with its marker file, and stops if
+  8688, 8085 or 8082 already answer. (2) app/discovery.py advertised an unfinished server, so anyone on the LAN could claim
+  /setup; it now waits until setup is finished (finishing setup starts it), and anonymous /health no longer returns
+  torrent_engine or checks. Claude wrote these security units. (3) Disconnecting Plex kept the Plex name; the name now needs
+  a Plex token and disconnecting re-announces. (4) Port move: the-den.install warns on upgrade when the env file has no
+  WEB_PORT; the KDE fallback covers any host on :8686, and Android gains the same fallback (movedUrl, PortMoveTest), which
+  replaces the overnight KDE-only, loopback-only decision at Liam's go-ahead. Verified: server import and
+  tests/test_discovery.py 8/8, a live mDNS run (not advertised before setup, advertised after), KDE
+  check_api_client_port_fallback.py, Android build and unit tests 12/12. The 4090 fast-edit model hung twice with empty
+  replies, so Claude wrote the fixture script edits; the 4080 wrote the rest. Not yet run: the fixture script itself.
   Test logs now go to /home/liam/Projects/logs/<repo>/. The KDE race-guard
   test used to overwrite the installed client's saved address in ~/.config/the-den/client.conf; fixed, and the address
   is reset to :8686. Claude wrote this note after two refused handoffs.
@@ -139,8 +151,9 @@ DEV ENVIRONMENT ON THIS MACHINE (set up 2026-09-13):
     log ~/the-den-dev/server.log.
   - Test backend: 127.0.0.1:8688 is the KDE client's fixture backend, built by the-den-client's
     tests/fixture_backend.sh: a copy of the dev database (for its users and tokens) seeded with movie 1, series 1
-    and a mock indexer, backed by mock TVmaze on 8085 and mock Torznab on 8082. Data and logs are in ~/the-den-test,
-    which each run wipes; torrent port 6894. The KDE tests/run_all.sh is 12/12 against it.
+    and a mock indexer, backed by mock TVmaze on 8085 and mock Torznab on 8082. Data and logs are in
+    ~/the-den-client-fixture, which the script marks and only ever deletes itself; it stops if 8688, 8085 or 8082 already
+    answer. Torrent port 6894. The KDE tests/run_all.sh is 12/12 against it.
   - Start each from the repo root with DATABASE_URL, STATE_DIR, DOWNLOADS_ROOT, MOVIES_ROOT, TV_ROOT, TORRENT_PORT,
     WEB_HOST and WEB_PORT exported, run ~/.venvs/the-den/bin/python -m alembic upgrade head, then
     setsid nohup ~/.venvs/the-den/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port <port>.
