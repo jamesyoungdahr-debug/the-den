@@ -40,9 +40,12 @@ NEXT, in order:
      Backups: DONE 2026-09-13. Liam chose /home/liam/Projects/backups; each repo has a subfolder holding verified
      `git bundle create <file> --all` bundles named <repo>-<YYYYMMDD-HHMM>-<short commit>.bundle. The first set was
      written at 20:09 and a test clone from each bundle matched its repo.
-     Still open: Liam runs
-     `sudo pacman -S --needed jdk17-openjdk android-tools`; install the Android SDK cmdline-tools (platform 35,
-     build-tools 35.0.0) under ~/Android/Sdk; rebuild the lost 72-check e2e and the mock Plex starter inside tests/;
+     Android toolchain: DONE 2026-09-13, installed without root. Temurin JDK 17 in ~/.local/jdk-17; Android SDK in
+     ~/Android/Sdk (cmdline-tools 23.0, platform-tools 37.0.1, platform 35, build-tools 35.0.0). The deprecated
+     sdkmanager script was removed on Liam's request; use the Android CLI (cmdline-tools/latest/bin/android sdk ...).
+     the-den-android builds and passes testDebugUnitTest 10/10 against the dev backend; how to run it is at the end
+     of the-den-android's HANDOFF.md.
+     Still open: rebuild the lost 72-check e2e and the mock Plex starter inside tests/;
      update README and HANDOFF paths; fix the-den-client's tests/qml_harness.py, which rewrites the tracked
      tests/_shell.qml with this machine's absolute path on every run (restore it with git checkout before committing).
      Liam decided on 2026-09-13 to keep the dev admin token as it is, so don't ask about rotating it again.
