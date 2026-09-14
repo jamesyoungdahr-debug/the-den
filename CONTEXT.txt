@@ -58,6 +58,16 @@ CURRENT PLAN (2026-09-14): docs/port-40204-release-plan.md -- move the KDE clien
   loopback still plain HTTP, 15 live HTTPS checks against python -m app, offline server tests. Claude wrote app/tls.py,
   app/__main__.py and the TLS wiring in app/main.py and app/discovery.py; local models wrote the rest. Next: M36 UPnP
   (only external port 40204, plus the server's own NAT loopback check).
+  M35 VM TEST 2026-09-14 (holtos-test Hyper-V VM, HoltOS 0.0.6d, Python 3.14.7, OpenSSL 3.6.4; coordinated with the
+  holtos session): commit 085537a ran offline from a home folder with the updater's /opt/the-den/.venv, on
+  0.0.0.0:40290. Liam said downloads need a VPN, so nothing was downloaded: that venv has no cryptography, so Ubuntu's
+  cryptography 46.0.5, bcrypt and _cffi_backend were copied from WSL onto PYTHONPATH, with a _rust.abi3.so symlink
+  because Arch's Python doesn't load Debian's multiarch module suffix. Results: 30 migrations on a fresh database, 26
+  unit checks, TLS=off refused on 0.0.0.0, and 21 live checks (pin matches the served key on 127.0.0.1 and the LAN IP,
+  curl --pinnedpubkey connects with the right pin and exits 90 with a wrong one, first-run setup over HTTPS with a
+  Secure cookie, device token sign-in, settings API and page, mDNS TXT https=1 plus the pin). From Windows: HTTPS with
+  the right pin 200, a wrong pin refused, plain HTTP gets an empty reply. The installed updater service was not touched.
+  A real updater install of 0.8.1c gets cryptography from requirements.txt, which needs network access.
 
 Work no longer happens on the Windows machine (C:\projects, WSL Ubuntu). The three repos were cloned fresh from
 GitHub into /home/liam/Projects/theden/the-den, the-den-client and the-den-android on Liam's HoltOS 0.0.4-alpha
