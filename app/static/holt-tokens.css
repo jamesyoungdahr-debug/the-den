@@ -27,6 +27,11 @@
   --holt-healthy:#28E0C8;
   --holt-warning:#FFB84D;
 
+  /* Neon accents -- blue informs, magenta glows, lime sparks; never a state or the primary action */
+  --holt-pulse:#4F7BFF;
+  --holt-flare:#FF4FD8;
+  --holt-volt:#C6FF3D;
+
   /* Glass (HoltOS Glass v2): translucent surfaces that blur what is behind them */
   --holt-glass-surface:rgba(23,20,35,.70);
   --holt-glass-surface-strong:rgba(23,20,35,.84);
@@ -49,6 +54,8 @@
   --holt-ambient-scrim-mid:rgba(13,11,18,.62);
   --holt-ambient-scrim-weak:rgba(13,11,18,.12);
   --holt-ambient-stripe:rgba(177,77,255,.24);
+  --holt-ambient-glow-pulse:rgba(79,123,255,.12);
+  --holt-ambient-glow-flare:rgba(255,79,216,.14);
 
   /* Badges (status on media) */
   --holt-badge-available:#28E0C8;

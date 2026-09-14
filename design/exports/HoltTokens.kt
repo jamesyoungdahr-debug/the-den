@@ -24,6 +24,9 @@ object HoltTokens {
         val lilac = Color(0xFFF4EBFF)
         val healthy = Color(0xFF28E0C8)
         val warning = Color(0xFFFFB84D)
+        val pulse = Color(0xFF4F7BFF)
+        val flare = Color(0xFFFF4FD8)
+        val volt = Color(0xFFC6FF3D)
     }
     object Glass {
         val surface = Color(0xB2171423)
@@ -47,6 +50,8 @@ object HoltTokens {
         val scrimMid = Color(0x9E0D0B12)
         val scrimWeak = Color(0x1F0D0B12)
         val stripe = Color(0x3DB14DFF)
+        val glowPulse = Color(0x1F4F7BFF)
+        val glowFlare = Color(0x24FF4FD8)
     }
     object Badge {
         val available = Color(0xFF28E0C8)

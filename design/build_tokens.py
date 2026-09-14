@@ -73,6 +73,10 @@ def build_css(t: dict) -> str:
     for k in ("healthy", "warning"):
         lines.append(f"  --holt-{k}:{c[k]};")
     lines.append("")
+    lines.append("  /* Neon accents -- blue informs, magenta glows, lime sparks; never a state or the primary action */")
+    for k in ("pulse", "flare", "volt"):
+        lines.append(f"  --holt-{k}:{c[k]};")
+    lines.append("")
     group("Glass (HoltOS Glass v2): translucent surfaces that blur what is behind them", "glass-", g)
     group("Ambient ground layer + scrims for text over art", "ambient-", a)
     group("Badges (status on media)", "badge-", b)
