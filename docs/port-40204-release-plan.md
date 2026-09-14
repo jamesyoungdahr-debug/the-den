@@ -1,6 +1,6 @@
 # Plan: move the apps to port 40204, then release the-den v0.8.1a (drafted 2026-09-14)
 
-Status (2026-09-14, overnight; Liam handed over and Claude makes the calls): Phase 0 and Phase 1 steps 2-4 are done; next are the client release (step 5) and Phase 2.
+Status (2026-09-14, overnight; Liam handed over and Claude makes the calls): Phases 0 and 1 and step 6 are done. the-den-client v0.5.0b and the-den v0.8.1a are tagged and pushed; waiting for the HoltOS updater to install them (step 7), then the step 8 checks. Phase 3 is next.
 
 ## Why
 
@@ -37,11 +37,11 @@ first, then release the server as v0.8.1a.
 4. Test: KDE `tests/run_all.sh` against 8688; Android `assembleDebug` and `testDebugUnitTest` against
    8687. Commit each repo and write a bundle. DONE: KDE 13/13, Android 10/10; test logs in `/home/liam/Projects/logs/<repo>/`.
 5. Release the KDE client as v0.5.0b (pkgver 0.5.0b), tag and push, so the fixed client is installed
-   before the server moves.
+   before the server moves. DONE 2026-09-14: tagged and pushed (commit 31b6a35).
 
 ## Phase 2: server v0.8.1a
 
-6. Version 0.8.1a in the PKGBUILD and any other version file; tag v0.8.1a and push.
+6. Version 0.8.1a in the PKGBUILD and any other version file; tag v0.8.1a and push. DONE 2026-09-14: the PKGBUILD is the only version file; offline tests 4/4 and a local `python -m app` run answered on 127.0.0.1:40204; tagged and pushed. the-den-android 0.7.0a stays committed locally (it has no tags).
 7. Liam starts the install from the HoltOS Updates window, or the 6-hour timer does.
 8. Check: the service listens on 40204, `/health` has `server_id` and `server_name`, the updater
    history shows no failure, and the installed KDE client reconnects.

@@ -11,7 +11,8 @@ CURRENT PLAN (2026-09-14): docs/port-40204-release-plan.md -- move the KDE clien
   run again. KDE client 0.5.0b (default :40204, plus a fallback from a saved loopback :8686) passes run_all.sh 13/13;
   Android 0.7.0a (versionCode 23, default :40204) passes testDebugUnitTest 10/10. Both committed and bundled. A local
   `python -m app` run with no WEB_HOST/WEB_PORT answered /health on 127.0.0.1:40204 with no errors. PKGBUILD is 0.8.1a.
-  Next: tag client v0.5.0b, then server v0.8.1a. Test logs now go to /home/liam/Projects/logs/<repo>/. The KDE race-guard
+  RELEASED: client v0.5.0b and server v0.8.1a are tagged and pushed; the HoltOS updater's timer installs them (plan step 7).
+  Test logs now go to /home/liam/Projects/logs/<repo>/. The KDE race-guard
   test used to overwrite the installed client's saved address in ~/.config/the-den/client.conf; fixed, and the address
   is reset to :8686. Claude wrote this note after two refused handoffs.
 
