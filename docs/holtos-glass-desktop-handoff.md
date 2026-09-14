@@ -80,7 +80,7 @@ than HoltOS's.
 
    | Token | Value | Use |
    |---|---|---|
-   | `window` | `rgba(23,20,35,.40)` *provisional* | the single window tint; must match HoltOS's Kvantum window fill |
+   | `window` | `rgba(23,20,35,.30)` | the single window tint; matches HoltOS's Kvantum window fill and title bar (30 %, Liam, 2026-09-14) |
    | `raised` | `rgba(29,25,39,.30)` *provisional* | cards and dialogs |
    | `selection` | `rgba(177,77,255,.22)` | selected items |
    | `hover` | `rgba(177,77,255,.12)` | hovered items |
