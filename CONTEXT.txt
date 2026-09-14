@@ -69,6 +69,13 @@ NEXT, in order:
      /etc/the-den/the-den.env, so the installed server moves from 8686 to 40204 and keeps WEB_HOST=127.0.0.1
      (not advertised until Liam sets WEB_HOST=0.0.0.0). The installed KDE client and the phones keep their saved
      8686 address and must be pointed at :40204 by hand until M39/M40 add discovery to the apps.
+     LIAM'S DECISION (2026-09-13, before a reboot): fix the Android app and the KDE client first, then release
+     v0.8.1a. Start there next session: the apps' default and placeholder addresses still say 8686
+     (the-den-client src/api_client.py and src/qml/LoginPage.qml; the-den-android network/ApiClient.kt and
+     ui/screens/LoginScreen.kt), and M39/M40 in docs/connect-secure-plan.md cover discovery and remembered servers.
+     After the reboot, restart the dev backend on 8687 (DEV ENVIRONMENT below) and rerun the-den-client's
+     tests/fixture_backend.sh for 8688. Phone install: Liam pairs with `adb pair` first (the Pixel showed up at
+     192.168.0.82); the phones can't reach this laptop until a server runs with WEB_HOST=0.0.0.0.
   4. M37 device tokens can go before M35 while Liam answers the router questions (ports 80 and 443, NAT loopback,
      device approval).
   5. M35 HTTPS, M36 UPnP, M38 passkeys, M39 Android, M40 KDE, then the M14 shakedown, Tier 3 (M41-M47) and M48
