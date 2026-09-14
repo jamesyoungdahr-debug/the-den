@@ -37,13 +37,15 @@ NEXT, in order:
      livetest; the password is Liam's and is not recorded anywhere), Liam's admin API token saved by Liam in
      ~/the-den-dev/admin-token.txt (mode 600; Claude never writes tokens), and the KDE tests/run_all.sh at 12/12 against
      the-den-client's new tests/fixture_backend.sh on 8688 (see DEV ENVIRONMENT below).
-     Still open: Liam picks a backup folder for the git bundles (none written yet); Liam runs
+     Backups: DONE 2026-09-13. Liam chose /home/liam/Projects/backups; each repo has a subfolder holding verified
+     `git bundle create <file> --all` bundles named <repo>-<YYYYMMDD-HHMM>-<short commit>.bundle. The first set was
+     written at 20:09 and a test clone from each bundle matched its repo.
+     Still open: Liam runs
      `sudo pacman -S --needed jdk17-openjdk android-tools`; install the Android SDK cmdline-tools (platform 35,
      build-tools 35.0.0) under ~/Android/Sdk; rebuild the lost 72-check e2e and the mock Plex starter inside tests/;
      update README and HANDOFF paths; fix the-den-client's tests/qml_harness.py, which rewrites the tracked
      tests/_shell.qml with this machine's absolute path on every run (restore it with git checkout before committing).
-     Liam should revoke the admin token (it was pasted into chat) and save a new one; rerun tests/fixture_backend.sh
-     afterwards, since it copies users and tokens from the dev database.
+     Liam decided on 2026-09-13 to keep the dev admin token as it is, so don't ask about rotating it again.
   2. (DONE 2026-09-13) The libtorrent 2.1 fix: engine.py now reads
      torrent_status.flags for paused and auto_managed, and drops torrent_status.states.allocating, a fourth break the
      live install never reached. Verified 11/11 on libtorrent 2.1.1 against tests/local_swarm.py: .torrent and magnet
@@ -143,7 +145,7 @@ NEXT, in order:
 STANDING RULE (updated 2026-09-13 evening; supersedes every older push rule in this file): commit each
   verified milestone locally and do not push until Liam says so. The one exception is a tagged release pushed for
   live testing through the HoltOS updater (see PICK UP HERE). After every commit, write a git bundle of each repo
-  outside the working trees once Liam picks the backup folder. Git now runs natively on Linux, so the old WSL
+  into /home/liam/Projects/backups/<repo>/ (see item 1 under NEXT). Git now runs natively on Linux, so the old WSL
   credential-prompt hang no longer applies.
 
 BRIDGE NOTE (2026-09-13, corrected later the same day): run_coding_task never wrote a file during
