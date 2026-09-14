@@ -81,10 +81,13 @@ NEXT, in order:
      backend (8687), the fixture backend and its mocks (8688, 8085, 8082), the local swarm (8083) and adb are all
      down. HoltOS is now v0.0.6d-alpha. All three repos are committed with nothing uncommitted: the-den is 6 commits
      ahead of GitHub, the client 1 and Android 1; each has a verified bundle in /home/liam/Projects/backups.
-     LOCAL MODELS NOW: ComfyUI moved to the 4090 PC (http://192.168.0.152:8188), and its LM Studio answers but has
-     no LLM loaded, so lmstudio-bridge can't take work until Liam loads one. Use lmstudio-4080super
-     (qwen/qwen3.5-9b, 92,672 context) meanwhile. The model review, downloads in progress and scheduler plan are in
-     /home/liam/Projects/LOCAL-LLM-WORKFLOW.md; check ComfyUI's /queue is empty before loading an LLM on the 4090.
+     LOCAL MODELS NOW (2026-09-14): hand every unit to the user-scope local-llm MCP server, LiamPC's unified bridge
+     in scheduler mode (scheduler at http://192.168.0.152:8790). The old lmstudio-bridge and lmstudio-4080super
+     servers were removed because they bypassed the scheduler. Pick a profile per unit: fast-edit (4090,
+     Qwen3.6-27B-MTP) for normal edits, large-file (this laptop, Qwen3-Coder-30B-A3B) for big files like this one,
+     trivial (4080, qwen3.5-9b) for one-line changes. The full rules are in ~/.claude/CLAUDE.md.
+     Nothing else changed since the reboot entry above: the next step is still fixing the Android app and the KDE
+     client before v0.8.1a, and the dev backend, fixture backend, swarm and adb are still down.
   4. M37 device tokens can go before M35 while Liam answers the router questions (ports 80 and 443, NAT loopback,
      device approval).
   5. M35 HTTPS, M36 UPnP, M38 passkeys, M39 Android, M40 KDE, then the M14 shakedown, Tier 3 (M41-M47) and M48
