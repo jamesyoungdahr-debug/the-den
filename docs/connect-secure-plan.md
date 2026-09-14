@@ -78,7 +78,11 @@ CONTEXT.txt), Claude writes a git bundle of each repo outside the working trees 
 - Verify: on a fresh DB every API route answers 503 until setup; after setup, anonymous
   requests get 401 everywhere; e2e with tokens; KDE harness; Android build and tests.
 
-### M34 Server identity and LAN discovery (server)
+### M34 Server identity and LAN discovery (server) -- DONE 2026-09-13, not released yet
+
+Status: done and verified on 2026-09-13 (details in STATUS.md). Two choices differ from the bullets below.
+The unit runs `python -m app`, which reads `WEB_HOST` and `WEB_PORT` itself, so an env file without those
+keys still starts, on 127.0.0.1:40204. The TXT record carries `name`, `id` and `api`; `https` is added in M35.
 
 - `config.WEB_HOST`, `WEB_PORT` and `SERVER_NAME` (drafted by the local model, uncommitted);
   the systemd unit passes them to uvicorn; README and the env example explain LAN binding.

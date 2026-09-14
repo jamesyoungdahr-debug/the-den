@@ -60,9 +60,15 @@ NEXT, in order:
      because the laptop rebooted at 17:23 and the journal only keeps the current boot. Since the reboot /opt/the-den runs
      the v0.8.0a code on 127.0.0.1:8686 with no engine errors, but its /setup page is not finished yet (Liam). The
      client v0.5.0a installed cleanly at 17:15.
-  3. M34 (docs/connect-secure-plan.md), NEXT UP, ships as the-den v0.8.1a: rewrite app/discovery.py, make
-     deploy/the-den.service use WEB_HOST and WEB_PORT instead of the hardcoded 127.0.0.1:8686, and add both keys to
-     deploy/the-den.env.example. Nothing of M34 is written or pushed yet; app/config.py only has the 40204 default.
+  3. (DONE 2026-09-13, committed locally as 'M34: server identity and LAN discovery', NOT tagged yet) M34: the
+     service runs `python -m app`, which listens on WEB_HOST:WEB_PORT (default 127.0.0.1:40204); app/discovery.py
+     keeps a server id under STATE_DIR and advertises _theden._tcp (TXT name, id, api) unless WEB_HOST is loopback;
+     /health gains server_id and server_name; zeroconf 0.151.3 joins requirements.txt. Verified with
+     tests/test_discovery.py 8/8 and a live mDNS run on port 8689 (see STATUS.md).
+     Releasing it as the-den v0.8.1a waits for Liam: the HoltOS updater appends WEB_PORT=40204 to
+     /etc/the-den/the-den.env, so the installed server moves from 8686 to 40204 and keeps WEB_HOST=127.0.0.1
+     (not advertised until Liam sets WEB_HOST=0.0.0.0). The installed KDE client and the phones keep their saved
+     8686 address and must be pointed at :40204 by hand until M39/M40 add discovery to the apps.
   4. M37 device tokens can go before M35 while Liam answers the router questions (ports 80 and 443, NAT loopback,
      device approval).
   5. M35 HTTPS, M36 UPnP, M38 passkeys, M39 Android, M40 KDE, then the M14 shakedown, Tier 3 (M41-M47) and M48
