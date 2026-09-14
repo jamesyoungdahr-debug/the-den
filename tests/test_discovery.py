@@ -51,16 +51,19 @@ def test_server_id_replaces_a_bad_file():
 
 
 def test_display_name_order():
+    original = config.SERVER_NAME
     config.SERVER_NAME = "Env Name"
     try:
-        s1 = SimpleNamespace(plex_server_name="Plex Box", server_name="Setup Name")
+        s1 = SimpleNamespace(plex_server_name="Plex Box", plex_token="token", server_name="Setup Name")
         assert discovery.display_name(s1) == "Plex Box"
+        s1_disconnected = SimpleNamespace(plex_server_name="Plex Box", plex_token=None, server_name="Setup Name")
+        assert discovery.display_name(s1_disconnected) == "Setup Name"
         s2 = SimpleNamespace(plex_server_name=None, server_name="Setup Name")
         assert discovery.display_name(s2) == "Setup Name"
         s3 = SimpleNamespace(plex_server_name="  ", server_name=None)
         assert discovery.display_name(s3) == "Env Name"
     finally:
-        config.SERVER_NAME = ""
+        config.SERVER_NAME = original
     s4 = SimpleNamespace(plex_server_name=None, server_name=None)
     assert discovery.display_name(s4) == socket.gethostname()
 

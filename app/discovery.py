@@ -45,8 +45,9 @@ def server_id() -> str:
 
 
 def display_name(s: Any) -> str:
-    """Return the first non-empty value after .strip() of: s.plex_server_name, s.server_name, config.SERVER_NAME, socket.gethostname()."""
-    for name in (s.plex_server_name, s.server_name, config.SERVER_NAME, socket.gethostname()):
+    """Return the first non-empty value after .strip() of: s.plex_server_name (only while Plex is connected, i.e. s.plex_token is set), s.server_name, config.SERVER_NAME, socket.gethostname()."""
+    plex_name = s.plex_server_name if getattr(s, "plex_token", None) else None
+    for name in (plex_name, s.server_name, config.SERVER_NAME, socket.gethostname()):
         if name and name.strip():
             return name.strip()
     return ""
@@ -107,14 +108,23 @@ def instance_name(name: str) -> str:
     return f"{label}.{SERVICE_TYPE}"
 
 
-async def start(s: Any) -> None:
-    """Remember the running loop and advertise display_name(s)."""
+async def start(s: Any, advertise: bool = True) -> None:
+    """Remember the running loop and advertise display_name(s). With advertise=False only the
+    loop is remembered: a server whose first-run setup isn't finished stays off the LAN, since
+    anyone who reached /setup could claim the admin account (see start_from_thread)."""
     global _loop, _zeroconf, _info, _current_name
 
     _loop = asyncio.get_running_loop()
+    if not advertise:
+        log.info("Server is not advertised until first-run setup is finished")
+        return
     name = display_name(s)
 
-    addresses = advertised_addresses()
+    try:
+        addresses = advertised_addresses()
+    except Exception:
+        log.warning("LAN discovery could not read this machine's network addresses", exc_info=True)
+        return
     if not addresses:
         log.info("Server is not advertised because WEB_HOST is a loopback address")
         return
@@ -176,6 +186,14 @@ def refresh(s: Any) -> None:
         _loop.create_task(do_reregister())
     else:
         asyncio.run_coroutine_threadsafe(do_reregister(), _loop)
+
+
+def start_from_thread(s: Any) -> None:
+    """Start advertising from a sync request handler (a worker thread) once first-run setup is
+    finished. Does nothing before start() has run, or while the server is already advertised."""
+    if _loop is None or _zeroconf is not None:
+        return
+    asyncio.run_coroutine_threadsafe(start(s), _loop)
 
 
 def current() -> dict[str, Any]:

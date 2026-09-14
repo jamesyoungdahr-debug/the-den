@@ -121,18 +121,27 @@ async def start_torrent_engine():
 
 @app.on_event("startup")
 async def start_discovery():
-    # Advertise this server on the LAN (M34). Does nothing when WEB_HOST is a loopback address.
+    # Advertise this server on the LAN (M34), but only once first-run setup is finished (M33);
+    # finishing setup starts it (routers/auth.py). Does nothing when WEB_HOST is a loopback address.
     db = SessionLocal()
     try:
         s = settings_module.effective(db)
+        complete = setup_state.is_complete(db)
     finally:
         db.close()
-    await discovery.start(s)
+    await discovery.start(s, advertise=complete)
 
 
 @app.on_event("startup")
 def start_scheduler():
     scheduler.start()
+
+
+# Shutdown handlers run in registration order and stop at the first one that raises, so the
+# mDNS goodbye goes first: the apps drop a stopped server at once instead of waiting for expiry.
+@app.on_event("shutdown")
+async def stop_discovery():
+    await discovery.stop()
 
 
 @app.on_event("shutdown")
@@ -148,11 +157,6 @@ async def stop_torrent_engine():
     await solver.close()  # the built-in Cloudflare solver's Chromium, if it was started
 
 
-@app.on_event("shutdown")
-async def stop_discovery():
-    await discovery.stop()
-
-
 @app.post("/automation/run-now", dependencies=[Depends(auth.require_admin)])
 async def run_automation_now(db: Session = Depends(get_db)):
     await automation.run_cycle(db)
@@ -160,13 +164,18 @@ async def run_automation_now(db: Session = Depends(get_db)):
 
 
 @app.get("/health")
-def health_check(db: Session = Depends(get_db)):
+def health_check(request: Request, db: Session = Depends(get_db)):
     """Unauthenticated on purpose: the apps check it before signing in, and it's how they learn
-    that setup isn't finished yet."""
+    that setup isn't finished yet. The torrent engine state and the health checks name folders,
+    indexers and errors, so only signed-in callers get them."""
     with db_engine.connect() as conn:
         conn.execute(text("SELECT 1"))
     s = settings_module.effective(db)
-    return {"status": "ok", "api_version": 2, "server_id": discovery.server_id(), "server_name": discovery.display_name(s), "setup_complete": setup_state.is_complete(db), "torrent_engine": torrent_engine.info(), "checks": health.current(db)}
+    out = {"status": "ok", "api_version": 2, "server_id": discovery.server_id(), "server_name": discovery.display_name(s), "setup_complete": setup_state.is_complete(db)}
+    if getattr(request.state, "user", None) is not None:
+        out["torrent_engine"] = torrent_engine.info()
+        out["checks"] = health.current(db)
+    return out
 
 
 @app.get("/forbidden", response_class=HTMLResponse, include_in_schema=False)

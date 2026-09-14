@@ -159,4 +159,5 @@ def ui_disconnect_plex(db: Session = Depends(get_db)):
     row.plex_owner_id = None
     row.plex_owner_username = None
     db.commit()
+    discovery.refresh(settings_module.effective(db))
     return RedirectResponse("/ui/settings#plex", status_code=303)

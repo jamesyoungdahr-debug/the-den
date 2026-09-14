@@ -20,6 +20,11 @@ post_upgrade() {
     cd /opt/the-den && DATABASE_URL="sqlite:////var/lib/the-den/den.db" \
         runuser -u the-den -- /opt/the-den/.venv/bin/python -m alembic upgrade head
     echo "==> Migrations applied. Restart to pick up the new version: systemctl restart the-den"
+    if ! grep -q '^WEB_PORT=' /etc/the-den/the-den.env 2>/dev/null; then
+        echo "==> Since 0.8.1a the web UI listens on port 40204 by default (it used to be 8686)."
+        echo "    /etc/the-den/the-den.env sets no WEB_PORT, so after the restart it moves to 40204;"
+        echo "    add WEB_PORT=8686 there to keep the old port, and update any saved app addresses."
+    fi
 }
 
 pre_remove() {

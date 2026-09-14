@@ -94,7 +94,11 @@ def setup_server_submit(
     row.tv_root = values["tv_root"]
     row.downloads_root = values["downloads_root"]
     setup_state.mark_complete(db)
-    apply_runtime_changes(old, settings_module.effective(db))
+    new = settings_module.effective(db)
+    apply_runtime_changes(old, new)
+    from app import discovery
+
+    discovery.start_from_thread(new)  # the server stayed off the LAN until setup was finished
     return RedirectResponse("/", status_code=303)
 
 
