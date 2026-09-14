@@ -120,6 +120,12 @@
         </div>
       </section>
 
+      <section class="holt-panel" id="remote">
+        <div class="holt-panel-head"><div class="holt-eyebrow">Remote access</div><div class="holt-meta">{{ 'HTTPS on' if tls_on else 'HTTPS off: listening on this machine only' }}</div></div>
+        <div class="holt-field"><label for="public_host">Public name</label><input name="public_host" id="public_host" value="{{ s.public_host or '' }}" placeholder="requesthome.asuscomm.com" autocomplete="off"><div class="holt-meta">The name the apps use away from home, for example your router's DDNS name. The server's certificate covers it from the next restart.</div></div>
+        <div class="holt-field" style="margin:0"><label>Certificate pin</label><div class="holt-meta" style="font-family:var(--holt-font-mono);word-break:break-all">{{ tls_pin or 'None yet: HTTPS turns on when WEB_HOST is set to a LAN address.' }}</div><div class="holt-meta">The apps remember this the first time they sign in, and refuse to connect if it ever changes.</div></div>
+      </section>
+
       <section class="holt-panel" id="notifications">
         <div class="holt-panel-head"><div class="holt-eyebrow">Notifications</div><div class="holt-meta">Discord, ntfy, webhook, Telegram, Pushover</div></div>
         <div id="agent-list" class="holt-row-list"></div>

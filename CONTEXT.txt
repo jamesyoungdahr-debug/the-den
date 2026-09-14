@@ -41,8 +41,23 @@ CURRENT PLAN (2026-09-14): docs/port-40204-release-plan.md -- move the KDE clien
   against a live M37 backend, KDE run_all.sh 13/13 against the fixture on M37 code, and a KDE sign-in check (6/6: kde
   device named after the host, logout revokes it). WSL lacks the sqlite3 and jq CLIs, so the fixture ran with test-only
   stand-ins from the session scratchpad. Claude wrote the security units (app/device_tokens.py, the migration,
-  app/auth.py, the auth, users and Plex thumbnail routes); the local models wrote the rest. Next: M35 HTTPS once Liam
-  answers the router questions (ports 80 and 443, NAT loopback).
+  app/auth.py, the auth, users and Plex thumbnail routes); the local models wrote the rest.
+  LIAM'S ROUTER ANSWERS 2026-09-14: never use ports 80 or 443, and he doesn't know whether NAT loopback works. So M35
+  is a self-signed certificate that the apps pin (no Let's Encrypt: HTTP-01 needs 80, TLS-ALPN-01 needs 443, and the
+  asuscomm.com DDNS name has no DNS API for DNS-01); the server tests NAT loopback itself once M36 maps port 40204;
+  M38 passkeys move after M48 Cloudflare, because they need a certificate browsers trust. Plan updated in
+  docs/connect-secure-plan.md.
+  M35 HTTPS 2026-09-14 (LiamPC session; committed locally, NOT pushed or tagged; server 0.8.1c): app/tls.py keeps one
+  ECDSA P-256 key under STATE_DIR/tls and a 2-year self-signed certificate (localhost, hostname, public name, LAN
+  addresses), reissued with the same key when names change, so the app pin (sha256/<base64> of the public key) stays
+  the same. TLS=auto serves HTTPS only on non-loopback binds; TLS=off on a LAN bind refuses to start. Secure session
+  cookie with HTTPS; /health, the mDNS TXT record and GET /api/settings carry https and tls_pin; public_host (migration
+  b1c2d3e4f5a6, env PUBLIC_HOST) is set in Settings > Remote access. cryptography==46.0.5 pinned. The KDE client 0.5.0c
+  and Android 0.7.0b can't pin yet, so they only reach loopback or plain-HTTP servers until M39/M40; the laptop install
+  binds 127.0.0.1 and is unaffected. Verified in WSL: 26 unit checks, migration round-trip, TLS=off refused on 0.0.0.0,
+  loopback still plain HTTP, 15 live HTTPS checks against python -m app, offline server tests. Claude wrote app/tls.py,
+  app/__main__.py and the TLS wiring in app/main.py and app/discovery.py; local models wrote the rest. Next: M36 UPnP
+  (only external port 40204, plus the server's own NAT loopback check).
 
 Work no longer happens on the Windows machine (C:\projects, WSL Ubuntu). The three repos were cloned fresh from
 GitHub into /home/liam/Projects/theden/the-den, the-den-client and the-den-android on Liam's HoltOS 0.0.4-alpha

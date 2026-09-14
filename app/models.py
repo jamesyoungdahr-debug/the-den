@@ -144,6 +144,8 @@ class Settings(Base):
     server_name = Column(String, nullable=True)
     # Set when the first-run setup wizard is finished; until then only the setup pages are served (M33).
     setup_completed_at = Column(DateTime, nullable=True)
+    # The name remote apps use to reach this server, e.g. requesthome.asuscomm.com (M35); null = PUBLIC_HOST.
+    public_host = Column(String, nullable=True)
 
 
 class DownloadRecord(Base):

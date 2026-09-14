@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any
 
 import ifaddr
-from app import config
+from app import config, tls
 from zeroconf import IPVersion
 from zeroconf.asyncio import AsyncServiceInfo, AsyncZeroconf
 
@@ -214,7 +214,7 @@ async def _register(name: str) -> None:
         instance_name(name),
         addresses=[socket.inet_aton(a) for a in addresses],
         port=config.WEB_PORT,
-        properties={"name": name, "id": server_id(), "api": API_VERSION},
+        properties={"name": name, "id": server_id(), "api": API_VERSION, **tls.txt_properties()},
         server=f"{socket.gethostname()}.local.",
     )
     await _zeroconf.async_register_service(info, allow_name_change=True)

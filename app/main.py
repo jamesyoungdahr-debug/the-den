@@ -5,7 +5,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
 
-from app import auth, automation, backup, discovery, formats, health, scheduler, setup_state
+from app import auth, automation, backup, discovery, formats, health, scheduler, setup_state, tls
 from app import settings as settings_module
 from app.db import SessionLocal, engine as db_engine
 from app.deps import get_db
@@ -67,7 +67,7 @@ app.add_middleware(
     session_cookie=auth.SESSION_COOKIE,
     max_age=auth.SESSION_MAX_AGE,
     same_site="lax",
-    https_only=False,
+    https_only=tls.enabled(),  # M35: the cookie never travels over plain HTTP once HTTPS is on
 )
 
 
@@ -171,7 +171,8 @@ def health_check(request: Request, db: Session = Depends(get_db)):
     with db_engine.connect() as conn:
         conn.execute(text("SELECT 1"))
     s = settings_module.effective(db)
-    out = {"status": "ok", "api_version": 2, "server_id": discovery.server_id(), "server_name": discovery.display_name(s), "setup_complete": setup_state.is_complete(db)}
+    out = {"status": "ok", "api_version": 2, "server_id": discovery.server_id(), "server_name": discovery.display_name(s), "setup_complete": setup_state.is_complete(db),
+           "https": tls.enabled(), "tls_pin": tls.pin()}  # M35: the apps pin this key on first sign-in
     if getattr(request.state, "user", None) is not None:
         out["torrent_engine"] = torrent_engine.info()
         out["checks"] = health.current(db)

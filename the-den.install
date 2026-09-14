@@ -9,7 +9,8 @@ post_install() {
     echo "    then: systemctl enable --now the-den"
     echo "==> The web UI listens on WEB_HOST:WEB_PORT from /etc/the-den/the-den.env"
     echo "    (127.0.0.1:40204 by default). Set WEB_HOST=0.0.0.0 to reach it from your LAN;"
-    echo "    it is plain HTTP until HTTPS lands, so only do that on a network you trust."
+    echo "    any bind that isn't loopback serves HTTPS only, with a self-signed certificate"
+    echo "    under STATE_DIR/tls that the apps pin. Set PUBLIC_HOST to your DDNS name."
     echo "==> The built-in torrent client listens on TORRENT_PORT (default 6881, TCP+UDP) on"
     echo "    all interfaces; forward it on your router for better peer connectivity."
 }
@@ -24,6 +25,11 @@ post_upgrade() {
         echo "==> Since 0.8.1a the web UI listens on port 40204 by default (it used to be 8686)."
         echo "    /etc/the-den/the-den.env sets no WEB_PORT, so after the restart it moves to 40204;"
         echo "    add WEB_PORT=8686 there to keep the old port, and update any saved app addresses."
+    fi
+    if grep -q '^WEB_HOST=' /etc/the-den/the-den.env 2>/dev/null && ! grep -Eq '^WEB_HOST=(127\.|localhost$|::1$)' /etc/the-den/the-den.env; then
+        echo "==> Since 0.8.1c a WEB_HOST that isn't loopback serves HTTPS only (a self-signed"
+        echo "    certificate the apps pin). Use https:// in browsers; apps that can't pin yet"
+        echo "    (KDE client 0.5.0c, Android 0.7.0b) can't connect until their next versions."
     fi
 }
 

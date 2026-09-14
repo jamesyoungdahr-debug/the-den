@@ -19,7 +19,8 @@ from app.download_check import check_and_import
 from app.grabber import grab_episode as do_grab_episode, grab_season as do_grab_season
 from app.grabber import grab_movie as do_grab_movie
 from app.models import BlocklistEntry, DownloadRecord, Episode, Indexer, Movie, Series
-from app.routers.api_settings import apply_runtime_changes
+from app import tls
+from app.routers.api_settings import apply_runtime_changes, clean_public_host
 from app.routers.downloads import assign_download as _assign_download_action, import_as_is as _import_as_is_action, _unmatched_entry
 from app.schemas import AssignBody, ImportAsIsBody
 from app.templating import templates
@@ -554,6 +555,8 @@ def ui_settings(request: Request, db: Session = Depends(get_db)):
         {
             "request": request,
             "s": s,
+            "tls_on": tls.enabled(),
+            "tls_pin": tls.pin(),
             "has_tmdb_api_key": bool(row.tmdb_api_key),
             "has_discord_webhook": bool(row.discord_webhook_url),
             "has_opensubtitles_api_key": bool(row.opensubtitles_api_key),
@@ -598,6 +601,7 @@ def ui_save_settings(
     request_series_limit: str = Form(""),
     request_limit_days: str = Form(""),
     flaresolverr_url: str = Form(""),
+    public_host: str = Form(""),
     import_list_interval_minutes: str = Form(""),
     opensubtitles_api_key: str = Form(""),
     subtitle_languages: str = Form(""),
@@ -608,6 +612,10 @@ def ui_save_settings(
     row = settings_module.get_row(db)
     old = settings_module.effective(db)
     row.flaresolverr_url = flaresolverr_url.strip() or None
+    try:
+        row.public_host = clean_public_host(public_host)
+    except Exception:
+        return RedirectResponse("/ui/settings?error=Public+name+must+be+a+hostname+or+an+IP+address#remote", status_code=303)
     row.subtitle_languages = subtitle_languages.strip() or None
     row.sabnzbd_url = sabnzbd_url.strip() or None
     row.import_list_interval_minutes = _int_or_none(import_list_interval_minutes)

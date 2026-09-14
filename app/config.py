@@ -42,6 +42,10 @@ WEB_HOST = os.environ.get("WEB_HOST", "127.0.0.1")
 WEB_PORT = int(os.environ.get("WEB_PORT", "40204"))
 # The name the apps show when this server isn't tied to a Plex server; blank = this machine's hostname.
 SERVER_NAME = os.environ.get("SERVER_NAME", "")
+# The name remote apps use to reach this server (M35), e.g. requesthome.asuscomm.com; Settings can override it.
+PUBLIC_HOST = os.environ.get("PUBLIC_HOST", "")
+# HTTPS (M35, app/tls.py): auto = on unless WEB_HOST is a loopback address; on; off (loopback binds only).
+TLS = os.environ.get("TLS", "auto")
 
 # Plex. The owner's token and server are normally set from Settings (stored in the DB);
 # these env defaults exist for headless setups. The two URLs only change for tests/mock_plex.py.

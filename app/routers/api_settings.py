@@ -1,11 +1,13 @@
+import ipaddress
 import json
+import re
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app import auth
-from app import config, scheduler
+from app import config, scheduler, tls
 from app import settings as settings_module
 from app.deps import get_db
 from app.torrent import engine
@@ -54,6 +56,24 @@ class SettingsUpdate(BaseModel):
     # existing SABnzbd install the same way FlareSolverr is an external service.
     sabnzbd_url: str | None = None
     sabnzbd_api_key: str | None = None
+    # The name remote apps use to reach this server (M35), e.g. requesthome.asuscomm.com; blank = PUBLIC_HOST.
+    # The self-signed certificate covers it from the next restart.
+    public_host: str | None = None
+
+
+def clean_public_host(value: str) -> str | None:
+    """Lowercase, strip a trailing dot, and allow only a hostname or an IP address; blank -> None."""
+    value = value.strip().lower().rstrip(".")
+    if not value:
+        return None
+    try:
+        return str(ipaddress.ip_address(value))
+    except ValueError:
+        pass
+    labels = value.split(".")
+    if len(value) > 253 or not all(re.fullmatch(r"[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?", label) for label in labels):
+        raise HTTPException(400, "public_host must be a hostname like requesthome.asuscomm.com or an IP address")
+    return value
 
 
 @router.get("/settings")
@@ -100,6 +120,9 @@ def get_settings(db: Session = Depends(get_db)):
         "subtitle_languages": ",".join(s.subtitle_languages),
         "sabnzbd_url": s.sabnzbd_url,
         "has_sabnzbd_api_key": bool(row.sabnzbd_api_key),
+        "public_host": s.public_host or "",
+        "https": tls.enabled(),  # read-only: set by TLS and WEB_HOST in the env file
+        "tls_pin": tls.pin(),  # read-only: the key pin the apps store (M35)
     }
 
 
@@ -183,6 +206,8 @@ def save_settings(payload: SettingsUpdate, db: Session = Depends(get_db)):
         row.subtitle_languages = payload.subtitle_languages.strip() or None
     if payload.sabnzbd_url is not None:
         row.sabnzbd_url = payload.sabnzbd_url.strip() or None
+    if payload.public_host is not None:
+        row.public_host = clean_public_host(payload.public_host)
 
     db.commit()
     apply_runtime_changes(old, settings_module.effective(db))
