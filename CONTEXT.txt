@@ -7,6 +7,13 @@ PICK UP HERE (2026-09-13 evening: the project moved to Liam's HoltOS laptop, Lin
 -------------------------------------------------------------------------------------------
 CURRENT PLAN (2026-09-14): docs/port-40204-release-plan.md -- move the KDE client and the Android app to port 40204,
   then release the-den v0.8.1a. Its phases and the open questions for Liam are listed there.
+  PROGRESS 2026-09-14 (overnight, Claude deciding while Liam sleeps): the dev backend (8687) and the fixture backend (8688)
+  run again. KDE client 0.5.0b (default :40204, plus a fallback from a saved loopback :8686) passes run_all.sh 13/13;
+  Android 0.7.0a (versionCode 23, default :40204) passes testDebugUnitTest 10/10. Both committed and bundled. A local
+  `python -m app` run with no WEB_HOST/WEB_PORT answered /health on 127.0.0.1:40204 with no errors. PKGBUILD is 0.8.1a.
+  Next: tag client v0.5.0b, then server v0.8.1a. Test logs now go to /home/liam/Projects/logs/<repo>/. The KDE race-guard
+  test used to overwrite the installed client's saved address in ~/.config/the-den/client.conf; fixed, and the address
+  is reset to :8686. Claude wrote this note after two refused handoffs.
 
 Work no longer happens on the Windows machine (C:\projects, WSL Ubuntu). The three repos were cloned fresh from
 GitHub into /home/liam/Projects/theden/the-den, the-den-client and the-den-android on Liam's HoltOS 0.0.4-alpha

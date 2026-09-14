@@ -1,6 +1,6 @@
 # Plan: move the apps to port 40204, then release the-den v0.8.1a (drafted 2026-09-14)
 
-Status: planned, not started. Phase 1 waits on Liam's answer to open question 1.
+Status (2026-09-14, overnight; Liam handed over and Claude makes the calls): Phase 0 and Phase 1 steps 2-4 are done; next are the client release (step 5) and Phase 2.
 
 ## Why
 
@@ -26,16 +26,16 @@ first, then release the server as v0.8.1a.
 
 ## Phase 0: test environment (Claude, shell)
 
-1. Start the dev backend on 8687 and rerun the-den-client `tests/fixture_backend.sh` (8688, 8085, 8082).
+1. Start the dev backend on 8687 and rerun the-den-client `tests/fixture_backend.sh` (8688, 8085, 8082). DONE 2026-09-14.
 
 ## Phase 1: the apps move to 40204
 
 2. KDE client: default and placeholder to `:40204`. If Liam agrees (question 1): when a saved loopback
-   `:8686` address fails, try `:40204` and save it if `/health` answers. Profile fast-edit.
+   `:8686` address fails, try `:40204` and save it if `/health` answers. Profile fast-edit. DONE, checked by `tests/check_api_client_port_fallback.py`.
 3. Android: `DEFAULT_URL` to `http://10.0.2.2:40204`, placeholder and test default to `:40204`;
    versionName 0.7.0a, versionCode 23. Profile trivial.
 4. Test: KDE `tests/run_all.sh` against 8688; Android `assembleDebug` and `testDebugUnitTest` against
-   8687. Commit each repo and write a bundle.
+   8687. Commit each repo and write a bundle. DONE: KDE 13/13, Android 10/10; test logs in `/home/liam/Projects/logs/<repo>/`.
 5. Release the KDE client as v0.5.0b (pkgver 0.5.0b), tag and push, so the fixed client is installed
    before the server moves.
 
@@ -73,3 +73,14 @@ first, then release the server as v0.8.1a.
   security-sensitive units itself and takes over a unit whose handoff failed twice; the local models
   write everything else. This replaces the 2026-09-13 note in `CONTEXT.txt` that sent security code to
   the local models.
+- 2026-09-14, overnight: question 1 is settled as the automatic fallback, in the KDE client only. Android gets
+  no fallback, because the phones can't reach the server until it listens on the LAN (question 2), and M39 adds
+  discovery.
+- 2026-09-14: release both tonight under the standing live-testing rule: the client as v0.5.0b first, then the
+  server as v0.8.1a after a local `python -m app` run on port 40204. Questions 2 to 4 stay open for Liam.
+- 2026-09-14: `tests/check_api_client_race_guard.py` saved settings, so every KDE test run replaced the installed
+  client's saved server address with `http://127.0.0.1:18689`. The test no longer saves settings, and Claude reset
+  the address to `http://127.0.0.1:8686` in `~/.config/the-den/client.conf`.
+- 2026-09-14: failed handoffs. The three one-line client edits failed on the 4080 (ran out of steps) and on the
+  4090 (refused, believing it could only write under C:\projects), so Claude made them. The Strix Halo model wrote
+  the new fallback test under `/home/liam/Projects/home/liam/...`; Claude moved it into the repo.
