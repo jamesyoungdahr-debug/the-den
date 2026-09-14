@@ -58,10 +58,6 @@ def verify_password(password: str, stored: str | None) -> bool:
         return False
 
 
-def new_api_token() -> str:
-    return "den_" + secrets.token_urlsafe(32)
-
-
 # ---- session secret -------------------------------------------------------------
 
 def session_secret() -> str:
@@ -93,10 +89,12 @@ def users_exist(db: Session) -> bool:
 
 
 def resolve_user(request: Request, db: Session) -> User | None:
-    """The signed-in user for this request: an X-Api-Key header wins, else the session."""
+    """The signed-in user for this request: an X-Api-Key device token wins, else the session."""
     token = request.headers.get(API_KEY_HEADER)
     if token:
-        return db.query(User).filter(User.api_token == token).first()
+        from app import device_tokens
+
+        return device_tokens.user_for_token(db, token)
     user_id = request.session.get("user_id") if "session" in request.scope else None
     if user_id:
         return db.get(User, user_id)

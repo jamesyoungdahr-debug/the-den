@@ -115,7 +115,14 @@ keys still starts, on 127.0.0.1:40204. The TXT record carries `name`, `id` and `
 - Verify: the mapping shows in the router's UPnP table; the server answers from mobile data;
   the mapping is removed when the server stops.
 
-### M37 Device tokens (server, web)
+### M37 Device tokens (server, web) -- DONE 2026-09-14, not released yet
+
+Status: done and verified on 2026-09-14 on LiamPC (server 0.8.1b, KDE client 0.5.0c, Android 0.7.0b with
+versionCode 24; committed locally, not pushed or tagged). Signing in is enough to add a device; admins can
+revoke (question 4, decided by Claude at Liam's request). `POST /api/auth/token` takes an optional
+`{name, platform}` body, so apps from before M37 still sign in as "Unnamed device". New routes:
+`GET /api/auth/devices`, `DELETE /api/auth/devices/{id}`, `DELETE /api/users/{id}/devices`; logout with a
+token revokes it. `has_api_token` left the user JSON; the admin user list gains `device_count`.
 
 - `device_tokens` table (user, device name, platform, token hash, created, last seen). An app
   sign-in creates one; the profile page lists and revokes them; the existing single

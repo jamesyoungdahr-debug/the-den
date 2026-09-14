@@ -82,7 +82,9 @@ async def plex_thumb(rating_key: str, request: Request, api_key: str | None = No
     can't send headers."""
     allowed = getattr(request.state, "user", None) is not None
     if not allowed and api_key:
-        allowed = db.query(User).filter(User.api_token == api_key).first() is not None
+        from app import device_tokens
+
+        allowed = device_tokens.user_for_token(db, api_key) is not None
     if not allowed:
         raise HTTPException(401, "Sign in required")
     row = db.query(PlexMedia).filter(PlexMedia.rating_key == rating_key).first()

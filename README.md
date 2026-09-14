@@ -47,9 +47,13 @@ two-step setup (create the admin with a password or Plex, then name the server a
 library folders); until it's finished the server serves only the setup and sign-in pages and
 answers every app or API call with 503 "setup required".
 
-Companion apps authenticate with a per-user **API token** (generate one on `/ui/profile`,
-send it as `X-Api-Key`) or a session from `POST /api/auth/login`. `GET /api/auth/me` tells a
-client who it is and whether it's an admin.
+Companion apps authenticate with a **device token**, sent as `X-Api-Key`: after signing in
+(`POST /api/auth/login` or Plex), an app calls `POST /api/auth/token` with its `name` and
+`platform` and keeps the token it gets back. Every device has its own token, stored on the
+server only as a hash; `GET /api/auth/devices` lists them, `DELETE /api/auth/devices/{id}`
+revokes one, and `POST /api/auth/logout` with a token revokes that token. `/ui/profile` lists
+your devices and can make a token for a script. `GET /api/auth/me` tells a client who it is
+and whether it's an admin.
 
 **Plex sign-in.** Sign in with the Plex account that owns your server and The Den links
 it as the owner (an admin) and keeps that account's token for reading the library. People
@@ -136,8 +140,9 @@ live at `/api/requests`, `/api/requests/quota` and `/api/plex/scan`.
 
 Sign-in is always required; there is no anonymous access. The first visit to a fresh install
 runs the setup (admin account, then server name and library folders). Create accounts on
-Users, or let people sign in with Plex. The apps authenticate with the API token from each
-person's profile, sent as `X-Api-Key`.
+Users, or let people sign in with Plex. Each app sign-in gets its own device token, sent as
+`X-Api-Key`. People see and revoke their devices on their profile; admins can sign out all of
+someone's devices on Users.
 
 ## How the built-in torrent client works
 

@@ -7,7 +7,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app import auth, plex, plex_access, requests_service, setup_state
+from app import auth, device_tokens, plex, plex_access, requests_service, setup_state
 from app import settings as settings_module
 from app.deps import get_db
 from app.models import User
@@ -28,8 +28,7 @@ def _user_out(user: User) -> dict:
     return {
         "id": user.id, "username": user.username, "email": user.email, "avatar_url": user.avatar_url,
         "role": user.role, "is_admin": user.is_admin, "auto_approve": user.auto_approve,
-        "plex_linked": user.plex_id is not None, "has_api_token": bool(user.api_token),
-        "notify_ntfy_topic": user.notify_ntfy_topic,
+        "plex_linked": user.plex_id is not None, "notify_ntfy_topic": user.notify_ntfy_topic,
     }
 
 
@@ -237,23 +236,33 @@ async def api_plex_login(body: PlexPinBody, request: Request, db: Session = Depe
 
 # ---- profile ------------------------------------------------------------------------
 
+def _profile(request: Request, db: Session, user: User, status: int = 200, **extra):
+    context = {
+        "request": request, "user": user, "new_token": None, "quota": requests_service.quota(db, user),
+        "devices": [device_tokens.out(d) for d in device_tokens.list_for(db, user.id)],
+        "error": request.query_params.get("error"), "notice": request.query_params.get("notice"),
+    }
+    context.update(extra)
+    return templates.TemplateResponse("profile.html", context, status_code=status)
+
+
 @router.get("/ui/profile", response_class=HTMLResponse)
 def profile_page(request: Request, user: User = Depends(auth.page_user), db: Session = Depends(get_db)):
-    return templates.TemplateResponse(
-        "profile.html",
-        {"request": request, "user": user, "new_token": None, "quota": requests_service.quota(db, user),
-         "error": request.query_params.get("error"), "notice": request.query_params.get("notice")},
-    )
+    return _profile(request, db, user)
 
 
 @router.post("/ui/profile/token", response_class=HTMLResponse)
-def profile_new_token(request: Request, user: User = Depends(auth.page_user), db: Session = Depends(get_db)):
-    user = db.get(User, user.id)
-    token = auth.new_api_token()
-    user.api_token = token
-    db.commit()
-    # Shown exactly once; only its existence is stored/served afterwards.
-    return templates.TemplateResponse("profile.html", {"request": request, "user": user, "new_token": token, "quota": requests_service.quota(db, user)})
+def profile_new_token(request: Request, name: str = Form(""), user: User = Depends(auth.page_user), db: Session = Depends(get_db)):
+    """A token for a script or another tool. It is shown exactly once; only its hash is kept."""
+    token, row = device_tokens.create(db, user, name or "Token made on the profile page", "other")
+    return _profile(request, db, user, new_token=token, notice=f"Token created for {row.name}.")
+
+
+@router.post("/ui/profile/devices/{device_id}/revoke")
+def profile_revoke_device(device_id: int, user: User = Depends(auth.page_user), db: Session = Depends(get_db)):
+    if not device_tokens.revoke(db, device_id, user):
+        return RedirectResponse("/ui/profile?error=That+device+wasn%27t+found.", status_code=303)
+    return RedirectResponse("/ui/profile?notice=Device+signed+out.", status_code=303)
 
 
 @router.post("/ui/profile/password")
@@ -263,16 +272,12 @@ def profile_change_password(
 ):
     user = db.get(User, user.id)
     if user.password_hash and not auth.verify_password(current_password, user.password_hash):
-        return templates.TemplateResponse(
-            "profile.html", {"request": request, "user": user, "new_token": None, "error": "Current password is wrong."}, status_code=400
-        )
+        return _profile(request, db, user, status=400, error="Current password is wrong.")
     if len(new_password) < 8:
-        return templates.TemplateResponse(
-            "profile.html", {"request": request, "user": user, "new_token": None, "error": "New password needs 8+ characters."}, status_code=400
-        )
+        return _profile(request, db, user, status=400, error="New password needs 8+ characters.")
     user.password_hash = auth.hash_password(new_password)
     db.commit()
-    return templates.TemplateResponse("profile.html", {"request": request, "user": user, "new_token": None, "notice": "Password changed."})
+    return _profile(request, db, user, notice="Password changed.")
 
 
 @router.post("/ui/profile/notifications")
@@ -283,7 +288,7 @@ def profile_notifications(
     user = db.get(User, user.id)
     user.notify_ntfy_topic = notify_ntfy_topic.strip() or None
     db.commit()
-    return templates.TemplateResponse("profile.html", {"request": request, "user": user, "new_token": None, "notice": "Notification settings saved.", "quota": requests_service.quota(db, user)})
+    return _profile(request, db, user, notice="Notification settings saved.")
 
 
 # ---- JSON -------------------------------------------------------------------------
@@ -291,6 +296,11 @@ def profile_notifications(
 class LoginBody(BaseModel):
     username: str
     password: str
+
+
+class TokenRequest(BaseModel):
+    name: str | None = None
+    platform: str | None = None  # web | kde | android | other
 
 
 @router.post("/api/auth/login")
@@ -303,7 +313,9 @@ def api_login(body: LoginBody, request: Request, db: Session = Depends(get_db)):
 
 
 @router.post("/api/auth/logout", status_code=204)
-def api_logout(request: Request):
+def api_logout(request: Request, db: Session = Depends(get_db)):
+    """Sign out. An app that signed in with its device token also revokes that token."""
+    device_tokens.revoke_token(db, request.headers.get(auth.API_KEY_HEADER))
     auth.sign_out(request)
 
 
@@ -314,12 +326,32 @@ def api_me(user: User = Depends(auth.require_user), db: Session = Depends(get_db
 
 
 @router.post("/api/auth/token")
-def api_new_token(user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
-    """Regenerate the caller's API token. The token is returned once, here only."""
-    user = db.get(User, user.id)
-    user.api_token = auth.new_api_token()
-    db.commit()
-    return {"api_token": user.api_token}
+def api_new_token(body: TokenRequest | None = None, user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    """A new token for the calling device, returned once, here only. Each call adds a device (M37);
+    old ones are revoked from the profile page or with DELETE /api/auth/devices/{id}. Apps from
+    before M37 send no body and get an "Unnamed device"."""
+    body = body or TokenRequest()
+    token, row = device_tokens.create(db, user, body.name, body.platform)
+    return {"api_token": token, "device": device_tokens.out(row, token)}
+
+
+@router.get("/api/auth/devices")
+def api_devices(request: Request, user_id: int | None = None, user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    """The caller's devices; an admin may pass user_id to list someone else's."""
+    target = user.id
+    if user_id is not None and user_id != user.id:
+        if not user.is_admin:
+            raise HTTPException(403, "Admin only")
+        target = user_id
+    current = request.headers.get(auth.API_KEY_HEADER)
+    return [device_tokens.out(d, current) for d in device_tokens.list_for(db, target)]
+
+
+@router.delete("/api/auth/devices/{device_id}", status_code=204)
+def api_revoke_device(device_id: int, user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    """Revoke one of the caller's devices; admins may revoke anyone's."""
+    if not device_tokens.revoke(db, device_id, user):
+        raise HTTPException(404, "Device not found")
 
 
 class NotificationSettingsBody(BaseModel):

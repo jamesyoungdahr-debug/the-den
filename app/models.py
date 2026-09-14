@@ -193,7 +193,6 @@ class User(Base):
     movie_limit = Column(Integer, nullable=True)
     series_limit = Column(Integer, nullable=True)
     limit_days = Column(Integer, nullable=True)
-    api_token = Column(String, nullable=True, unique=True)
     notify_ntfy_topic = Column(String, nullable=True)  # E9: personal ntfy.sh topic for this user's own request outcomes
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     last_login_at = Column(DateTime, nullable=True)
@@ -205,6 +204,22 @@ class User(Base):
     @property
     def initial(self) -> str:
         return (self.username or "?")[:1].upper()
+
+
+class DeviceToken(Base):
+    """A sign-in token for one device (M37). Only a SHA-256 hash of the token is stored;
+    token_prefix (its first 8 characters) helps people tell their devices apart."""
+
+    __tablename__ = "device_tokens"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    name = Column(String, nullable=False)
+    platform = Column(String, nullable=False, default="other")  # web | kde | android | other
+    token_hash = Column(String, nullable=False, unique=True)
+    token_prefix = Column(String, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    last_used_at = Column(DateTime, nullable=True)
 
 
 class PlexMedia(Base):

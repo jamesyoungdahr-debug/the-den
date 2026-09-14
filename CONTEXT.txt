@@ -28,6 +28,21 @@ CURRENT PLAN (2026-09-14): docs/port-40204-release-plan.md -- move the KDE clien
   Test logs now go to /home/liam/Projects/logs/<repo>/. The KDE race-guard
   test used to overwrite the installed client's saved address in ~/.config/the-den/client.conf; fixed, and the address
   is reset to :8686. Claude wrote this note after two refused handoffs.
+  M37 DEVICE TOKENS 2026-09-14 (LiamPC session; committed locally in all three repos, NOT pushed or tagged): every app
+  sign-in gets its own token in the new device_tokens table (migration a0b1c2d3e4f5), stored only as a SHA-256 hash plus
+  its first 8 characters. users.api_token is gone; each existing token moved in as one device, so apps stay signed in.
+  POST /api/auth/token takes an optional {name, platform} body (old apps become "Unnamed device"); GET /api/auth/devices,
+  DELETE /api/auth/devices/{id} (owner or admin), DELETE /api/users/{id}/devices; logout with a token revokes it; deleting
+  a user deletes their devices. Profile page: device list with Revoke and named tokens for scripts. Users page: device
+  count and "sign out devices". Versions: server 0.8.1b, KDE client 0.5.0c (sends the hostname), Android 0.7.0b with
+  versionCode 24 (sends manufacturer and model). Signing in is enough to add a device; admins can revoke.
+  Verified in WSL: migration upgrade/downgrade/upgrade on a test DB copy (a downgrade cannot restore tokens, so apps sign
+  in again after one), a 31-check API smoke test, the 4 offline server test scripts, Android testDebugUnitTest 12/12
+  against a live M37 backend, KDE run_all.sh 13/13 against the fixture on M37 code, and a KDE sign-in check (6/6: kde
+  device named after the host, logout revokes it). WSL lacks the sqlite3 and jq CLIs, so the fixture ran with test-only
+  stand-ins from the session scratchpad. Claude wrote the security units (app/device_tokens.py, the migration,
+  app/auth.py, the auth, users and Plex thumbnail routes); the local models wrote the rest. Next: M35 HTTPS once Liam
+  answers the router questions (ports 80 and 443, NAT loopback).
 
 Work no longer happens on the Windows machine (C:\projects, WSL Ubuntu). The three repos were cloned fresh from
 GitHub into /home/liam/Projects/theden/the-den, the-den-client and the-den-android on Liam's HoltOS 0.0.4-alpha
@@ -112,7 +127,7 @@ NEXT, in order:
      trivial (4080, qwen3.5-9b) for one-line changes. The full rules are in ~/.claude/CLAUDE.md.
      Nothing else changed since the reboot entry above: the next step is still fixing the Android app and the KDE
      client before v0.8.1a, and the dev backend, fixture backend, swarm and adb are still down.
-  4. M37 device tokens can go before M35 while Liam answers the router questions (ports 80 and 443, NAT loopback,
+  4. (DONE 2026-09-14, see M37 DEVICE TOKENS above) M37 device tokens can go before M35 while Liam answers the router questions (ports 80 and 443, NAT loopback,
      device approval).
   5. M35 HTTPS, M36 UPnP, M38 passkeys, M39 Android, M40 KDE, then the M14 shakedown, Tier 3 (M41-M47) and M48
      Cloudflare DNS.

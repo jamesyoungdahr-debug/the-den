@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app import auth
+from app import auth, device_tokens
 from app import settings as settings_module
 from app.deps import get_db
 from app.models import User
@@ -17,11 +17,11 @@ router = APIRouter(tags=["users"])
 ROLES = ("admin", "user")
 
 
-def _out(u: User) -> dict:
+def _out(db: Session, u: User) -> dict:
     return {
         "id": u.id, "username": u.username, "email": u.email, "role": u.role, "auto_approve": u.auto_approve,
         "movie_limit": u.movie_limit, "series_limit": u.series_limit, "limit_days": u.limit_days,
-        "plex_linked": u.plex_id is not None, "has_api_token": bool(u.api_token),
+        "plex_linked": u.plex_id is not None, "device_count": device_tokens.count_for(db, u.id),
         "created_at": u.created_at.isoformat() if u.created_at else None,
         "last_login_at": u.last_login_at.isoformat() if u.last_login_at else None,
     }
@@ -37,22 +37,33 @@ def _last_admin_guard(db: Session, target: User, new_role: str | None = None, de
             raise HTTPException(400, "That's the only admin; promote someone else first.")
 
 
+def _delete_user(db: Session, user: User) -> None:
+    """SQLite doesn't cascade, so the user's device tokens go first; a reused id must never
+    inherit someone else's signed-in devices."""
+    device_tokens.revoke_all(db, user.id)
+    db.delete(user)
+    db.commit()
+
+
 # ---- HTML -------------------------------------------------------------------------
 
 @router.get("/ui/users", response_class=HTMLResponse)
-def users_page(request: Request, _: User | None = Depends(auth.page_admin), db: Session = Depends(get_db)):
+def users_page(request: Request, _: User = Depends(auth.page_admin), db: Session = Depends(get_db)):
     users = db.query(User).order_by(User.id).all()
     s = settings_module.effective(db)
     defaults = {"movies": s.request_movie_limit, "series": s.request_series_limit, "days": s.request_limit_days}
+    device_counts = {u.id: device_tokens.count_for(db, u.id) for u in users}
     return templates.TemplateResponse(
-        "users.html", {"request": request, "users": users, "defaults": defaults, "error": request.query_params.get("error"), "active_nav": "users"}
+        "users.html",
+        {"request": request, "users": users, "defaults": defaults, "device_counts": device_counts,
+         "error": request.query_params.get("error"), "active_nav": "users"},
     )
 
 
 @router.post("/ui/users")
 def ui_create_user(
     username: str = Form(...), password: str = Form(...), role: str = Form("user"),
-    auto_approve: str = Form(""), _: User | None = Depends(auth.page_admin), db: Session = Depends(get_db),
+    auto_approve: str = Form(""), _: User = Depends(auth.page_admin), db: Session = Depends(get_db),
 ):
     username = username.strip()
     if len(username) < 2 or len(password) < 8 or role not in ROLES:
@@ -67,7 +78,7 @@ def ui_create_user(
 
 
 @router.post("/ui/users/{user_id}/role")
-def ui_set_role(user_id: int, role: str = Form(...), _: User | None = Depends(auth.page_admin), db: Session = Depends(get_db)):
+def ui_set_role(user_id: int, role: str = Form(...), _: User = Depends(auth.page_admin), db: Session = Depends(get_db)):
     user = db.get(User, user_id)
     if user is None or role not in ROLES:
         raise HTTPException(404, "User not found")
@@ -81,7 +92,7 @@ def ui_set_role(user_id: int, role: str = Form(...), _: User | None = Depends(au
 
 
 @router.post("/ui/users/{user_id}/auto-approve")
-def ui_set_auto_approve(user_id: int, enabled: str = Form(""), _: User | None = Depends(auth.page_admin), db: Session = Depends(get_db)):
+def ui_set_auto_approve(user_id: int, enabled: str = Form(""), _: User = Depends(auth.page_admin), db: Session = Depends(get_db)):
     user = db.get(User, user_id)
     if user is None:
         raise HTTPException(404, "User not found")
@@ -93,7 +104,7 @@ def ui_set_auto_approve(user_id: int, enabled: str = Form(""), _: User | None = 
 @router.post("/ui/users/{user_id}/limits")
 def ui_set_limits(
     user_id: int, email: str = Form(""), movie_limit: str = Form(""), series_limit: str = Form(""), limit_days: str = Form(""),
-    _: User | None = Depends(auth.page_admin), db: Session = Depends(get_db),
+    _: User = Depends(auth.page_admin), db: Session = Depends(get_db),
 ):
     """Per-user request quota; blank fields fall back to the Settings defaults."""
     user = db.get(User, user_id)
@@ -108,7 +119,7 @@ def ui_set_limits(
 
 
 @router.post("/ui/users/{user_id}/password")
-def ui_reset_password(user_id: int, password: str = Form(...), _: User | None = Depends(auth.page_admin), db: Session = Depends(get_db)):
+def ui_reset_password(user_id: int, password: str = Form(...), _: User = Depends(auth.page_admin), db: Session = Depends(get_db)):
     user = db.get(User, user_id)
     if user is None:
         raise HTTPException(404, "User not found")
@@ -119,8 +130,17 @@ def ui_reset_password(user_id: int, password: str = Form(...), _: User | None = 
     return RedirectResponse("/ui/users", status_code=303)
 
 
+@router.post("/ui/users/{user_id}/devices/revoke")
+def ui_revoke_devices(user_id: int, _: User = Depends(auth.page_admin), db: Session = Depends(get_db)):
+    """Sign every app of this user out."""
+    if db.get(User, user_id) is None:
+        raise HTTPException(404, "User not found")
+    device_tokens.revoke_all(db, user_id)
+    return RedirectResponse("/ui/users", status_code=303)
+
+
 @router.post("/ui/users/{user_id}/delete")
-def ui_delete_user(request: Request, user_id: int, _: User | None = Depends(auth.page_admin), db: Session = Depends(get_db)):
+def ui_delete_user(request: Request, user_id: int, _: User = Depends(auth.page_admin), db: Session = Depends(get_db)):
     user = db.get(User, user_id)
     if user is None:
         return RedirectResponse("/ui/users", status_code=303)
@@ -131,8 +151,7 @@ def ui_delete_user(request: Request, user_id: int, _: User | None = Depends(auth
         _last_admin_guard(db, user, deleting=True)
     except HTTPException as exc:
         return RedirectResponse(f"/ui/users?error={exc.detail.replace(' ', '+')}", status_code=303)
-    db.delete(user)
-    db.commit()
+    _delete_user(db, user)
     return RedirectResponse("/ui/users", status_code=303)
 
 
@@ -157,12 +176,12 @@ class UserUpdate(BaseModel):
 
 
 @router.get("/api/users")
-def api_list_users(_: User | None = Depends(auth.require_admin), db: Session = Depends(get_db)):
-    return [_out(u) for u in db.query(User).order_by(User.id)]
+def api_list_users(_: User = Depends(auth.require_admin), db: Session = Depends(get_db)):
+    return [_out(db, u) for u in db.query(User).order_by(User.id)]
 
 
 @router.post("/api/users", status_code=201)
-def api_create_user(body: UserCreate, _: User | None = Depends(auth.require_admin), db: Session = Depends(get_db)):
+def api_create_user(body: UserCreate, _: User = Depends(auth.require_admin), db: Session = Depends(get_db)):
     if body.role not in ROLES:
         raise HTTPException(400, "role must be admin or user")
     user = User(
@@ -175,11 +194,11 @@ def api_create_user(body: UserCreate, _: User | None = Depends(auth.require_admi
     except IntegrityError:
         db.rollback()
         raise HTTPException(400, "That username is taken")
-    return _out(user)
+    return _out(db, user)
 
 
 @router.patch("/api/users/{user_id}")
-def api_update_user(user_id: int, body: UserUpdate, _: User | None = Depends(auth.require_admin), db: Session = Depends(get_db)):
+def api_update_user(user_id: int, body: UserUpdate, _: User = Depends(auth.require_admin), db: Session = Depends(get_db)):
     user = db.get(User, user_id)
     if user is None:
         raise HTTPException(404, "User not found")
@@ -195,11 +214,19 @@ def api_update_user(user_id: int, body: UserUpdate, _: User | None = Depends(aut
     if body.password:
         user.password_hash = auth.hash_password(body.password)
     db.commit()
-    return _out(user)
+    return _out(db, user)
+
+
+@router.delete("/api/users/{user_id}/devices")
+def api_revoke_devices(user_id: int, _: User = Depends(auth.require_admin), db: Session = Depends(get_db)):
+    """Sign every app of this user out."""
+    if db.get(User, user_id) is None:
+        raise HTTPException(404, "User not found")
+    return {"revoked": device_tokens.revoke_all(db, user_id)}
 
 
 @router.delete("/api/users/{user_id}", status_code=204)
-def api_delete_user(request: Request, user_id: int, _: User | None = Depends(auth.require_admin), db: Session = Depends(get_db)):
+def api_delete_user(request: Request, user_id: int, _: User = Depends(auth.require_admin), db: Session = Depends(get_db)):
     user = db.get(User, user_id)
     if user is None:
         raise HTTPException(404, "User not found")
@@ -207,5 +234,4 @@ def api_delete_user(request: Request, user_id: int, _: User | None = Depends(aut
     if me is not None and me.id == user.id:
         raise HTTPException(400, "You can't delete yourself")
     _last_admin_guard(db, user, deleting=True)
-    db.delete(user)
-    db.commit()
+    _delete_user(db, user)

@@ -13,13 +13,29 @@
 
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:var(--holt-space-3)">
     <div class="holt-panel">
-      <div class="holt-panel-head"><div class="holt-eyebrow">API token</div><div class="holt-meta">{{ 'set' if user.api_token else 'not set' }}</div></div>
-      <p class="holt-body" style="font-size:13.5px;margin:0 0 var(--holt-space-3)">For the desktop and Android apps. Send it as the <code>X-Api-Key</code> header. Generating a new one replaces the old one everywhere.</p>
+      <div class="holt-panel-head"><div class="holt-eyebrow">Devices</div><div class="holt-meta">{{ devices|length }} signed in</div></div>
+      <p class="holt-body" style="font-size:13.5px;margin:0 0 var(--holt-space-3)">Every app you sign in to gets its own token. Revoke one to sign that device out; the others keep working. You can also make a token for a script or another tool here.</p>
       {% if new_token %}
-      <div class="holt-message holt-message-positive" style="font-family:var(--holt-font-mono);font-size:12px;word-break:break-all;margin-bottom:var(--holt-space-3)">{{ new_token }}</div>
-      <div class="holt-meta" style="margin-bottom:var(--holt-space-3)">Copy it now. It won't be shown again.</div>
+      <div class="holt-message holt-message-positive" style="font-family:var(--holt-font-mono);font-size:12px;word-break:break-all;margin-bottom:var(--holt-space-2)">{{ new_token }}</div>
+      <div class="holt-meta" style="margin-bottom:var(--holt-space-3)">Copy it now. It won't be shown again. Send it as the <code>X-Api-Key</code> header.</div>
       {% endif %}
-      <form method="post" action="/ui/profile/token"><button type="submit" class="holt-btn holt-btn-secondary">{{ 'Generate a new token' if user.api_token else 'Generate token' }}</button></form>
+      {% for d in devices %}
+      <div style="display:flex;align-items:center;gap:var(--holt-space-2);padding:var(--holt-space-2) 0;border-top:1px solid var(--holt-hairline)">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;color:var(--holt-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ d.name }}</div>
+          <div class="holt-meta">{{ d.platform }} · {{ d.token_prefix }}… · added {{ d.created_at[:10] if d.created_at else 'unknown' }} · last used {{ d.last_used_at[:16]|replace('T', ' ') if d.last_used_at else 'never' }}</div>
+        </div>
+        <form method="post" action="/ui/profile/devices/{{ d.id }}/revoke" onsubmit="return confirm('Sign this device out?')" style="margin:0">
+          <button type="submit" class="holt-btn holt-btn-quiet holt-btn-sm">Revoke</button>
+        </form>
+      </div>
+      {% else %}
+      <div class="holt-meta" style="padding:var(--holt-space-2) 0;border-top:1px solid var(--holt-hairline)">No devices signed in yet.</div>
+      {% endfor %}
+      <form method="post" action="/ui/profile/token" style="display:flex;gap:var(--holt-space-2);align-items:flex-end;margin-top:var(--holt-space-3)">
+        <div class="holt-field" style="flex:1;margin:0"><label>New token for</label><input name="name" maxlength="60" placeholder="e.g. a backup script"></div>
+        <button type="submit" class="holt-btn holt-btn-secondary">Create token</button>
+      </form>
     </div>
 
     <div class="holt-panel">
