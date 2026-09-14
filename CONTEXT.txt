@@ -76,6 +76,15 @@ NEXT, in order:
      After the reboot, restart the dev backend on 8687 (DEV ENVIRONMENT below) and rerun the-den-client's
      tests/fixture_backend.sh for 8688. Phone install: Liam pairs with `adb pair` first (the Pixel showed up at
      192.168.0.82); the phones can't reach this laptop until a server runs with WEB_HOST=0.0.0.0.
+     STATE AFTER THE REBOOT (checked 2026-09-13 about 21:40): the laptop rebooted at 20:45. The installed server
+     (v0.8.0a, setup complete, no engine errors since boot) answers on 8686. Nothing else was restarted: the dev
+     backend (8687), the fixture backend and its mocks (8688, 8085, 8082), the local swarm (8083) and adb are all
+     down. HoltOS is now v0.0.6d-alpha. All three repos are committed with nothing uncommitted: the-den is 6 commits
+     ahead of GitHub, the client 1 and Android 1; each has a verified bundle in /home/liam/Projects/backups.
+     LOCAL MODELS NOW: ComfyUI moved to the 4090 PC (http://192.168.0.152:8188), and its LM Studio answers but has
+     no LLM loaded, so lmstudio-bridge can't take work until Liam loads one. Use lmstudio-4080super
+     (qwen/qwen3.5-9b, 92,672 context) meanwhile. The model review, downloads in progress and scheduler plan are in
+     /home/liam/Projects/LOCAL-LLM-WORKFLOW.md; check ComfyUI's /queue is empty before loading an LLM on the 4090.
   4. M37 device tokens can go before M35 while Liam answers the router questions (ports 80 and 443, NAT loopback,
      device approval).
   5. M35 HTTPS, M36 UPnP, M38 passkeys, M39 Android, M40 KDE, then the M14 shakedown, Tier 3 (M41-M47) and M48
