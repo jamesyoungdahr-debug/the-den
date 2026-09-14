@@ -143,7 +143,7 @@ keys still starts, on 127.0.0.1:40204. The TXT record carries `name`, `id` and `
 - HTTPS with pinning when connecting by LAN IP; a setup-required screen; passkey sign-in via
   Credential Manager.
 - Verify: JVM tests for TXT parsing, address choice and pinning rules; an emulator walk (the
-  emulator has to be reinstalled in WSL); the real phone on Wi-Fi and on mobile data (needs
+  emulator runs under KVM on the Strix Halo; its system image isn't installed yet); the real phone on Wi-Fi and on mobile data (needs
   Liam).
 
 ### M40 KDE: find, remember, switch, passkeys

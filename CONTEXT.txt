@@ -57,8 +57,8 @@ NEXT, in order:
      the-den-android builds and passes testDebugUnitTest 10/10 against the dev backend; how to run it is at the end
      of the-den-android's HANDOFF.md.
      Still open: rebuild the lost 72-check e2e and the mock Plex starter inside tests/;
-     update README and HANDOFF paths; fix the-den-client's tests/qml_harness.py, which rewrites the tracked
-     tests/_shell.qml with this machine's absolute path on every run (restore it with git checkout before committing).
+     update README and HANDOFF paths. (Fixed 2026-09-14: the-den-client's tests/qml_harness.py now writes its shell to
+     the temp folder, and tests/_shell.qml is no longer tracked.)
      Liam decided on 2026-09-13 to keep the dev admin token as it is, so don't ask about rotating it again.
   2. (DONE 2026-09-13) The libtorrent 2.1 fix: engine.py now reads
      torrent_status.flags for paused and auto_managed, and drops torrent_status.states.allocating, a fourth break the
@@ -124,13 +124,12 @@ LIVE TESTING THROUGH THE HOLTOS UPDATER (Liam, 2026-09-13): push a tagged releas
   GitHub sign-in: the gh token expired on 2026-09-13 and Liam signed in again; git pushes use that login. If a push
   or fetch fails with "could not read Username", ask Liam to run gh auth login.
 
-LOCAL MODELS ON THIS MACHINE: two user-scope MCP servers in ~/.claude.json run ~/.claude/mcp-servers/lmstudio_mcp.py
-  (stdlib only; tools list_models, chat and run_coding_task; writes are sandboxed to /home/liam/Projects; the result
-  includes a real unified diff). lmstudio-bridge is the 4090 on LiamPC at http://192.168.0.152:1234
-  (qwen2.5-coder-32b-instruct at 14,592 context, which prints tool calls as text that the bridge parses;
-  qwen3-coder-30b-a3b also worked when loaded). lmstudio-4080super is http://192.168.0.39:1234 (qwen/qwen3.5-9b at
-  92,672 context; use it for big files like this one). Machine-wide rules for every session are in
-  ~/.claude/CLAUDE.md.
+LOCAL MODELS ON THIS MACHINE (updated 2026-09-14): every unit goes to the user-scope local-llm MCP server, LiamPC's
+  unified bridge in scheduler mode (scheduler http://192.168.0.152:8790). Profiles: fast-edit (4090, Qwen3.6-27B-MTP),
+  large-file (this laptop, Qwen3-Coder-30B-A3B), trivial (4080, qwen/qwen3.5-9b). The old lmstudio-bridge and
+  lmstudio-4080super servers and ~/.claude/mcp-servers/lmstudio_mcp.py are no longer used. Tip from 2026-09-14: tell
+  the model its write root is /home/liam/Projects, because the tool description still says C:\projects.
+  Machine-wide rules for every session are in ~/.claude/CLAUDE.md.
 
 DEV ENVIRONMENT ON THIS MACHINE (set up 2026-09-13):
   - Venv: ~/.venvs/the-den, made with python -m venv --system-site-packages so it sees the system libtorrent 2.1.1,
