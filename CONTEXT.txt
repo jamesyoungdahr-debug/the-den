@@ -206,9 +206,9 @@ BRIDGE NOTE (2026-09-13, corrected later the same day): run_coding_task never wr
 
 REPOS AND VERSIONS
 ------------------
-- the-den            C:\projects\theden             github.com/jamesyoungdahr-debug/the-den        v0.7.0 tagged (ff5fc9d); master now carries M33, untagged, on the 0.8.0 track (stays 0.x -- see "no 1.0.0 yet" below)
-- the-den-client     C:\projects\the-den-client     (KDE, PySide6/Kirigami)                         v0.5.0 (M33, untagged; v0.4.16 tagged at f410c6f)
-- the-den-android    C:\projects\the-den-android    (Kotlin/Compose)                                v0.7.0 (M33, untagged; v0.6.8 tagged at 4de2bfe)
+- the-den            /home/liam/Projects/theden/the-den          github.com/jamesyoungdahr-debug/the-den   v0.8.1a tagged 2026-09-14 (M34, port 40204); stays 0.x -- see "no 1.0.0 yet" below
+- the-den-client     /home/liam/Projects/theden/the-den-client   (KDE, PySide6/Kirigami)                   v0.5.0b tagged 2026-09-14
+- the-den-android    /home/liam/Projects/theden/the-den-android  (Kotlin/Compose)                          0.7.0a, versionCode 23, committed locally (no tags since v0.6.8)
 - Rule: the-den and the-den-client stay SEPARATE repos and SEPARATE packages; the HoltOS updater tracks both.
 - Git identity for commits: user.name Liam, user.email jamesyoungdahr@gmail.com (set locally in all three repos).
 

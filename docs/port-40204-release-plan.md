@@ -50,12 +50,12 @@ first, then release the server as v0.8.1a.
 
 9. `CONTEXT.txt`: replace the stale "LOCAL MODELS ON THIS MACHINE" section and the Windows repo paths.
    `HANDOFF.md`: point its dev environment section at the Linux notes. `docs/connect-secure-plan.md`:
-   the M39 emulator runs under KVM on the Strix Halo, not WSL. DONE 2026-09-14 for the local-models section, the Android HANDOFF.md update and the M39 note; the Windows repo paths in CONTEXT.txt's REPOS AND VERSIONS are still to do.
+   the M39 emulator runs under KVM on the Strix Halo, not WSL. DONE 2026-09-14 for the local-models section, the Android HANDOFF.md update, the M39 note and the repo paths in CONTEXT.txt's REPOS AND VERSIONS.
 10. the-den-client `tests/qml_harness.py` stops rewriting the tracked `tests/_shell.qml`. DONE 2026-09-14: the shell goes to the temp folder, `tests/_shell.qml` is no longer tracked, and the harness still passes (15 pages clean).
 
 ## Phase 4: next milestones (docs/connect-secure-plan.md)
 
-11. M37 device tokens (needs question 4).
+11. M37 device tokens (needs question 4). Not started overnight on purpose (2026-09-14): it changes how every app signs in, so it waits for Liam's answer to question 4.
 12. M35 HTTPS (needs question 3), then M36 UPnP, M38 passkeys, M39 Android, M40 KDE and the M14 shakedown.
 
 ## Open questions for Liam
