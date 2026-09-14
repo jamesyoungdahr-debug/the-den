@@ -5,6 +5,9 @@ the chat history. Newest entries at the top of each section. Last updated: 2026-
 
 PICK UP HERE (2026-09-13 evening: the project moved to Liam's HoltOS laptop, Linux)
 -------------------------------------------------------------------------------------------
+CURRENT PLAN (2026-09-14): docs/port-40204-release-plan.md -- move the KDE client and the Android app to port 40204,
+  then release the-den v0.8.1a. Its phases and the open questions for Liam are listed there.
+
 Work no longer happens on the Windows machine (C:\projects, WSL Ubuntu). The three repos were cloned fresh from
 GitHub into /home/liam/Projects/theden/the-den, the-den-client and the-den-android on Liam's HoltOS 0.0.4-alpha
 laptop (Arch based, KDE Plasma on Wayland). The paths, venvs and scripts in the older sections below describe the
@@ -453,9 +456,11 @@ RECENTLY COMPLETED MILESTONES
 
 RULES AND DECISIONS TO REMEMBER
 -------------------------------
-- Liam, 2026-09-13 evening: the local models write ALL text in these repos (code, docs and this file). Claude
-  plans, writes specs, reviews each real diff, tests and commits. Security-sensitive code is no exception; Claude
-  reviews it line by line. If a unit fails twice on both GPUs, ask Liam instead of writing it.
+- Liam, 2026-09-14 (replaces the 2026-09-13 evening rule): follow ~/.claude/CLAUDE.md. The local models write all
+  text in these repos (code, docs and this file); Claude writes security-sensitive units itself and takes over a unit
+  whose handoff failed twice, saying so in the commit and the recap. Claude plans, writes specs, reviews each real
+  diff, tests and commits.
+- Liam, 2026-09-14: save every plan as docs/<topic>-plan.md and link it from PICK UP HERE.
 - Liam, 2026-09-13 evening: push only when Liam says so, or as a tagged test release for the HoltOS updater (see
   PICK UP HERE for the lettered version scheme). This replaces the push-and-tag rule below.
 - Claude never types API keys/tokens into fields or files. The user pasted the TMDB key into
