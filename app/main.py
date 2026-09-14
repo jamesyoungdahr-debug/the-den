@@ -5,7 +5,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
 
-from app import auth, automation, backup, formats, health, scheduler, setup_state
+from app import auth, automation, backup, discovery, formats, health, scheduler, setup_state
 from app import settings as settings_module
 from app.db import SessionLocal, engine as db_engine
 from app.deps import get_db
@@ -120,6 +120,17 @@ async def start_torrent_engine():
 
 
 @app.on_event("startup")
+async def start_discovery():
+    # Advertise this server on the LAN (M34). Does nothing when WEB_HOST is a loopback address.
+    db = SessionLocal()
+    try:
+        s = settings_module.effective(db)
+    finally:
+        db.close()
+    await discovery.start(s)
+
+
+@app.on_event("startup")
 def start_scheduler():
     scheduler.start()
 
@@ -137,6 +148,11 @@ async def stop_torrent_engine():
     await solver.close()  # the built-in Cloudflare solver's Chromium, if it was started
 
 
+@app.on_event("shutdown")
+async def stop_discovery():
+    await discovery.stop()
+
+
 @app.post("/automation/run-now", dependencies=[Depends(auth.require_admin)])
 async def run_automation_now(db: Session = Depends(get_db)):
     await automation.run_cycle(db)
@@ -149,7 +165,8 @@ def health_check(db: Session = Depends(get_db)):
     that setup isn't finished yet."""
     with db_engine.connect() as conn:
         conn.execute(text("SELECT 1"))
-    return {"status": "ok", "api_version": 2, "setup_complete": setup_state.is_complete(db), "torrent_engine": torrent_engine.info(), "checks": health.current(db)}
+    s = settings_module.effective(db)
+    return {"status": "ok", "api_version": 2, "server_id": discovery.server_id(), "server_name": discovery.display_name(s), "setup_complete": setup_state.is_complete(db), "torrent_engine": torrent_engine.info(), "checks": health.current(db)}
 
 
 @app.get("/forbidden", response_class=HTMLResponse, include_in_schema=False)

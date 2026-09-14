@@ -7,9 +7,9 @@ post_install() {
     echo "==> Edit /etc/the-den/the-den.env (at least TMDB_API_KEY and MOVIES_ROOT/TV_ROOT,"
     echo "    DOWNLOADS_ROOT if the defaults under /var/lib/the-den aren't where you want them),"
     echo "    then: systemctl enable --now the-den"
-    echo "==> The web UI listens on 127.0.0.1:8686 only. Put a reverse proxy in front of it"
-    echo "    (or change --host in the-den.service) before exposing it beyond localhost --"
-    echo "    there is no login/auth layer yet."
+    echo "==> The web UI listens on WEB_HOST:WEB_PORT from /etc/the-den/the-den.env"
+    echo "    (127.0.0.1:40204 by default). Set WEB_HOST=0.0.0.0 to reach it from your LAN;"
+    echo "    it is plain HTTP until HTTPS lands, so only do that on a network you trust."
     echo "==> The built-in torrent client listens on TORRENT_PORT (default 6881, TCP+UDP) on"
     echo "    all interfaces; forward it on your router for better peer connectivity."
 }

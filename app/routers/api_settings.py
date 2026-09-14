@@ -125,6 +125,10 @@ def apply_runtime_changes(old: settings_module.EffectiveSettings, new: settings_
             scheduler.reschedule_import_lists(new.import_list_interval_minutes)
         except Exception:
             pass
+    from app import discovery
+
+    if discovery.display_name(new) != discovery.display_name(old):
+        discovery.refresh(new)
 
 
 @router.post("/settings")

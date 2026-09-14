@@ -14,3 +14,5 @@ itsdangerous==2.2.0
 # Built-in Cloudflare solver (app/indexers/solver.py) drives the system Chromium; 0.46 is
 # pinned because 0.47+ ship a generated file Python 3.14 refuses to import (non-UTF-8 byte).
 nodriver==0.46
+# LAN discovery (app/discovery.py) advertises the server over mDNS as _theden._tcp for the apps.
+zeroconf==0.151.3

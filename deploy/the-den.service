@@ -8,7 +8,8 @@ User=the-den
 Group=the-den
 WorkingDirectory=/opt/the-den
 EnvironmentFile=-/etc/the-den/the-den.env
-ExecStart=/opt/the-den/.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8686
+# app/__main__.py listens on WEB_HOST:WEB_PORT from the env file (127.0.0.1:40204 by default).
+ExecStart=/opt/the-den/.venv/bin/python -m app
 Restart=on-failure
 
 [Install]

@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
-from app import auth, plex, plex_scan, scheduler
+from app import auth, discovery, plex, plex_scan, scheduler
 from app import settings as settings_module
 from app.deps import get_db
 from app.models import PlexMedia, User
@@ -142,6 +142,7 @@ async def ui_save_plex(
     row.plex_sections = json.dumps(sections) if sections else None
     row.plex_allow_any_account = allow_any == "1"
     db.commit()
+    discovery.refresh(settings_module.effective(db))
     new_interval = settings_module.effective(db).plex_scan_interval_minutes
     if new_interval != old_interval:
         try:

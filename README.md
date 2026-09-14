@@ -29,10 +29,10 @@ sudo apt install python3-libtorrent        # or: pacman -S libtorrent-rasterbar
 python -m venv --system-site-packages .venv
 .venv/bin/pip install -r requirements.txt
 .venv/bin/python -m alembic upgrade head
-.venv/bin/python -m uvicorn app.main:app --port 8686
+.venv/bin/python -m app        # listens on WEB_HOST:WEB_PORT, 127.0.0.1:40204 by default
 ```
 
-Then open http://127.0.0.1:8686. Configure TMDB key, library folders, the torrent client
+Then open http://127.0.0.1:40204. Configure TMDB key, library folders, the torrent client
 (downloads folder, listen port, rate and seeding limits), automation interval, and Discord
 webhook from **Settings** in the app itself -- or copy `.env.example` to `.env` (or export
 the same variables) if you'd rather manage config as files; the in-app settings win if both
@@ -81,8 +81,10 @@ $EDITOR /etc/the-den/the-den.env
 systemctl enable --now the-den
 ```
 
-The web UI binds to `127.0.0.1:8686` only. Sign-in is always required (see Accounts); put a
-TLS reverse proxy in front of it before exposing it beyond localhost. The torrent client listens on `TORRENT_PORT` (default 6881,
+The web UI listens on `WEB_HOST:WEB_PORT` from `/etc/the-den/the-den.env`, `127.0.0.1:40204` by
+default. Set `WEB_HOST=0.0.0.0` so the apps can find it on your LAN: The Den then advertises itself
+over mDNS as `_theden._tcp`. Sign-in is always required (see Accounts), but traffic stays plain HTTP
+until HTTPS lands, so put a TLS reverse proxy in front of it before exposing it beyond your network. The torrent client listens on `TORRENT_PORT` (default 6881,
 TCP+UDP) on all interfaces; forward that port on your router for better peer connectivity.
 The built-in Cloudflare solver opens Chromium headed when a display is available (that
 clears the check most reliably); set `DEN_SOLVER_HEADLESS=1` to keep it windowless anyway,

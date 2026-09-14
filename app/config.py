@@ -36,7 +36,7 @@ DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "")
 # SESSION_SECRET signs the session cookie; left blank, one is generated once and kept under STATE_DIR.
 SESSION_SECRET = os.environ.get("SESSION_SECRET", "")
 
-# Where uvicorn listens (deploy/the-den.service passes these to --host/--port). LAN discovery and
+# Where The Den listens (app/__main__.py passes these to uvicorn; the service runs `python -m app`). LAN discovery and
 # remote access only work when WEB_HOST isn't a loopback address.
 WEB_HOST = os.environ.get("WEB_HOST", "127.0.0.1")
 WEB_PORT = int(os.environ.get("WEB_PORT", "40204"))
