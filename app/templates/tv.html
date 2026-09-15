@@ -65,13 +65,19 @@
         {% elif s.have %}<span class="holt-badge holt-badge-solid holt-badge-partial"><span class="dot"></span>{{ s.have }}/{{ s.total }}{% if s.on_plex %} · Plex{% endif %}</span>
         {% elif s.on_plex %}<span class="holt-badge holt-badge-solid holt-badge-available"><span class="dot"></span>on Plex · wanted</span>
         {% else %}<span class="holt-badge holt-badge-solid holt-badge-missing"><span class="dot"></span>missing</span>{% endif %}
+        {% set play = (series_play or {}).get(s.id) if s.id else none %}
+        {% if play and play.resume_state and play.resume_state.position_ms and play.resume_state.duration_ms %}<span class="den-card-progress"><i style="width:{{ (play.resume_state.position_ms / play.resume_state.duration_ms * 100)|round(1) }}%"></i></span>{% endif %}
         <div class="holt-poster-actions">
           {% if s.source == 'plex' %}
             {% if is_admin and s.tmdb_id %}
             <form method="post" action="/ui/discover/tv/{{ s.tmdb_id }}/add"><button type="submit" class="holt-btn holt-btn-secondary holt-btn-sm" title="Track it in The Den too">Add to Den</button></form>
             {% elif s.tmdb_id %}<span class="holt-btn holt-btn-secondary holt-btn-sm">Details</span>{% endif %}
           {% else %}
-            <span class="holt-btn holt-btn-primary holt-btn-sm">Episodes</span>
+            {% if play and (play.resume or play.first) %}
+            <form method="get" action="/watch/episode/{{ play.resume or play.first }}"><button type="submit" class="holt-btn holt-btn-primary holt-btn-sm">{{ 'Resume' if play.resume else 'Play' }}</button></form>
+            {% else %}
+            <span class="holt-btn holt-btn-secondary holt-btn-sm">No episodes yet</span>
+            {% endif %}
             {% if is_admin %}
             <form method="post" action="/ui/series/{{ s.id }}/delete" onsubmit="return confirm('Remove {{ s.title|e }} from the library?')">
               <button type="submit" class="holt-btn holt-btn-quiet holt-btn-sm">Remove</button>

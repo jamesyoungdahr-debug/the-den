@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 
+from app import library_scan
 from app.models import Episode, Movie, PlaybackState, Series
 
 
@@ -251,3 +252,40 @@ def forget_user(db: Session, user_id: int) -> None:
     db.query(PlaybackState).filter(
         PlaybackState.user_id == user_id,
     ).delete(synchronize_session=False)
+
+
+def series_play(db: Session, user_id: int, series_ids) -> dict[int, dict]:
+    """What a series card should offer, the way a movie card offers Play or Resume: the episode
+    to resume (the most recent one this user is partway through) and the first episode with a
+    file to start from. Two queries for a whole page rather than two per series."""
+    ids = [int(s) for s in series_ids if s]
+    if not ids:
+        return {}
+    episodes = (
+        db.query(Episode)
+        .filter(Episode.series_id.in_(ids))
+        .order_by(Episode.series_id, Episode.season_number, Episode.episode_number)
+        .all()
+    )
+    if not episodes:
+        return {}
+    have = library_scan.playable_ids(db, "episode", [e.id for e in episodes])
+    states = states_for(db, user_id, "episode", [e.id for e in episodes])
+
+    out: dict[int, dict] = {}
+    for episode in episodes:
+        entry = out.setdefault(episode.series_id, {"resume": None, "resume_state": None, "first": None})
+        if entry["first"] is None and episode.id in have:
+            entry["first"] = episode.id
+        state = states.get(episode.id)
+        if state is not None and state.position_ms:
+            # The most recently touched episode wins, so the card resumes where the person
+            # actually stopped rather than at the latest episode number.
+            current = entry["resume_state"]
+            if current is None or (
+                state.updated_at is not None
+                and (current.updated_at is None or state.updated_at > current.updated_at)
+            ):
+                entry["resume"] = episode.id
+                entry["resume_state"] = state
+    return out

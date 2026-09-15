@@ -250,6 +250,8 @@ async def tv_library(request: Request, q: str | None = None, filter: str = "all"
             "request": request, "series": rows, "query": q, "candidates": candidates, "filter": filter,
             "counts": {"total": len(all_rows), "plex": sum(1 for r in all_rows if r["on_plex"]), "plex_only": sum(1 for r in all_rows if r["source"] == "plex"), "tracked": sum(1 for r in all_rows if r["id"])},
             "episodes_total": sum(r["total"] for r in all_rows), "episodes_have": sum(r["have"] for r in all_rows),
+            # M50b: series cards get the same Play/Resume the movie cards have.
+            "series_play": playback.series_play(db, request.state.user.id, [r["id"] for r in rows if r["id"]]),
             "library_tvmaze_ids": {r["tvmaze_id"] for r in all_rows if r["tvmaze_id"]}, "active_nav": "tv",
         },
     )
