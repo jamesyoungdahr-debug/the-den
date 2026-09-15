@@ -21,8 +21,13 @@ log = logging.getLogger(__name__)
 
 VIDEO_EXTENSIONS = {".mkv", ".mp4", ".avi", ".m4v", ".mov", ".ts", ".m2ts", ".webm", ".wmv"}
 
-# Torrent releases ship samples, ad folders and artwork beside the feature; never descend into them.
-SKIP_DIR_NAMES = {"@eadir", "extrafanout", "sample", "samples", ".actors"}
+# Folders that sit BESIDE the feature rather than being it: torrent samples and ad folders, artwork,
+# and the extras a Plex library keeps for bonus content. Recording those would fill the unmatched
+# queue with files that are not the film or episode they look like.
+SKIP_DIR_NAMES = {
+    ".actors", "@eadir", "behind the scenes", "deleted scenes", "extrafanout", "extras",
+    "featurettes", "interviews", "other", "proof", "sample", "samples", "trailers",
+}
 
 SEASON_DIR_RE = re.compile(r"^(?:season|s)[\s._-]*(\d{1,2})$", re.IGNORECASE)
 
