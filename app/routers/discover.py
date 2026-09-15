@@ -237,6 +237,21 @@ async def _detail(kind: str, tmdb_id: int, db: Session, me: User | None = None) 
             taken |= set(r.season_list) if r.season_list else {s["season_number"] for s in item["seasons"]}
         item["requestable_seasons"] = [s["season_number"] for s in item["seasons"] if s["season_number"] > 0 and s["season_number"] not in taken]
     item["history"] = history.as_dicts(history.for_movie(db, av["den"]["id"]) if kind == "movie" and av["den"] else history.for_series(db, av["den"]["id"]) if kind == "tv" and av["den"] else [])
+    if kind == "movie" and item.get("collection"):
+        # One extra TMDB call per movie view (cached by tmdb's TTL), so the page can show which
+        # of the series the library already has.
+        parts = await tmdb.collection_parts(item["collection"]["id"], api_key)
+        owned = {
+            m.tmdb_id: m.id
+            for m in db.query(Movie).filter(Movie.tmdb_id.in_([p["tmdb_id"] for p in parts]))
+        }
+        item["collection"] = {
+            **item["collection"],
+            "parts": [
+                {**p, "in_library": p["tmdb_id"] in owned, "den_id": owned.get(p["tmdb_id"])}
+                for p in parts
+            ],
+        }
     return item
 
 

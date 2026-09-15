@@ -181,7 +181,24 @@ async def movie_details(tmdb_id: int, api_key: str) -> dict | None:
         return None
     card = _common_details(d, "movie")
     card["runtime"] = d.get("runtime") or None
+    # The plain movie endpoint already carries belongs_to_collection; surface it so the movie
+    # page can show what else in the series the library is missing.
+    belongs = d.get("belongs_to_collection") or None
+    card["collection"] = (
+        {"id": belongs["id"], "name": belongs.get("name"), "poster_path": belongs.get("poster_path")}
+        if belongs else None
+    )
     return card
+
+
+async def collection_parts(collection_id: int, api_key: str) -> list[dict]:
+    """The films in a TMDB collection, oldest first. A second call is needed because the movie
+    endpoint only names the collection, it does not list its parts."""
+    data = await _get(f"/collection/{collection_id}", api_key, ttl=DETAIL_TTL)
+    if not data:
+        return []
+    parts = [card for card in (normalize(p, "movie") for p in data.get("parts", [])) if card]
+    return sorted(parts, key=lambda card: card.get("year") or 0)
 
 
 async def tv_details(tmdb_id: int, api_key: str) -> dict | None:

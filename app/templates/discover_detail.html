@@ -71,6 +71,28 @@
     <div style="display:flex;flex-direction:column;gap:var(--holt-space-4);min-width:0">
       {% if item.overview %}<p class="holt-body" style="font-size:14.5px;margin:0;max-width:720px">{{ item.overview }}</p>{% endif %}
 
+      {% if item.collection and item.collection.parts %}
+      <section class="holt-section">
+        <div class="holt-rail-head"><div class="holt-eyebrow" style="color:var(--holt-ink-28)">Part of {{ item.collection.name }}</div><div class="holt-meta">{{ item.collection.parts|selectattr('in_library')|list|length }} of {{ item.collection.parts|length }} in your library</div></div>
+        <div class="holt-panel">
+          <div class="holt-row-list">
+            {% for p in item.collection.parts %}
+            <div class="holt-row">
+              <div class="holt-row-main">
+                <div class="holt-row-title">{{ p.title }}</div>
+                <div class="holt-row-meta">{{ p.year or 'year unknown' }}</div>
+              </div>
+              <div class="holt-toolbar">
+                {% if p.in_library %}<span class="holt-badge holt-badge-available"><span class="dot"></span>in your library</span>
+                {% else %}<a class="holt-chip" href="/discover/movie/{{ p.tmdb_id }}">not in your library</a>{% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </section>
+      {% endif %}
+
       {% if item.cast %}
       <section class="holt-section">
         <div class="holt-eyebrow" style="color:var(--holt-ink-28)">Cast</div>
