@@ -7,7 +7,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app import auth, device_tokens, plex, plex_access, requests_service, setup_state
+from app import auth, device_tokens, plex, plex_access, requests_service, setup_state, sign_in_links
 from app import settings as settings_module
 from app.deps import get_db
 from app.models import User
@@ -131,6 +131,30 @@ def login_submit(
 def logout(request: Request):
     auth.sign_out(request)
     return RedirectResponse("/login", status_code=303)
+
+
+# ---- one-time sign-in links (M51) --------------------------------------------------
+
+@router.get("/join/{token}", response_class=HTMLResponse)
+def join_page(request: Request, token: str, db: Session = Depends(get_db)):
+    """Where somebody lands from a sign-in link: choose a password, once."""
+    user = sign_in_links.user_for_token(db, token)
+    if user is None:
+        return templates.TemplateResponse("join.html", {"request": request, "invalid": True, "token": ""}, status_code=404)
+    return templates.TemplateResponse("join.html", {"request": request, "invalid": False, "token": token, "username": user.username})
+
+
+@router.post("/join/{token}")
+def join_submit(request: Request, token: str, password: str = Form(...), db: Session = Depends(get_db)):
+    """Set the password and burn the link, then sign the person straight in.
+
+    An unusable link, an expired one and a password that is too short all produce the same page,
+    so this cannot be used to probe for which accounts or links exist."""
+    user = sign_in_links.redeem(db, token, password)
+    if user is None:
+        return templates.TemplateResponse("join.html", {"request": request, "invalid": True, "token": ""}, status_code=400)
+    auth.sign_in(request, db, user)
+    return RedirectResponse("/", status_code=303)
 
 
 # ---- Plex sign-in (PIN flow) -------------------------------------------------------

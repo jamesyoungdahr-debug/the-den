@@ -11,6 +11,13 @@
 
   {% if error %}<div class="holt-message holt-message-warning">{{ error }}</div>{% endif %}
 
+  {% if new_link %}
+  <div class="holt-message holt-message-positive">
+    <div><strong>Sign-in link for {{ new_link.username }}</strong> — good for {{ new_link.days }} days and it works once. Copy it now: this is the only time it is shown.</div>
+    <input type="text" readonly value="{{ new_link.url }}" onclick="this.select()" style="margin-top:var(--holt-space-2);font-family:var(--holt-font-mono);font-size:12px">
+  </div>
+  {% endif %}
+
   <div class="holt-panel">
     <div class="holt-row-list">
       {% for u in users %}
@@ -37,6 +44,9 @@
             <button type="submit" class="holt-btn holt-btn-quiet holt-btn-sm">sign out devices</button>
           </form>
           {% endif %}
+          <form method="post" action="/ui/users/{{ u.id }}/sign-in-link">
+            <button type="submit" class="holt-btn holt-btn-quiet holt-btn-sm" title="Hand {{ u.username|e }} a link so they can set their own password">sign-in link</button>
+          </form>
           {% if not (current_user and current_user.id == u.id) %}
           <form method="post" action="/ui/users/{{ u.id }}/delete" onsubmit="return confirm('Delete {{ u.username|e }}?')">
             <button type="submit" class="holt-btn holt-btn-quiet holt-btn-sm">delete</button>

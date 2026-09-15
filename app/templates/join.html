@@ -1,0 +1,21 @@
+{% extends "auth_base.html" %}
+{% block title_suffix %} — Set a password{% endblock %}
+{% block card %}
+  {% if invalid %}
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <div class="holt-page-title" style="font-size:24px">This link doesn't work</div>
+    <div class="holt-body" style="font-size:14px">It may have expired, or already have been used. Ask an admin for a new one.</div>
+  </div>
+  <a class="holt-btn holt-btn-secondary" href="/login">Go to sign in</a>
+  {% else %}
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <div class="holt-page-title" style="font-size:24px">Set a password</div>
+    <div class="holt-body" style="font-size:14px">Choose a password for <strong>{{ username }}</strong>. You'll be signed in straight away, and this link stops working.</div>
+  </div>
+  <form method="post" action="/join/{{ token }}" style="display:flex;flex-direction:column;gap:var(--holt-space-3)">
+    <div class="holt-field" style="margin:0"><label for="password">New password</label><input id="password" name="password" type="password" autocomplete="new-password" minlength="8" required></div>
+    <div class="holt-meta" style="margin:0">At least 8 characters.</div>
+    <button type="submit" class="holt-btn holt-btn-primary">Set password and sign in</button>
+  </form>
+  {% endif %}
+{% endblock %}

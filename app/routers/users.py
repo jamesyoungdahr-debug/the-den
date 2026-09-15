@@ -1,12 +1,12 @@
 """Admin user management: an HTML page and a JSON API, both admin-only."""
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app import auth, device_tokens, playback
+from app import auth, device_tokens, playback, sign_in_links
 from app import settings as settings_module
 from app.deps import get_db
 from app.models import User
@@ -48,8 +48,8 @@ def _delete_user(db: Session, user: User) -> None:
 
 # ---- HTML -------------------------------------------------------------------------
 
-@router.get("/ui/users", response_class=HTMLResponse)
-def users_page(request: Request, _: User = Depends(auth.page_admin), db: Session = Depends(get_db)):
+def _render_users(request: Request, db: Session, new_link: dict | None = None) -> Response:
+    """The users page. `new_link` carries a freshly minted sign-in link to show exactly once."""
     users = db.query(User).order_by(User.id).all()
     s = settings_module.effective(db)
     defaults = {"movies": s.request_movie_limit, "series": s.request_series_limit, "days": s.request_limit_days}
@@ -57,8 +57,27 @@ def users_page(request: Request, _: User = Depends(auth.page_admin), db: Session
     return templates.TemplateResponse(
         "users.html",
         {"request": request, "users": users, "defaults": defaults, "device_counts": device_counts,
-         "error": request.query_params.get("error"), "active_nav": "users"},
+         "error": request.query_params.get("error"), "new_link": new_link, "active_nav": "users"},
     )
+
+
+@router.get("/ui/users", response_class=HTMLResponse)
+def users_page(request: Request, _: User = Depends(auth.page_admin), db: Session = Depends(get_db)):
+    return _render_users(request, db)
+
+
+@router.post("/ui/users/{user_id}/sign-in-link")
+def ui_create_sign_in_link(request: Request, user_id: int, _: User = Depends(auth.page_admin), db: Session = Depends(get_db)):
+    """M51: mint a one-time link so this person can set their own password.
+
+    Rendered rather than redirected, so the token never reaches a URL bar, browser history or a
+    server access log -- this response is the only place it is ever readable. Minting a second
+    link quietly retires the first, which is what an admin wants for one that has gone astray."""
+    target = db.get(User, user_id)
+    if target is None:
+        raise HTTPException(404, "User not found")
+    token = sign_in_links.create(db, target)
+    return _render_users(request, db, new_link={"username": target.username, "url": f"/join/{token}", "days": sign_in_links.LINK_DAYS})
 
 
 @router.post("/ui/users")

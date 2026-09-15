@@ -6,7 +6,7 @@
 # is not how packages meant for the official Arch repos or AUR are expected
 # to behave (they must not reach the network during build()).
 pkgname=the-den
-pkgver=0.8.3o
+pkgver=0.8.3p
 pkgrel=1
 pkgdesc="Unified movie/TV library manager with a built-in torrent client (Sonarr+Radarr+Prowlarr+qBittorrent replacement)"
 arch=('any')
