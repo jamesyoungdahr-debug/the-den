@@ -27,6 +27,27 @@ M50b LIBRARY SCANNER, MATCHING 2026-09-15 (LiamPC; committed locally, NOT pushed
   library_match.attach_choice, which creates the Movie or Series through the same get_or_create_* helpers the matcher uses.
   library_match.html is the search page. Server 0.8.3c. Verified by py_compile only; the suite and a live server still have not
   been run (the app deps are not on this machine). The 4090 wrote the service functions and the routes, the 4080 the templates.
+M51 ACCOUNTS WITHOUT PLEX 2026-09-15 (0.8.3o to 0.8.3s; NOT pushed or tagged): the milestone that stops anybody
+  being locked out the day Plex goes. Three of its four parts are done. (1) ONE-TIME SIGN-IN LINKS:
+  app/sign_in_links.py lets an admin hand somebody a link so they choose their own password, rather than the admin
+  picking one and reading it out. Only the hash is stored, exactly as device tokens are; one link per user, so
+  minting a second retires the first; redeem() returns the same None for an unusable link, an expired one and a
+  too-short password, so probing a token teaches nothing about whether an account exists. The link is RENDERED
+  rather than redirected, because a redirect would put the token in a URL bar, a browser history and the access
+  log. Migration 8c4d2e6f9a13. (2) THE PLEX MIGRATION VIEW: /ui/users/plex-migration lists every account tied to a
+  Plex id with no password of its own - M60's switch-off gate is "zero Plex-only users" and until now that could
+  only be guessed at. Each row carries the sign-in-link button, so the people who would be locked out are also the
+  shortest path to fixing them. (3) THE DEN'S OWN WATCHLIST: watchlist_items (migration 9d5e3f7a1b26) plus a
+  den_watchlist import-list kind, so a wishlist no longer needs Plex connected; Discover gains Add/On-your-
+  watchlist and there is a /ui/watchlist page with a nav entry. The Plex watchlist kind keeps working during the
+  parallel period. add() is idempotent; the remove route takes the user from the session, never the form; the
+  `back` field is validated before use as a redirect, closing the classic open-redirect hole. STILL TO DO: per-user
+  library access, the last part of M51, which needs agreeing on first because "per-user library access" could mean
+  anything from per-folder to per-rating. The session wrote the auth units itself (the rules require it); the
+  templates and the watchlist data layer went to local models. Verified: py_compile throughout, a single Alembic
+  head (36 migrations), and BOTH new migrations' DDL run against real SQLite - including that a unique index
+  tolerates the many NULLs every user without a link has, and that the watchlist constraint still lets two
+  different people want the same film while rejecting the same film twice on one list.
 TRANSCODE PATH (P2 FIRST SLICE) 2026-09-15 (0.8.3j to 0.8.3n; NOT pushed or tagged): a browser refuses HEVC,
   10-bit H.264, HDR and Matroska, and nothing the server sends changes that - the only fix is to hand the file to
   ffmpeg and serve what comes out. Liam hit this ("the webplayer cant play hvec"). app/transcode.py decides: direct,
