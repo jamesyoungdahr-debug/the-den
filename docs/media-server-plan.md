@@ -1,5 +1,7 @@
 # Media server for The Den: research and plan
 
+Update 2026-09-15: Liam set the goal of replacing Plex completely. The milestone order now lives in docs/plex-replacement-plan.md; this document stays as the research behind it. Phase 1 (direct play in the web UI) is done as M49, see docs/media-phase1-plan.md.
+
 Researched 2026-09-15. Sources: four research reports on Plex's feature set, what Plex users wish Plex had, Jellyfin and Emby, and media-server architecture. No code has been written. This document is a plan for Liam to decide on, not a commitment.
 
 ## 1. Summary and recommendation

@@ -152,6 +152,19 @@ PREVIOUS PLAN (2026-09-14): docs/port-40204-release-plan.md -- move the KDE clie
   reviewed app/media_stream.py (1 call, 2.5K prompt, 17.9K completion tokens) and found two issues, both fixed. The
   HoltOS session added ffmpeg to archiso/packages.x86_64. Next: Liam's decisions from docs/media-server-plan.md
   (licence, casting and certificates, KDE player, hardware target), then P2 transcoding.
+  PLEX REPLACEMENT PLAN 2026-09-15 (docs only; committed locally as 4a0eab7, not pushed): Liam set the goal of
+  removing Plex Media Server and its apps and web player completely. His answers the same day: The Den runs only on
+  HoltOS (the host machine doesn't matter); viewers are the household and remote friends on 4 Gbit symmetric fibre;
+  devices are web browsers, Android phones and tablets, TV boxes or smart TVs and Chromecast; cutover runs Plex and
+  The Den side by side first. docs/plex-replacement-plan.md lists what The Den still takes from Plex (its library
+  scan, Plex sign-in, request availability, watch history, the Plex watchlist import, the server name, the players)
+  and the order: G0 HTTPS serving benchmark, M50a/M50b own library scanner, M51 accounts without Plex, M52 Plex
+  history sync, M53 Android player, M54a/M54b remux and transcoding, M55 Android TV, M48 trusted certificate before
+  M56 casting, M57 KDE player, M58 other TV platforms, M59 extras in use, M60 switch-off (Plex code kept dormant for
+  one release), M61 Plex code removal. Liam's earlier question "are we going to have the back end serve the files?":
+  yes for now; G0 decides whether a reverse proxy takes over transfers. DeepSeek Flash critiqued the first milestone
+  order (1 call, 0.8K prompt, 4.2K completion tokens). Open for Liam: TV platforms, other Plex features in use, the
+  four research decisions, and when M48 can happen. Next: G0, M50a and M51 need none of those answers.
 
 Work no longer happens on the Windows machine (C:\projects, WSL Ubuntu). The three repos were cloned fresh from
 GitHub into /home/liam/Projects/theden/the-den, the-den-client and the-den-android on Liam's HoltOS 0.0.4-alpha
