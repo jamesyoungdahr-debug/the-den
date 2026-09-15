@@ -5,7 +5,11 @@ the chat history. Newest entries at the top of each section. Last updated: 2026-
 
 PICK UP HERE (2026-09-13 evening: the project moved to Liam's HoltOS laptop, Linux)
 -------------------------------------------------------------------------------------------
-CURRENT PLAN (2026-09-14): docs/port-40204-release-plan.md -- move the KDE client and the Android app to port 40204,
+CURRENT PLAN (2026-09-15): docs/plex-replacement-plan.md -- Liam's goal is to remove Plex Media Server and its apps
+  and web player completely. Plex and The Den run side by side first, then Plex is switched off (M60) and its code
+  removed (M61). Milestones M50 to M61 and the open questions for Liam are listed there. M49 (direct play in the web
+  UI) is done.
+PREVIOUS PLAN (2026-09-14): docs/port-40204-release-plan.md -- move the KDE client and the Android app to port 40204,
   then release the-den v0.8.1a. Its phases and the open questions for Liam are listed there.
   PROGRESS 2026-09-14 (overnight, Claude deciding while Liam sleeps): the dev backend (8687) and the fixture backend (8688)
   run again. KDE client 0.5.0b (default :40204, plus a fallback from a saved loopback :8686) passes run_all.sh 13/13;
