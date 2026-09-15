@@ -45,6 +45,9 @@
           <div class="holt-meta">How often The Den walks its library folders and records every file it finds. Applied immediately.</div>
         </div>
         <div class="holt-meta" style="margin-top: var(--holt-space-2)"><a href="/ui/rename">Rename existing files</a> to match the current naming convention. <a href="/ui/library/files">Library files</a> shows every file the scan has recorded.</div>
+        <div class="holt-toolbar" style="margin-top: var(--holt-space-3)">
+          <button type="submit" form="library-scan" class="holt-btn holt-btn-secondary holt-btn-sm">Scan now</button>
+        </div>
       </section>
 
       <section class="holt-panel" id="torrent">
@@ -202,6 +205,7 @@
         </div>
       </form>
       <form method="post" action="/ui/settings/plex/scan" id="plex-scan"></form>
+      <form method="post" action="/ui/settings/library/scan" id="library-scan"></form>
       <form method="post" action="/ui/settings/plex/disconnect" id="plex-disconnect"></form>
       <script>
         (async function () {

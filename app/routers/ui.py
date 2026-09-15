@@ -736,6 +736,25 @@ async def ui_library_match_apply(file_id: int, tmdb_id: int = Form(...), media_t
     return RedirectResponse("/ui/library/files?show=unmatched", status_code=303)
 
 
+@router.post("/ui/settings/library/scan", dependencies=ADMIN)
+async def ui_library_scan_now(db: Session = Depends(get_db)):
+    """M50b: run a library scan and the matchers on demand instead of waiting for the timer."""
+    try:
+        result = library_scan.scan(db)
+        db.commit()
+        movies = await library_match.match_movies(db)
+        episodes = await library_match.match_episodes(db)
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        return RedirectResponse(f"/ui/settings?error=Library+scan+failed:+{str(exc).replace(' ', '+')}#library", status_code=303)
+    summary = (
+        f"{result['seen']} files seen, {result['added']} new, {result['unmatched']} unmatched, "
+        f"{result['missing']} missing; placed {movies['matched'] + episodes['matched']}"
+    )
+    return RedirectResponse(f"/ui/settings?notice=Library+scan:+{summary.replace(' ', '+')}#library", status_code=303)
+
+
 @router.post("/ui/rename/apply", dependencies=ADMIN)
 def ui_rename_apply(kind: str = Form(...), item_id: int = Form(...), db: Session = Depends(get_db)):
     try:
