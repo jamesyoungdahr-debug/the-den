@@ -27,6 +27,20 @@
   </section>
   {% endif %}
 
+  {% if continue_items %}
+<section class="holt-section">
+  <div class="holt-rail-head"><div class="holt-eyebrow">Continue watching</div><div class="holt-meta">{{ continue_items|length }} in progress</div></div>
+  <div class="holt-rail">{% for item in continue_items %}
+<a class="holt-card" href="{{ item.href }}" style="color:inherit">
+  <div class="holt-poster">
+    {% if item.poster_path %}<img src="{{ item.poster_path|poster }}" alt="" loading="lazy">{% else %}<span class="holt-poster-letter">{{ item.title[:1] }}</span>{% endif %}
+    <span class="den-card-progress"><i style="width:{{ (item.progress * 100)|round(1) }}%"></i></span>
+  </div>
+  <div class="holt-card-title" title="{{ item.title }}">{{ item.title }}</div>
+  <div class="holt-card-meta">{{ item.subtitle }}</div>
+</a>{% endfor %}</div>
+</section>
+{% endif %}
   {{ rail("Recommended for you", recommended, "based on what you've added") }}
   {{ rail("Trending this week", rails["trending"], "movies and series", "/discover/rail/trending") }}
 

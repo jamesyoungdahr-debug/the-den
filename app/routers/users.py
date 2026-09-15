@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app import auth, device_tokens
+from app import auth, device_tokens, playback
 from app import settings as settings_module
 from app.deps import get_db
 from app.models import User
@@ -41,6 +41,7 @@ def _delete_user(db: Session, user: User) -> None:
     """SQLite doesn't cascade, so the user's device tokens go first; a reused id must never
     inherit someone else's signed-in devices."""
     device_tokens.revoke_all(db, user.id)
+    playback.forget_user(db, user.id)
     db.delete(user)
     db.commit()
 

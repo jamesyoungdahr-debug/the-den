@@ -13,7 +13,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
 from app import health
-from app import auth, plex_scan, requests_service, tmdb, tvmaze
+from app import auth, playback, plex_scan, requests_service, tmdb, tvmaze
 from app import history
 from app import settings as settings_module
 from app.deps import get_db
@@ -152,10 +152,13 @@ async def discover_home(request: Request, db: Session = Depends(get_db)):
         "downloading": db.query(DownloadRecord).filter(DownloadRecord.status.notin_(["imported", "failed"])).count(),
         "plex": len(idx.plex_movies) + len(idx.plex_tv),
     }
+    user = getattr(request.state, "user", None)
+    continue_items = playback.continue_watching(db, user.id, 12) if user else []
     return templates.TemplateResponse(
         "discover.html",
         {
             "request": request, "rails": rails, "errors": errors, "hero": hero, "recommended": recommended,
+            "continue_items": continue_items,
             "stats": stats, "has_key": bool(api_key), "active_nav": "discover", "movie_rails": movie_rails, "tv_rails": tv_rails,
         },
     )

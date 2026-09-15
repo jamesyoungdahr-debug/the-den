@@ -133,6 +133,21 @@ CURRENT PLAN (2026-09-14): docs/port-40204-release-plan.md -- move the KDE clien
   (3) QtMultimedia or libmpv for the KDE player, (4) the hardware target for transcoding. Subagents researched;
   the 4090 wrote the document sections. Next: Liam's decisions, then P0 (ffprobe scanning, playback state, signed
   stream URLs, ffmpeg job manager).
+  M49 MEDIA PHASE 1 2026-09-15 (the-den 0.8.2a; committed locally, NOT pushed or tagged): direct play in the web UI,
+  at Liam's request ("Lets work on Phase 1"). Plan docs/media-phase1-plan.md. New: app/media_probe.py,
+  app/playability.py, app/media_stream.py (Claude, security), app/subtitle_tracks.py, app/playback.py,
+  app/routers/play.py, templates/watch.html, static/player.js and migration 4d9e2a7c1b35 (media_probes,
+  playback_states); Play and Resume buttons with watched state on the Movies and series pages, Continue watching on
+  Discover; PKGBUILD depends on ffmpeg. Signed stream URLs and the ffmpeg job manager moved to P4 and P2, when the
+  first player without cookies and the first transcode need them. Tests: test_media_pure.py, test_media_db.py,
+  live_media.py 60/60, live_media_browser.py 19/19 (headless Chromium through Playwright in WSL, the test token sent
+  as a header, never typed) and vm_media_check.py 33/33 in holtos-test with ffmpeg 9.0.1 (Liam approved through the
+  HoltOS session, which started the VM; ~/m49-vm was removed afterwards). WSL has no ffmpeg, so the live test uses a
+  fake ffprobe and a VP8 clip made from HoltOS wallpaper JPEGs with Playwright's bundled ffmpeg (no pipe protocol,
+  no rawvideo input). DeepSeek: Flash critiqued the unit split (1 call, 1.3K prompt, 3.3K completion tokens); Pro
+  reviewed app/media_stream.py (1 call, 2.5K prompt, 17.9K completion tokens) and found two issues, both fixed. The
+  HoltOS session added ffmpeg to archiso/packages.x86_64. Next: Liam's decisions from docs/media-server-plan.md
+  (licence, casting and certificates, KDE player, hardware target), then P2 transcoding.
 
 Work no longer happens on the Windows machine (C:\projects, WSL Ubuntu). The three repos were cloned fresh from
 GitHub into /home/liam/Projects/theden/the-den, the-den-client and the-den-android on Liam's HoltOS 0.0.4-alpha

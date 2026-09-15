@@ -7,7 +7,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
 from app import indexers as indexer_engine
-from app import auth, config, library_service
+from app import auth, config, library_service, playback
 from app import backup, renamer
 from app import settings as settings_module
 from app import tmdb, torznab, tvmaze
@@ -137,6 +137,7 @@ async def library(request: Request, q: str | None = None, filter: str = "all", d
         {
             "request": request, "movies": movies, "counts": counts, "filter": filter,
             "downloading_ids": downloading_ids, "library_tmdb_ids": {m["tmdb_id"] for m in all_movies if m["tmdb_id"]},
+            "movie_states": playback.states_for(db, request.state.user.id, "movie", [m["id"] for m in movies if m["id"]]),
             "query": q, "candidates": candidates, "active_nav": "movies",
         },
     )
@@ -177,6 +178,7 @@ async def ui_add_movie(
 def ui_delete_movie(movie_id: int, db: Session = Depends(get_db)):
     movie = db.get(Movie, movie_id)
     if movie:
+        playback.forget_items(db, "movie", [movie.id])
         db.delete(movie)
         db.commit()
     return RedirectResponse("/library", status_code=303)
@@ -282,6 +284,7 @@ async def ui_add_series(
 def ui_delete_series(series_id: int, db: Session = Depends(get_db)):
     series = db.get(Series, series_id)
     if series:
+        playback.forget_items(db, "episode", [episode_id for (episode_id,) in db.query(Episode.id).filter(Episode.series_id == series_id)])
         db.query(Episode).filter(Episode.series_id == series_id).delete()
         db.delete(series)
         db.commit()
@@ -315,8 +318,23 @@ def ui_series_detail(series_id: int, request: Request, db: Session = Depends(get
             "request": request, "series": series, "seasons": seasons,
             "have": sum(s["have"] for s in seasons), "total": len(episodes),
             "upgradable_ids": upgradable_ids,
+            "episode_states": playback.states_for(db, request.state.user.id, "episode", [e.id for e in episodes]),
             "today": date.today().isoformat(), "active_nav": "tv",
         },
+    )
+
+
+@router.get("/watch/{kind}/{item_id}", response_class=HTMLResponse, dependencies=USER)
+def watch_page(kind: str, item_id: int, request: Request, db: Session = Depends(get_db)):
+    """M49: the web player for one movie or episode; the page fetches /api/play/{kind}/{id} itself."""
+    if kind not in ("movie", "episode"):
+        raise HTTPException(404, "Not found")
+    from app.routers.play import item_meta
+
+    meta = item_meta(db, kind, item_id)
+    return templates.TemplateResponse(
+        "watch.html",
+        {"request": request, "kind": kind, "item_id": item_id, "active_nav": "movies" if kind == "movie" else "tv", **meta},
     )
 
 

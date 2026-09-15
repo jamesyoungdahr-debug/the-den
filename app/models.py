@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import BigInteger, Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 
 from app.db import Base
 
@@ -400,3 +400,35 @@ class HistoryEvent(Base):
     series_id = Column(Integer, ForeignKey("series.id"), nullable=True)
     season_number = Column(Integer, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class MediaProbe(Base):
+    """M49: cached ffprobe summary for one library file; stale when size or mtime_ns change."""
+
+    __tablename__ = "media_probes"
+
+    id = Column(Integer, primary_key=True)
+    file_path = Column(String, nullable=False, unique=True)
+    size = Column(BigInteger, nullable=False)
+    mtime_ns = Column(BigInteger, nullable=False)
+    probed_at = Column(DateTime, nullable=False)
+    summary = Column(Text, nullable=False)  # JSON from app.media_probe.summarise
+
+
+class PlaybackState(Base):
+    """M49: where one user is in one movie or episode, and whether they've watched it."""
+
+    __tablename__ = "playback_states"
+    __table_args__ = (UniqueConstraint("user_id", "item_kind", "item_id", name="uq_playback_state_item"),)
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    item_kind = Column(String, nullable=False)  # movie | episode
+    item_id = Column(Integer, nullable=False)
+    position_ms = Column(Integer, nullable=False, default=0)
+    duration_ms = Column(Integer, nullable=False, default=0)
+    played = Column(Boolean, nullable=False, default=False)
+    play_count = Column(Integer, nullable=False, default=0)
+    last_played_at = Column(DateTime, nullable=True)
+    updated_at = Column(DateTime, nullable=False)
+    device = Column(String, nullable=True)

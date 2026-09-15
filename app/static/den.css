@@ -855,3 +855,101 @@ dialog.holt-dialog::backdrop { background: var(--holt-ambient-scrim-mid); -webki
 .den-season-chevron { color: var(--holt-ink-42); transition: transform var(--holt-dur-fast) var(--holt-ease-out); }
 .den-season[open] .den-season-chevron { transform: rotate(180deg); }
 .den-season > .holt-row-list { padding: 0 17px 17px; }
+
+/* M49: watch page and playback progress */
+
+.den-watch {
+  display: flex;
+  flex-direction: column;
+  gap: var(--holt-space-3);
+}
+
+.den-watch-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.den-player {
+  position: relative;
+  background: #000;
+  border-radius: var(--holt-radius-lg);
+  overflow: hidden;
+}
+
+.den-video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  max-height: 78vh;
+  background: #000;
+}
+
+.den-player-message {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  text-align: center;
+  background: rgba(0,0,0,.78);
+  color: #fff;
+}
+
+.den-player-message .holt-body {
+  color: rgba(255,255,255,.85);
+}
+
+.den-player-float {
+  position: absolute;
+  right: 16px;
+  bottom: 72px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  max-width: calc(100% - 32px);
+  flex-wrap: wrap;
+}
+
+.den-watch-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.den-watch-notes ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.den-watch [hidden] {
+  display: none !important;
+}
+
+.den-card-progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: rgba(0,0,0,.45);
+}
+
+.den-card-progress i {
+  display: block;
+  height: 100%;
+  background: var(--holt-current);
+}
+
+@media (max-width: 640px) {
+  .den-player-float {
+    left: 8px;
+    right: 8px;
+    bottom: 56px;
+  }
+}

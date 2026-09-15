@@ -58,6 +58,7 @@
   <div class="holt-grid">
     {% for m in movies %}
     <div class="holt-card">
+      {% set st = (movie_states or {}).get(m.id) if m.id else none %}
       {% set href = ('/discover/movie/' ~ m.tmdb_id) if m.tmdb_id else '' %}
       <{{ 'a' if href else 'div' }} class="holt-poster"{% if href %} href="{{ href }}"{% endif %}>
         {% if m.poster_path %}<img src="{{ m.poster_path|poster }}" alt="" loading="lazy">{% else %}<span class="holt-poster-letter">{{ m.title[:1] }}</span>{% endif %}
@@ -67,8 +68,15 @@
         {% elif m.has_file %}<span class="holt-badge holt-badge-solid holt-badge-available"><span class="dot"></span>have{% if m.on_plex %} · Plex{% endif %}</span>
         {% elif m.on_plex %}<span class="holt-badge holt-badge-solid holt-badge-available"><span class="dot"></span>on Plex · wanted</span>
         {% else %}<span class="holt-badge holt-badge-solid holt-badge-missing"><span class="dot"></span>missing</span>{% endif %}
+        {% if st and st.position_ms and st.duration_ms %}<span class="den-card-progress"><i style="width:{{ (st.position_ms / st.duration_ms * 100)|round(1) }}%"></i></span>{% endif %}
+        {% if m.id and m.has_file and not is_admin %}
+        <div class="holt-poster-actions">
+          <form method="get" action="/watch/movie/{{ m.id }}"><button type="submit" class="holt-btn holt-btn-primary holt-btn-sm">{{ 'Resume' if st and st.position_ms else 'Play' }}</button></form>
+        </div>
+        {% endif %}
         {% if is_admin %}
         <div class="holt-poster-actions">
+          {% if m.id and m.has_file %}<form method="get" action="/watch/movie/{{ m.id }}"><button type="submit" class="holt-btn holt-btn-primary holt-btn-sm">{{ 'Resume' if st and st.position_ms else 'Play' }}</button></form>{% endif %}
           {% if m.source == 'plex' %}
             {% if m.tmdb_id %}
             <form method="post" action="/ui/movies">
@@ -88,7 +96,7 @@
         {% endif %}
       </{{ 'a' if href else 'div' }}>
       <div class="holt-card-title" title="{{ m.title }}">{{ m.title }}</div>
-      <div class="holt-card-meta">{{ m.year or "-" }}{% if m.downloading %} · downloading{% elif m.source == 'plex' %} · Plex only{% elif m.on_plex %} · Den + Plex{% endif %}</div>
+      <div class="holt-card-meta">{{ m.year or "-" }}{% if m.downloading %} · downloading{% elif m.source == 'plex' %} · Plex only{% elif m.on_plex %} · Den + Plex{% endif %}{% if st and st.played %} · watched{% endif %}</div>
     </div>
     {% endfor %}
   </div>

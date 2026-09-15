@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app import auth
+from app import auth, playback
 from app import settings as settings_module
 from app import tmdb
 from app.candidates import movie_query, profile_for, scored_candidates
@@ -61,6 +61,7 @@ def delete_movie(movie_id: int, db: Session = Depends(get_db)):
             DownloadRecord.movie_id == movie_id,
             DownloadRecord.status.notin_(["imported", "failed"]),
         ).update({"status": "failed"})
+        playback.forget_items(db, "movie", [movie.id])
         db.delete(movie)
         db.commit()
 

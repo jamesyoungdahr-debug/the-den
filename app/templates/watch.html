@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title_suffix %} — {{ title }}{% endblock %}
+{% block extra_head %}<script src="/static/player.js?v={{ static_v }}" defer></script>{% endblock %}
+{% block content %}
+  <div class="den-watch" data-info-url="/api/play/{{ kind }}/{{ item_id }}">
+    <div class="den-watch-head">
+      <a class="holt-btn holt-btn-quiet holt-btn-sm" href="{{ back_href }}">Back</a>
+      <div>
+        {% if subtitle %}<div class="holt-eyebrow">{{ subtitle }}</div>{% endif %}
+        <h1 class="holt-page-title">{{ title }}</h1>
+      </div>
+    </div>
+    <div class="den-player">
+      <video class="den-video" controls preload="metadata" playsinline></video>
+      <div class="den-player-message" data-message hidden>
+        <div class="holt-empty-title" data-message-title></div>
+        <div class="holt-body" data-message-body></div>
+        <button type="button" class="holt-btn holt-btn-secondary holt-btn-sm" data-try-anyway hidden>Try anyway</button>
+      </div>
+      <div class="den-player-float holt-glass-float" data-resume-box hidden>
+        <span class="holt-body">Resume from <span data-resume-time></span>?</span>
+        <button type="button" class="holt-btn holt-btn-primary holt-btn-sm" data-resume>Resume</button>
+        <button type="button" class="holt-btn holt-btn-secondary holt-btn-sm" data-start-over>Start over</button>
+      </div>
+      <div class="den-player-float holt-glass-float" data-next-box hidden>
+        <span class="holt-body">Up next: <span data-next-label></span></span>
+        <a class="holt-btn holt-btn-primary holt-btn-sm" data-next-link href="#">Play next</a>
+      </div>
+    </div>
+    <div class="den-watch-meta">
+      <button type="button" class="holt-btn holt-btn-secondary holt-btn-sm" data-toggle-watched hidden>Mark as watched</button>
+      <div class="holt-meta" data-tech></div>
+    </div>
+    <div class="den-watch-notes holt-panel" data-notes hidden>
+      <div class="holt-eyebrow">Playback notes</div>
+      <ul class="holt-body" data-notes-list></ul>
+    </div>
+  </div>
+{% endblock %}
