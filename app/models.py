@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import BigInteger, Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import BigInteger, Boolean, CheckConstraint, Column, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 
 from app.db import Base
 
@@ -127,6 +127,7 @@ class Settings(Base):
     plex_allow_any_account = Column(Boolean, nullable=True)
     plex_scan_interval_minutes = Column(Integer, nullable=True)
     import_list_interval_minutes = Column(Integer, nullable=True)
+    library_scan_interval_minutes = Column(Integer, nullable=True)  # M50a: how often the library folders are rescanned
     opensubtitles_api_key = Column(String, nullable=True)
     subtitle_languages = Column(String, nullable=True)  # comma-separated language codes, e.g. "en,es"
     sabnzbd_url = Column(String, nullable=True)
@@ -432,3 +433,27 @@ class PlaybackState(Base):
     last_played_at = Column(DateTime, nullable=True)
     updated_at = Column(DateTime, nullable=False)
     device = Column(String, nullable=True)
+
+
+class MediaFile(Base):
+    """M50a: one video file on disk in a library folder. A title can have several (say a
+    1080p and a 2160p copy), so files live here rather than in Movie.file_path. A row with
+    both owner columns NULL is a file the scan saw but could not match to a title yet."""
+
+    __tablename__ = "media_files"
+    __table_args__ = (CheckConstraint("movie_id IS NULL OR episode_id IS NULL", name="ck_media_files_one_owner"),)
+
+    id = Column(Integer, primary_key=True)
+    media_type = Column(String, nullable=False)  # movie | tv
+    movie_id = Column(Integer, ForeignKey("movies.id", ondelete="CASCADE"), nullable=True, index=True)
+    episode_id = Column(Integer, ForeignKey("episodes.id", ondelete="CASCADE"), nullable=True, index=True)
+    root_folder_id = Column(Integer, ForeignKey("root_folders.id", ondelete="SET NULL"), nullable=True)
+    path = Column(String, nullable=False, unique=True)  # real path, symlinks resolved
+    size = Column(BigInteger, nullable=True)  # filled by the scan; null until then
+    mtime_ns = Column(BigInteger, nullable=True)
+    quality = Column(String, nullable=True)  # app.parser.parse_quality on the file name
+    score = Column(Integer, nullable=False, default=0)
+    matched = Column(Boolean, nullable=False, default=False)  # False: seen but tied to no title
+    missing = Column(Boolean, nullable=False, default=False)  # was seen, then vanished from disk
+    added_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+    last_seen_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))

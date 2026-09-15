@@ -3,7 +3,7 @@ import json
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app import auth, automation, blocklist, importer, root_folders, settings as settings_module
+from app import auth, automation, blocklist, importer, library_scan, root_folders, settings as settings_module
 from app.deps import get_db
 from app.download_check import check_and_import, fail_download
 from app.models import DownloadRecord, BlocklistEntry, Episode, Movie, Series
@@ -144,6 +144,7 @@ def assign_download(download_id: int, body: AssignBody, db: Session = Depends(ge
         movie.file_quality = record.quality
         movie.file_score = record.score or 0
         movie.file_path = str(dest)
+        library_scan.record_imported(db, dest, "movie", movie_id=movie.id)
         record.movie_id = movie.id
     elif body.kind == "episode":
         episode = db.get(Episode, body.id)
@@ -158,6 +159,7 @@ def assign_download(download_id: int, body: AssignBody, db: Session = Depends(ge
         episode.file_quality = record.quality
         episode.file_score = record.score or 0
         episode.file_path = str(dest)
+        library_scan.record_imported(db, dest, "tv", episode_id=episode.id)
         record.episode_id = episode.id
     else:
         raise HTTPException(400, "kind must be 'movie' or 'episode'")

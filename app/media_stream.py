@@ -1,7 +1,8 @@
 """M49: the one place library files are opened for playback.
 
 Security-sensitive (written by Claude). Every route that sends library bytes goes through here:
-  * an item id is resolved to the path the importer stored, never a path from the request;
+  * an item id is resolved to the media_files rows the scan recorded for it, never a path
+    from the request; a requested file id must belong to that item or it is refused;
   * the real path (symlinks resolved) must sit inside a configured library folder, compared by
     whole path components, and no configured folders means nothing plays;
   * only video extensions are served, the file must be a regular file, and it is checked again
@@ -31,7 +32,7 @@ from starlette.responses import Response, StreamingResponse
 
 from app import config
 from app import settings as settings_module
-from app.models import Episode, Movie, RootFolder
+from app.models import Episode, MediaFile, Movie, RootFolder
 
 log = logging.getLogger(__name__)
 
@@ -64,6 +65,7 @@ class LibraryFile:
     content_type: str
     device: int = -1  # st_dev and st_ino when checked: the file opened later must be the same one
     inode: int = -1
+    file_id: int | None = None  # the media_files row this path came from
 
 
 # ---- which folders may be served ------------------------------------------------------
@@ -107,15 +109,9 @@ def _not_found(kind: str, item_id: int, why: str) -> HTTPException:
     return HTTPException(404, "No playable file for this item")
 
 
-def resolve_item_file(db: Session, kind: str, item_id: int) -> LibraryFile:
-    if kind not in KINDS:
-        raise HTTPException(404, "Unknown item kind")
-    item = db.get(Movie if kind == "movie" else Episode, item_id)
-    if item is None:
-        raise HTTPException(404, "Item not found")
-    raw = item.file_path
-    if not item.has_file or not raw:
-        raise HTTPException(404, "No file for this item")
+def _checked_file(db: Session, kind: str, item_id: int, raw: str, file_id: int | None = None) -> LibraryFile:
+    """Every check a served path must pass, unchanged from M49. The media_files lookup only
+    decides WHICH path is checked; it never decides whether these checks run."""
     if not os.path.isabs(raw):
         raise _not_found(kind, item_id, "stored path is not absolute")
     real = os.path.realpath(raw)
@@ -133,7 +129,49 @@ def resolve_item_file(db: Session, kind: str, item_id: int) -> LibraryFile:
         raise _not_found(kind, item_id, "file is missing")
     if not stat.S_ISREG(st.st_mode):
         raise _not_found(kind, item_id, "not a regular file")
-    return LibraryFile(kind=kind, item_id=item_id, path=real, content_type=content_type, device=st.st_dev, inode=st.st_ino)
+    return LibraryFile(kind=kind, item_id=item_id, path=real, content_type=content_type, device=st.st_dev, inode=st.st_ino, file_id=file_id)
+
+
+def item_files(db: Session, kind: str, item_id: int) -> list[MediaFile]:
+    """This item's playable media_files rows, best first. Rows the scan marked missing are
+    left out, so a file that has gone from disk is never chosen."""
+    query = db.query(MediaFile).filter(MediaFile.missing.is_(False))
+    query = query.filter(MediaFile.movie_id == item_id) if kind == "movie" else query.filter(MediaFile.episode_id == item_id)
+    # Highest score, then biggest file, then lowest id: a stable pick with no randomness.
+    return sorted(query.all(), key=lambda row: (-(row.score or 0), -(row.size or 0), row.id))
+
+
+def resolve_item_file(db: Session, kind: str, item_id: int, file_id: int | None = None) -> LibraryFile:
+    """The file to serve for one movie or episode.
+
+    An item id is resolved to the rows the scan recorded for it, never to a path from the
+    request. With no file_id the best row wins. A file_id that belongs to a DIFFERENT item is
+    refused rather than quietly falling back, so a caller cannot reach another title's file."""
+    if kind not in KINDS:
+        raise HTTPException(404, "Unknown item kind")
+    item = db.get(Movie if kind == "movie" else Episode, item_id)
+    if item is None:
+        raise HTTPException(404, "Item not found")
+    rows = item_files(db, kind, item_id)
+    if not rows:
+        raise HTTPException(404, "No file for this item")
+    if file_id is None:
+        chosen = rows[0]
+    else:
+        chosen = next((row for row in rows if row.id == file_id), None)
+        if chosen is None:
+            # No such row, or one that belongs to another title. Both are a refusal.
+            raise _not_found(kind, item_id, "requested file does not belong to this item")
+    return _checked_file(db, kind, item_id, chosen.path, chosen.id)
+
+
+def file_choices(db: Session, kind: str, item_id: int) -> list[dict]:
+    """The files a caller may choose between: id, file name, quality and size. The full path
+    is deliberately left out, so the API never hands out the library layout."""
+    return [
+        {"id": row.id, "name": os.path.basename(row.path), "quality": row.quality or "", "size": row.size or 0}
+        for row in item_files(db, kind, item_id)
+    ]
 
 
 # ---- subtitle sidecars ---------------------------------------------------------------

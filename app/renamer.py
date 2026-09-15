@@ -5,13 +5,14 @@ only -- existing folder structure is left alone."""
 
 from __future__ import annotations
 
+import os
 import shutil
 from pathlib import Path
 
 from sqlalchemy.orm import Session
 
 from app.importer import episode_name, movie_name
-from app.models import Episode, Movie, Series
+from app.models import Episode, MediaFile, Movie, Series
 
 
 def movie_plan(movie: Movie) -> dict | None:
@@ -66,6 +67,20 @@ def _move(current: Path, proposed: Path) -> None:
         current.unlink()
 
 
+def _move_media_file(db: Session, current_path: str, proposed_path: str) -> None:
+    """Keep media_files in step with a rename (M50a). Playback resolves media_files rows, so a
+    path left stale here would 404 until the next scan. Paths are compared resolved, the way
+    the scan stores them. When a row already sits at the new path the old one is dropped
+    rather than updated, because media_files.path is unique."""
+    stale = db.query(MediaFile).filter(MediaFile.path == os.path.realpath(current_path)).one_or_none()
+    if stale is None:
+        return
+    if db.query(MediaFile).filter(MediaFile.path == os.path.realpath(proposed_path)).one_or_none() is not None:
+        db.delete(stale)
+        return
+    stale.path = os.path.realpath(proposed_path)
+
+
 def apply_plan(db: Session, kind: str, item_id: int) -> dict:
     """Apply one rename and update the title's file_path. Raises ValueError if there's
     nothing to rename, FileNotFoundError/OSError if the move itself fails."""
@@ -76,6 +91,7 @@ def apply_plan(db: Session, kind: str, item_id: int) -> dict:
             raise ValueError("Nothing to rename")
         _move(Path(plan["current_path"]), Path(plan["proposed_path"]))
         movie.file_path = plan["proposed_path"]
+        _move_media_file(db, plan["current_path"], plan["proposed_path"])
         db.commit()
         return plan
     if kind == "episode":
@@ -86,6 +102,7 @@ def apply_plan(db: Session, kind: str, item_id: int) -> dict:
             raise ValueError("Nothing to rename")
         _move(Path(plan["current_path"]), Path(plan["proposed_path"]))
         episode.file_path = plan["proposed_path"]
+        _move_media_file(db, plan["current_path"], plan["proposed_path"])
         db.commit()
         return plan
     raise ValueError("kind must be 'movie' or 'episode'")

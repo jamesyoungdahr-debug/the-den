@@ -67,6 +67,9 @@ SABNZBD_URL = os.environ.get("SABNZBD_URL", "")
 SABNZBD_API_KEY = os.environ.get("SABNZBD_API_KEY", "")
 PLEX_SCAN_INTERVAL_MINUTES = int(os.environ.get("PLEX_SCAN_INTERVAL_MINUTES", "30"))
 
+# M50a: how often The Den walks its own library folders (app/library_scan.py).
+LIBRARY_SCAN_INTERVAL_MINUTES = int(os.environ.get("LIBRARY_SCAN_INTERVAL_MINUTES", "60"))
+
 # Request quotas for non-admin users (M11g); 0 = unlimited. Overridable in Settings and per user.
 REQUEST_MOVIE_LIMIT = int(os.environ.get("REQUEST_MOVIE_LIMIT", "10"))
 REQUEST_SERIES_LIMIT = int(os.environ.get("REQUEST_SERIES_LIMIT", "5"))

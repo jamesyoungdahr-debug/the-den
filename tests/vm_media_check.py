@@ -5,6 +5,7 @@ Run on a machine with ffmpeg and ffprobe on PATH (the holtos-test VM), from the 
 Offline: the test media come from ffmpeg's own lavfi sources. Everything lives in a temporary folder that is removed at the end."""
 
 import os, re, subprocess, sys, tempfile, shutil, time
+from datetime import datetime, timezone
 
 REPO = os.getcwd()
 sys.path.insert(0, REPO)
@@ -20,7 +21,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from app.db import Base
 from app import media_probe, media_stream, playability, subtitle_tracks
-from app.models import MediaProbe, Movie, RootFolder
+from app.models import MediaFile, MediaProbe, Movie, RootFolder
 
 
 failures = []
@@ -126,6 +127,17 @@ def main():
         hevc_movie = Movie(tmdb_id=3, title="Hevc", has_file=True, file_path=HEVC, file_score=0)
         db.add(hevc_movie)
 
+    db.commit()
+
+    # M50a: playback resolves media_files rows, so record what the scan would have found.
+    stamp = datetime.now(timezone.utc)
+    files = [
+        MediaFile(media_type="movie", movie_id=mp4_movie.id, path=MP4, matched=True, added_at=stamp, last_seen_at=stamp),
+        MediaFile(media_type="movie", movie_id=mkv_movie.id, path=MKV, matched=True, added_at=stamp, last_seen_at=stamp),
+    ]
+    if hevc_movie is not None:
+        files.append(MediaFile(media_type="movie", movie_id=hevc_movie.id, path=HEVC, matched=True, added_at=stamp, last_seen_at=stamp))
+    db.add_all(files)
     db.commit()
 
     # Step 4: MP4 checks

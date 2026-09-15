@@ -1,5 +1,6 @@
 """M49 checks with a temporary database and folders: the library path guard, sidecars, byte ranges and playback state rules. Linux only (uses symlinks). Run from the repo root."""
 import os, sys, tempfile, shutil
+from datetime import datetime, timezone
 
 TMP = tempfile.mkdtemp(prefix="den-m49-")
 os.environ["STATE_DIR"] = os.path.join(TMP, "state")
@@ -18,7 +19,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from app.db import Base
 from app import media_stream, playback
-from app.models import Episode, Movie, PlaybackState, RootFolder, Series
+from app.models import Episode, MediaFile, Movie, PlaybackState, RootFolder, Series
 
 engine = create_engine("sqlite://")
 Base.metadata.create_all(engine)
@@ -68,7 +69,7 @@ check("is_inside OUT/a.mkv", media_stream.is_inside(os.path.join(OUT, "a.mkv"), 
 check("is_inside ROOT/../outside/a.mkv", media_stream.is_inside(os.path.join(ROOT, "..", "outside", "a.mkv"), [os.path.realpath(ROOT)]), False)
 
 # =============================================================================
-# Section 2: resolve_item_file
+# Section 2: resolve_item_file (M50a: the resolver reads media_files rows)
 # =============================================================================
 
 film_dir = os.path.join(ROOT, "Film (2020)")
@@ -86,8 +87,9 @@ write(notes_path)
 # Create symlink that escapes the library
 os.symlink(escape_path, link_path)
 
-# Create movies in DB
-m_ok = Movie(tmdb_id=1, file_path=film_path, has_file=True, title="T1")
+# Create movies in DB. m_ok deliberately carries a STALE legacy file_path: M50a made the
+# media_files rows authoritative, so an outdated file_path must no longer be served.
+m_ok = Movie(tmdb_id=1, file_path=os.path.join(ROOT, "Stale.mkv"), has_file=True, title="T1")
 m_out = Movie(tmdb_id=2, file_path=escape_path, has_file=True, title="T2")
 m_rel = Movie(tmdb_id=3, file_path="relative/Film.mkv", has_file=True, title="T3")
 m_txt = Movie(tmdb_id=4, file_path=notes_path, has_file=True, title="T4")
@@ -98,6 +100,26 @@ m_missing = Movie(tmdb_id=7, file_path=os.path.join(ROOT, "Gone.mkv"), has_file=
 for m in [m_ok, m_out, m_rel, m_txt, m_nofile, m_link, m_missing]:
     db.add(m)
 db.commit()
+
+
+def add_file(movie, path, score=0, missing=False):
+    """The media_files row the M50a scan would have recorded for this movie."""
+    row = MediaFile(
+        media_type="movie", movie_id=movie.id, path=path, matched=True, missing=missing, score=score,
+        added_at=datetime.now(timezone.utc), last_seen_at=datetime.now(timezone.utc),
+    )
+    db.add(row)
+    db.commit()
+    return row
+
+
+f_ok = add_file(m_ok, film_path)
+f_out = add_file(m_out, escape_path)
+f_rel = add_file(m_rel, "relative/Film.mkv")
+f_txt = add_file(m_txt, notes_path)
+# m_nofile gets no row at all: the scan records files, and this movie has none.
+f_link = add_file(m_link, link_path)
+f_missing = add_file(m_missing, os.path.join(ROOT, "Gone.mkv"))
 
 # First: no RootFolder rows -> nothing plays
 check("resolve m_ok with no RootFolders", status_of(lambda: media_stream.resolve_item_file(db, "movie", m_ok.id)), 404)
@@ -110,15 +132,40 @@ db.commit()
 lf_ok = media_stream.resolve_item_file(db, "movie", m_ok.id)
 check("resolve m_ok path == realpath", lf_ok.path, os.path.realpath(film_path))
 check("resolve m_ok content_type", lf_ok.content_type, "video/x-matroska")
+check("resolve ignores the stale Movie.file_path", lf_ok.path != os.path.realpath(m_ok.file_path), True)
+check("resolve reports the media_files row id", lf_ok.file_id, f_ok.id)
 
 check("resolve m_out (outside)", status_of(lambda: media_stream.resolve_item_file(db, "movie", m_out.id)), 404)
 check("resolve m_rel (relative path)", status_of(lambda: media_stream.resolve_item_file(db, "movie", m_rel.id)), 404)
 check("resolve m_txt (.txt not video)", status_of(lambda: media_stream.resolve_item_file(db, "movie", m_txt.id)), 404)
-check("resolve m_nofile (has_file False)", status_of(lambda: media_stream.resolve_item_file(db, "movie", m_nofile.id)), 404)
+check("resolve m_nofile (no media_files row)", status_of(lambda: media_stream.resolve_item_file(db, "movie", m_nofile.id)), 404)
 check("resolve m_link (symlink escape)", status_of(lambda: media_stream.resolve_item_file(db, "movie", m_link.id)), 404)
 check("resolve m_missing (file gone)", status_of(lambda: media_stream.resolve_item_file(db, "movie", m_missing.id)), 404)
 check("resolve kind series", status_of(lambda: media_stream.resolve_item_file(db, "series", m_ok.id)), 404)
 check("resolve unknown id 9999", status_of(lambda: media_stream.resolve_item_file(db, "movie", 9999)), 404)
+
+# M50a: a title may hold several files. The best row wins unless one is named by id, and a
+# file id belonging to another title is refused rather than silently swapped for a default.
+m_multi = Movie(tmdb_id=8, has_file=True, title="T8")
+m_flagged = Movie(tmdb_id=9, has_file=True, title="T9")
+db.add(m_multi)
+db.add(m_flagged)
+db.commit()
+
+low_path = os.path.join(ROOT, "Multi", "Multi 1080p.mkv")
+high_path = os.path.join(ROOT, "Multi", "Multi 2160p.mkv")
+flagged_path = os.path.join(ROOT, "Multi", "Flagged.mkv")
+for p in (low_path, high_path, flagged_path):
+    write(p)
+f_low = add_file(m_multi, low_path, score=0)
+f_high = add_file(m_multi, high_path, score=50)
+add_file(m_flagged, flagged_path, missing=True)
+
+check("resolve multi picks the highest score", media_stream.resolve_item_file(db, "movie", m_multi.id).path, os.path.realpath(high_path))
+check("resolve multi honours an explicit file_id", media_stream.resolve_item_file(db, "movie", m_multi.id, f_low.id).path, os.path.realpath(low_path))
+check("resolve file_id of another item is refused", status_of(lambda: media_stream.resolve_item_file(db, "movie", m_multi.id, f_ok.id)), 404)
+check("resolve unknown file_id is refused", status_of(lambda: media_stream.resolve_item_file(db, "movie", m_multi.id, 999999)), 404)
+check("resolve skips a row marked missing", status_of(lambda: media_stream.resolve_item_file(db, "movie", m_flagged.id)), 404)
 
 # =============================================================================
 # Section 3: sidecars

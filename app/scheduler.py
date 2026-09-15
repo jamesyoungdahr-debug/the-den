@@ -2,13 +2,14 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 import logging
 
-from app import automation, import_lists as import_lists_service, plex_scan, remote_access, settings as settings_module
+from app import automation, import_lists as import_lists_service, library_scan, plex_scan, remote_access, settings as settings_module
 from app.db import SessionLocal
 
 scheduler = AsyncIOScheduler()
 JOB_ID = "automation_cycle"
 PLEX_JOB_ID = "plex_scan"
 IMPORT_LISTS_JOB_ID = "import_lists_sync"
+LIBRARY_SCAN_JOB_ID = "library_scan"
 REMOTE_ACCESS_JOB_ID = "remote_access_check"
 log = logging.getLogger(__name__)
 
@@ -45,6 +46,19 @@ async def _import_lists_job() -> None:
         db.close()
 
 
+async def _library_scan_job() -> None:
+    """M50a: walk the library folders and reconcile media_files with what is on disk."""
+    db = SessionLocal()
+    try:
+        library_scan.scan(db)
+        db.commit()
+    except Exception:
+        db.rollback()
+        log.warning("scheduled library scan failed", exc_info=True)
+    finally:
+        db.close()
+
+
 async def _remote_access_job():
     """Re-check the remote access guard and the router mapping, then test NAT loopback once mapped (M36)."""
     from app import remote_access, setup_state
@@ -63,11 +77,13 @@ def start() -> None:
     try:
         s = settings_module.effective(db)
         interval, plex_minutes, import_list_minutes = s.automation_interval_seconds, s.plex_scan_interval_minutes, s.import_list_interval_minutes
+        library_minutes = s.library_scan_interval_minutes
     finally:
         db.close()
     scheduler.add_job(_job, "interval", seconds=interval, id=JOB_ID)
     scheduler.add_job(_plex_job, "interval", minutes=plex_minutes, id=PLEX_JOB_ID)
     scheduler.add_job(_import_lists_job, "interval", minutes=import_list_minutes, id=IMPORT_LISTS_JOB_ID)
+    scheduler.add_job(_library_scan_job, "interval", minutes=library_minutes, id=LIBRARY_SCAN_JOB_ID)
     scheduler.add_job(_remote_access_job, "interval", minutes=10, id=REMOTE_ACCESS_JOB_ID)
     scheduler.start()
 
@@ -83,6 +99,10 @@ def reschedule_plex(minutes: int) -> None:
 
 def reschedule_import_lists(minutes: int) -> None:
     scheduler.reschedule_job(IMPORT_LISTS_JOB_ID, trigger="interval", minutes=minutes)
+
+
+def reschedule_library_scan(minutes: int) -> None:
+    scheduler.reschedule_job(LIBRARY_SCAN_JOB_ID, trigger="interval", minutes=minutes)
 
 
 def stop() -> None:

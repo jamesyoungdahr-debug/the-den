@@ -39,7 +39,12 @@
           <div class="holt-field"><label>Movies library folder</label><input type="text" name="movies_root" value="{{ s.movies_root }}"></div>
           <div class="holt-field"><label>TV library folder</label><input type="text" name="tv_root" value="{{ s.tv_root }}"></div>
         </div>
-        <div class="holt-meta" style="margin-top: var(--holt-space-2)"><a href="/ui/rename">Rename existing files</a> to match the current naming convention.</div>
+        <div class="holt-field">
+          <label>Rescan the library every (minutes)</label>
+          <input type="number" name="library_scan_interval_minutes" value="{{ s.library_scan_interval_minutes }}" min="5">
+          <div class="holt-meta">How often The Den walks its library folders and records every file it finds. Applied immediately.</div>
+        </div>
+        <div class="holt-meta" style="margin-top: var(--holt-space-2)"><a href="/ui/rename">Rename existing files</a> to match the current naming convention. <a href="/ui/library/files">Library files</a> shows every file the scan has recorded.</div>
       </section>
 
       <section class="holt-panel" id="torrent">

@@ -139,3 +139,40 @@ def parse_season_pack(release_title: str) -> int | None:
     if not m:
         return None
     return int(m.group(1) if m.group(1) is not None else m.group(2))
+
+
+_MOVIE_YEAR_PAREN_RE = re.compile(r"[\(\[]((?:19|20)\d{2})[\)\]]")
+_MOVIE_YEAR_BARE_RE = re.compile(r"(?:^|[\s._-])((?:19|20)\d{2})(?:[\s._-]|$)")
+
+
+def parse_movie(name: str) -> tuple[str, int | None] | None:
+    """(title, year) from a library movie file or folder name, year None when the name
+    carries none. Returns None when no usable title is left.
+
+    A year in brackets wins over a bare one, so a number inside the title survives:
+      "The Matrix (1999).mkv"        -> ("The Matrix", 1999)
+      "Blade Runner 2049 (2017).mkv" -> ("Blade Runner 2049", 2017)
+      "The Matrix.1999.1080p.mkv"    -> ("The Matrix", 1999)
+      "The Matrix.mkv"               -> ("The Matrix", None)
+    Dots and underscores in the title become spaces."""
+    stem = re.sub(r"\.[A-Za-z0-9]{2,4}$", "", name or "")
+    if not stem:
+        return None
+    match = _MOVIE_YEAR_PAREN_RE.search(stem)
+    if match:
+        year = int(match.group(1))
+        title = stem[: match.start()]
+    else:
+        match = _MOVIE_YEAR_BARE_RE.search(stem)
+        if match:
+            year = int(match.group(1))
+            title = stem[: match.start()]
+        else:
+            year = None
+            title = stem
+    title = re.sub(r"[._]+", " ", title)
+    title = re.sub(r"\s+", " ", title).strip(" -")
+    if not title:
+        return None
+    return title, year
+

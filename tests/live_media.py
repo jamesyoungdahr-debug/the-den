@@ -193,10 +193,12 @@ esac
     os.environ["DATABASE_URL"] = DB_URL
     os.environ["STATE_DIR"] = STATE
 
+    from datetime import datetime, timezone  # noqa: E402
     from sqlalchemy import create_engine  # noqa: E402
     from sqlalchemy.orm import sessionmaker  # noqa: E402
     from app.models import (  # noqa: E402
         Episode,
+        MediaFile,
         Movie,
         PlaybackState,
         RootFolder,
@@ -243,6 +245,17 @@ esac
         file_path=e2_path, file_score=0, monitored=True,
     )
     session.add_all([e1, e2])
+    session.commit()
+
+    # M50a: playback resolves media_files rows, so record what the scan would have found.
+    stamp = datetime.now(timezone.utc)
+    session.add_all([
+        MediaFile(media_type="movie", movie_id=clip.id, path=clip_path, matched=True, added_at=stamp, last_seen_at=stamp),
+        MediaFile(media_type="movie", movie_id=old.id, path=old_path, matched=True, added_at=stamp, last_seen_at=stamp),
+        MediaFile(media_type="movie", movie_id=escape.id, path=escape_path, matched=True, added_at=stamp, last_seen_at=stamp),
+        MediaFile(media_type="tv", episode_id=e1.id, path=e1_path, matched=True, added_at=stamp, last_seen_at=stamp),
+        MediaFile(media_type="tv", episode_id=e2.id, path=e2_path, matched=True, added_at=stamp, last_seen_at=stamp),
+    ])
     session.commit()
 
     clip_id = int(clip.id)

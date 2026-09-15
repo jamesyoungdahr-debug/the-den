@@ -33,6 +33,7 @@ class EffectiveSettings:
     plex_allow_any_account: bool
     plex_scan_interval_minutes: int
     import_list_interval_minutes: int
+    library_scan_interval_minutes: int
     opensubtitles_api_key: str
     subtitle_languages: list[str]
     sabnzbd_url: str
@@ -101,6 +102,7 @@ def effective(db: Session) -> EffectiveSettings:
         plex_allow_any_account=bool(row.plex_allow_any_account),
         plex_scan_interval_minutes=_pick(row.plex_scan_interval_minutes, config.PLEX_SCAN_INTERVAL_MINUTES),
         import_list_interval_minutes=_pick(row.import_list_interval_minutes, config.IMPORT_LIST_INTERVAL_MINUTES),
+        library_scan_interval_minutes=_pick(row.library_scan_interval_minutes, config.LIBRARY_SCAN_INTERVAL_MINUTES),
         opensubtitles_api_key=_pick(row.opensubtitles_api_key, config.OPENSUBTITLES_API_KEY),
         subtitle_languages=[lang.strip() for lang in _pick(row.subtitle_languages, config.SUBTITLE_LANGUAGES).split(",") if lang.strip()],
         sabnzbd_url=_pick(row.sabnzbd_url, config.SABNZBD_URL),

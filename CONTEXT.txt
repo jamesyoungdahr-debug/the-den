@@ -5,6 +5,25 @@ the chat history. Newest entries at the top of each section. Last updated: 2026-
 
 PICK UP HERE (2026-09-13 evening: the project moved to Liam's HoltOS laptop, Linux)
 -------------------------------------------------------------------------------------------
+M50a LIBRARY SCANNER, FILES 2026-09-15 (LiamPC; committed locally, NOT pushed or tagged): the first step of replacing Plex.
+  `app/library_scan.py` walks every configured library folder (RootFolder rows plus the Settings movies/TV roots, deduplicated
+  by real path), records each video file in the new `media_files` table (migration 7b3c9d1e5f2a), matches it to its Movie or
+  Episode, and marks vanished files missing instead of deleting them. Matching is conservative: an ambiguous name is stored with
+  matched=False and both owner columns NULL for a person to place later. New `parse_movie()` in app/parser.py handles
+  "Title (Year).ext" and "Title.Year.ext"; a bracketed year beats a bare one so "Blade Runner 2049 (2017)" keeps its title.
+  A title may hold several files. PlaybackState stays per title (switching copies must not fragment progress) and MediaProbe
+  stays keyed by file path (it is a filesystem cache). app/media_stream.py now resolves playback from media_files rows instead of
+  Movie.file_path: the M49 guards were extracted unchanged into _checked_file(), the best row wins by default (highest score,
+  then largest, then lowest id), rows marked missing are never served, and a file_id naming another item's file is refused
+  rather than silently swapped. The play API reports available files and takes an optional file_id; full paths are never
+  exposed. The importer records a row at import time, the renamer keeps media_files.path in step, and rows are deleted with
+  their movie or episode. Scans run on a timer (library_scan_interval_minutes, migration 3f8a1b6c9d2e, Settings > Library) and
+  /ui/library/files lists every recorded file with unmatched and missing filters. The legacy file_path columns stay (the
+  importer writes them, the renamer and subtitles read them) but playback no longer consults them. DeepSeek Flash critiqued the
+  unit split and caught a real gap: the plan moved playback to the new table while the importer still wrote only file_path,
+  which would have made every new import unplayable until a rescan. Verified: py_compile across every touched module and a
+  single Alembic head; the M49 test suite was ported to the new model and gained file-id ownership and best-row coverage.
+  NOT run here: the offline suite and any live server (the venv is in WSL, the app deps are not on this host) - the Z13 runs them.
 CURRENT PLAN (2026-09-15): docs/plex-replacement-plan.md -- Liam's goal is to remove Plex Media Server and its apps
   and web player completely. Plex and The Den run side by side first, then Plex is switched off (M60) and its code
   removed (M61). Milestones M50 to M61 and the open questions for Liam are listed there. M49 (direct play in the web

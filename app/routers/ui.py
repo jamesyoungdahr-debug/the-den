@@ -7,7 +7,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
 from app import indexers as indexer_engine
-from app import auth, config, library_service, playback
+from app import auth, config, library_scan, library_service, playback
 from app import backup, renamer
 from app import settings as settings_module
 from app import tmdb, torznab, tvmaze
@@ -179,6 +179,7 @@ def ui_delete_movie(movie_id: int, db: Session = Depends(get_db)):
     movie = db.get(Movie, movie_id)
     if movie:
         playback.forget_items(db, "movie", [movie.id])
+        library_scan.forget_movie_files(db, [movie.id])
         db.delete(movie)
         db.commit()
     return RedirectResponse("/library", status_code=303)
@@ -285,6 +286,7 @@ def ui_delete_series(series_id: int, db: Session = Depends(get_db)):
     series = db.get(Series, series_id)
     if series:
         playback.forget_items(db, "episode", [episode_id for (episode_id,) in db.query(Episode.id).filter(Episode.series_id == series_id)])
+        library_scan.forget_episode_files(db, [episode_id for (episode_id,) in db.query(Episode.id).filter(Episode.series_id == series_id)])
         db.query(Episode).filter(Episode.series_id == series_id).delete()
         db.delete(series)
         db.commit()
@@ -693,6 +695,18 @@ def ui_import_as_is_unmatched(download_id: int, file: str = Form(...), root: str
 def ui_rename(request: Request, db: Session = Depends(get_db)):
     plans = renamer.all_plans(db)
     return templates.TemplateResponse("rename.html", {"request": request, "plans": plans, "active_nav": "settings"})
+
+
+@router.get("/ui/library/files", response_class=HTMLResponse, dependencies=ADMIN)
+def ui_library_files(request: Request, show: str = "all", db: Session = Depends(get_db)):
+    """M50a: every file the library scan has recorded, filterable by unmatched or missing."""
+    if show not in ("all", "unmatched", "missing"):
+        show = "all"
+    entries = library_scan.library_file_list(db, show)
+    return templates.TemplateResponse(
+        "library_files.html",
+        {"request": request, "entries": entries, "counts": library_scan.file_counts(db), "show": show, "active_nav": "settings"},
+    )
 
 
 @router.post("/ui/rename/apply", dependencies=ADMIN)

@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app import auth, automation, playback, tvmaze
+from app import auth, automation, library_scan, playback, tvmaze
 from app.candidates import episode_query, profile_for, scored_candidates, season_candidates
 from app.deps import get_db
 from app.grabber import grab_episode as do_grab_episode, grab_season as do_grab_season
@@ -65,6 +65,7 @@ def delete_series(series_id: int, db: Session = Depends(get_db)):
                 DownloadRecord.status.notin_(["imported", "failed"]),
             ).update({"status": "failed"})
         playback.forget_items(db, "episode", episode_ids)
+        library_scan.forget_episode_files(db, episode_ids)
         db.query(Episode).filter(Episode.series_id == series_id).delete()
         db.delete(series)
         db.commit()

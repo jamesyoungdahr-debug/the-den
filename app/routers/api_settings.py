@@ -42,6 +42,7 @@ class SettingsUpdate(BaseModel):
     plex_allow_any_account: bool | None = None
     plex_scan_interval_minutes: int | None = Field(default=None, ge=5)
     import_list_interval_minutes: int | None = Field(default=None, ge=15)
+    library_scan_interval_minutes: int | None = Field(default=None, ge=5)
     # Request quotas for non-admins (M11g); 0 = unlimited
     request_movie_limit: int | None = Field(default=None, ge=0)
     request_series_limit: int | None = Field(default=None, ge=0)
@@ -112,6 +113,7 @@ def get_settings(db: Session = Depends(get_db)):
         "plex_allow_any_account": s.plex_allow_any_account,
         "plex_scan_interval_minutes": s.plex_scan_interval_minutes,
         "import_list_interval_minutes": s.import_list_interval_minutes,
+        "library_scan_interval_minutes": s.library_scan_interval_minutes,
         "plex_last_scan_at": row.plex_last_scan_at.isoformat() if row.plex_last_scan_at else None,
         "plex_last_scan_result": row.plex_last_scan_result,
         "request_movie_limit": s.request_movie_limit,
@@ -151,6 +153,12 @@ def apply_runtime_changes(old: settings_module.EffectiveSettings, new: settings_
     if new.import_list_interval_minutes != old.import_list_interval_minutes:
         try:
             scheduler.reschedule_import_lists(new.import_list_interval_minutes)
+        except Exception:
+            pass
+
+    if new.library_scan_interval_minutes != old.library_scan_interval_minutes:
+        try:
+            scheduler.reschedule_library_scan(new.library_scan_interval_minutes)
         except Exception:
             pass
     from app import discovery
@@ -215,6 +223,8 @@ def save_settings(payload: SettingsUpdate, db: Session = Depends(get_db)):
         row.plex_scan_interval_minutes = payload.plex_scan_interval_minutes
     if payload.import_list_interval_minutes is not None:
         row.import_list_interval_minutes = payload.import_list_interval_minutes
+    if payload.library_scan_interval_minutes is not None:
+        row.library_scan_interval_minutes = payload.library_scan_interval_minutes
     if payload.flaresolverr_url is not None:
         row.flaresolverr_url = payload.flaresolverr_url.strip() or None
     if payload.subtitle_languages is not None:

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title_suffix %} — Library files{% endblock %}
+{% block content %}
+  <div class="holt-page-head">
+    <div>
+      <h1 class="holt-page-title">Library files</h1>
+      <div class="holt-meta">{{ counts.total }} recorded · {{ counts.matched }} matched to a title · {{ counts.unmatched }} unmatched · {{ counts.missing }} missing</div>
+    </div>
+    <div class="holt-toolbar"><a class="holt-chip" href="/ui/settings">‹ Settings</a></div>
+  </div>
+
+  <div class="holt-toolbar" style="margin-bottom: var(--holt-space-3)">
+    <a class="holt-chip" href="/ui/library/files?show=all">All</a>
+    <a class="holt-chip" href="/ui/library/files?show=unmatched">Unmatched</a>
+    <a class="holt-chip" href="/ui/library/files?show=missing">Missing</a>
+  </div>
+
+  {% if not entries %}
+  <div class="holt-empty holt-panel">
+    <div class="holt-empty-title">No files{% if show != "all" %} in this filter{% endif %}</div>
+    <div class="holt-body">The Den walks its library folders on a timer and records every video file it finds.</div>
+  </div>
+  {% else %}
+  <section class="holt-section">
+    <div class="holt-panel">
+      <div class="holt-row-list">
+        {% for f in entries %}
+        <div class="holt-row">
+          <div class="holt-row-main">
+            <div class="holt-row-title">{{ f.name }}</div>
+            <div class="holt-row-meta">{{ f.owner if f.matched else "not matched to a title" }}{% if f.quality %} · {{ f.quality }}{% endif %}</div>
+          </div>
+          <div class="holt-toolbar">
+            <span class="holt-chip">{{ f.media_type }}</span>
+            {% if f.missing %}<span class="holt-chip">gone from disk</span>{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+{% endblock %}

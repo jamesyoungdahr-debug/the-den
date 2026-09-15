@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 from sqlalchemy.orm import Session
 
-from app import blocklist, history, importer, root_folders, sabnzbd, settings as settings_module
+from app import blocklist, history, importer, library_scan, root_folders, sabnzbd, settings as settings_module
 from app.models import DownloadRecord, Episode, Movie, Series
 from app.notifier import notify_event
 from app.torrent import engine
@@ -132,6 +132,7 @@ async def _import(db: Session, record: DownloadRecord) -> None:
             movie.file_quality = record.quality
             movie.file_score = record.score or 0
             movie.file_path = str(dest)
+            library_scan.record_imported(db, dest, "movie", movie_id=movie.id)
             imported = True
         else:
             names = [f.path.split("/")[-1].split("\\")[-1] for f in files if not f.path.lower().endswith((".txt", ".nfo", ".jpg", ".png", ".srt", ".sub"))]
@@ -151,6 +152,7 @@ async def _import(db: Session, record: DownloadRecord) -> None:
                 e.file_quality = record.quality
                 e.file_score = record.score or 0
                 e.file_path = str(done[e.episode_number])
+                library_scan.record_imported(db, done[e.episode_number], "tv", episode_id=e.id)
         imported = bool(done)
         if unmatched:
             record.unmatched_files = json.dumps(unmatched)
@@ -168,6 +170,7 @@ async def _import(db: Session, record: DownloadRecord) -> None:
             episode.file_quality = record.quality
             episode.file_score = record.score or 0
             episode.file_path = str(dest)
+            library_scan.record_imported(db, dest, "tv", episode_id=episode.id)
             imported = True
         else:
             names = [f.path.split("/")[-1].split("\\")[-1] for f in files if not f.path.lower().endswith((".txt", ".nfo", ".jpg", ".png", ".srt", ".sub"))]

@@ -78,7 +78,9 @@ def play_info(kind: Kind, item_id: int, user: User = Depends(auth.require_user),
             next_item = {"id": following.id, "label": _episode_label(following), "href": f"/watch/episode/{following.id}"}
     return {
         "kind": kind, "id": item_id, **meta,
-        "stream_url": f"{base}/file", "type": media_type, "probed": summary is not None,
+        "stream_url": f"{base}/file?file_id={library_file.file_id}" if library_file.file_id is not None else f"{base}/file",
+        "files": media_stream.file_choices(db, kind, item_id), "file_id": library_file.file_id,
+        "type": media_type, "probed": summary is not None,
         "duration_ms": summary.get("duration_ms") if summary else None,
         "video": summary.get("video") if summary else None,
         "audio": summary.get("audio", []) if summary else [],
@@ -92,15 +94,15 @@ def play_info(kind: Kind, item_id: int, user: User = Depends(auth.require_user),
 
 
 @router.api_route("/{kind}/{item_id}/file", methods=["GET", "HEAD"])
-def play_file(kind: Kind, item_id: int, request: Request, user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
-    return media_stream.file_response(request, media_stream.resolve_item_file(db, kind, item_id))
+def play_file(kind: Kind, item_id: int, request: Request, file_id: int | None = None, user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+    return media_stream.file_response(request, media_stream.resolve_item_file(db, kind, item_id, file_id))
 
 
 @router.get("/{kind}/{item_id}/subtitles/{track_id}.vtt")
-def play_subtitle(kind: Kind, item_id: int, track_id: str, user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
+def play_subtitle(kind: Kind, item_id: int, track_id: str, file_id: int | None = None, user: User = Depends(auth.require_user), db: Session = Depends(get_db)):
     if not _TRACK_ID.fullmatch(track_id):
         raise HTTPException(404, "Subtitle track not found")
-    library_file = media_stream.resolve_item_file(db, kind, item_id)
+    library_file = media_stream.resolve_item_file(db, kind, item_id, file_id)
     if track_id.startswith("x"):
         text = subtitle_tracks.webvtt_for_sidecar(library_file, track_id)
     else:
