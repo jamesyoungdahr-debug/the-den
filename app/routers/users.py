@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app import auth, device_tokens, playback, sign_in_links
+from app import auth, device_tokens, playback, sign_in_links, watchlist
 from app import settings as settings_module
 from app.deps import get_db
 from app.models import User
@@ -38,10 +38,11 @@ def _last_admin_guard(db: Session, target: User, new_role: str | None = None, de
 
 
 def _delete_user(db: Session, user: User) -> None:
-    """SQLite doesn't cascade, so the user's device tokens go first; a reused id must never
-    inherit someone else's signed-in devices."""
+    """SQLite doesn't cascade, so the user's own rows go first; a reused id must never inherit
+    someone else's signed-in devices, playback position or watchlist."""
     device_tokens.revoke_all(db, user.id)
     playback.forget_user(db, user.id)
+    watchlist.forget_user(db, user.id)
     db.delete(user)
     db.commit()
 

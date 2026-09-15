@@ -1,6 +1,6 @@
-"""E1: import lists -- auto-add movies/series from a TMDB list or a Plex watchlist on a
-schedule, the same way approving a request does (get_or_create_movie/series), just
-without a MediaRequest in between."""
+"""E1: import lists -- auto-add movies/series from a TMDB list, a Plex watchlist or The Den's
+own watchlist on a schedule, the same way approving a request does (get_or_create_movie/series),
+just without a MediaRequest in between."""
 
 from __future__ import annotations
 
@@ -10,9 +10,9 @@ from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
-from app import plex, requests_service, tmdb
+from app import plex, requests_service, tmdb, watchlist
 from app import settings as settings_module
-from app.models import ImportList, Movie, Series
+from app.models import ImportList, Movie, Series, User
 
 log = logging.getLogger(__name__)
 
@@ -32,6 +32,16 @@ async def sync_one(db: Session, il: ImportList) -> str:
             if not s.plex_token:
                 raise ValueError("Plex isn't connected")
             items = await plex.watchlist(s.plex_token)
+        elif il.kind == "den_watchlist":
+            # M51: The Den's own watchlist, so keeping a wishlist no longer needs Plex connected.
+            # The config names whose list it is, because the Plex one was always the owner's.
+            owner = db.get(User, int(config.get("user_id") or 0))
+            if owner is None:
+                raise ValueError("no watchlist owner configured")
+            items = [
+                {"tmdb_id": row.tmdb_id, "media_type": row.media_type, "title": row.title}
+                for row in watchlist.for_user(db, owner.id)
+            ]
         else:
             raise ValueError(f"unknown kind {il.kind!r}")
     except Exception as exc:

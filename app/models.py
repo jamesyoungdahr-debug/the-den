@@ -461,3 +461,20 @@ class MediaFile(Base):
     missing = Column(Boolean, nullable=False, default=False)  # was seen, then vanished from disk
     added_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
     last_seen_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+
+
+class WatchlistItem(Base):
+    """M51: a title somebody wants, kept by The Den rather than by Plex's Discover list."""
+
+    __tablename__ = "watchlist_items"
+    __table_args__ = (UniqueConstraint("user_id", "media_type", "tmdb_id", name="uq_watchlist_item"),)
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    media_type = Column(String, nullable=False)  # movie | tv
+    tmdb_id = Column(Integer, nullable=False, index=True)
+    title = Column(String, nullable=False)
+    year = Column(Integer, nullable=True)
+    poster_path = Column(String, nullable=True)
+    added_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc))
+
