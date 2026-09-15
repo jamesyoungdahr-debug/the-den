@@ -9,6 +9,7 @@
   var messageTitle = root.querySelector("[data-message-title]");
   var messageBody = root.querySelector("[data-message-body]");
   var tryAnywayBtn = root.querySelector("[data-try-anyway]");
+  var convertBtn = root.querySelector("[data-convert]");
   var resumeBox = root.querySelector("[data-resume-box]");
   var resumeTimeEl = root.querySelector("[data-resume-time]");
   var resumeBtn = root.querySelector("[data-resume]");
@@ -202,12 +203,63 @@
         }
       }, { once: false });
 
-      if (canPlay === "") {
+      /* When the browser cannot take the file, play_info says why and whether a converted copy
+         is already cached. Converting is opt-in: it costs the server real time, so it happens
+         because somebody asked, never automatically. */
+      function startConverted() {
+        video.src = info.converted_url;
+        var pos = state.position_ms || 0;
+        if (pos > 0) {
+          resumeTimeEl.textContent = fmtTime(pos);
+          resumeBox.hidden = false;
+        }
+      }
+
+      function pollConvert() {
+        fetch(info.convert_url, { credentials: "same-origin" })
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (s) {
+            if (!s) { setTimeout(pollConvert, 3000); return; }
+            if (s.state === "ready") {
+              messageBox.hidden = true;
+              startConverted();
+              playQuietly();
+              return;
+            }
+            if (s.state === "failed") {
+              showMessage("Converting failed", s.error || "ffmpeg could not convert this file. The server log has the detail.", false);
+              return;
+            }
+            if (s.state === "none") {
+              showMessage("Converting stopped", "The server is no longer working on this file. Try again.", false);
+              return;
+            }
+            messageBody.textContent = "Converting for this browser" +
+              (s.progress == null ? "" : " \u2014 " + Math.round(s.progress * 100) + "%") +
+              " (you can leave this page; the server keeps working)";
+            setTimeout(pollConvert, 1500);
+          })
+          .catch(function () { setTimeout(pollConvert, 3000); });
+      }
+
+      if (info.converted) {
+        startConverted();
+      } else if (canPlay === "") {
+        var why = info.playback && info.playback.reason ? info.playback.reason : "this file is not one a browser plays";
         showMessage(
           "Your browser can't play this file directly",
-          (info.notes && info.notes.length ? info.notes.join(" ") + " " : "") + "Transcoding arrives in a later update.",
+          (info.notes && info.notes.length ? info.notes.join(" ") + " " : "") +
+            "The Den can convert it: " + why + ".",
           true
         );
+        convertBtn.hidden = false;
+        convertBtn.addEventListener("click", function () {
+          convertBtn.hidden = true;
+          messageBody.textContent = "Starting\u2026";
+          fetch(info.convert_url, { method: "POST", credentials: "same-origin" })
+            .then(function () { pollConvert(); })
+            .catch(function () { messageBody.textContent = "Could not start the conversion. The server log has the detail."; });
+        });
         tryAnywayBtn.addEventListener("click", function () {
           messageBox.hidden = true;
           start();
