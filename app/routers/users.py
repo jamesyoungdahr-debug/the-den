@@ -61,23 +61,61 @@ def _render_users(request: Request, db: Session, new_link: dict | None = None) -
     )
 
 
+def _plex_only(db: Session) -> list[User]:
+    """Accounts that can still ONLY sign in through Plex.
+
+    An account is Plex-only when it is tied to a Plex id and has never been given a password of
+    its own. Plex sign-in keeps working during the parallel period, so these are not broken --
+    they are the people who would be locked out the day Plex is switched off."""
+    return (
+        db.query(User)
+        .filter(User.plex_id.isnot(None), User.password_hash.is_(None))
+        .order_by(User.username)
+        .all()
+    )
+
+
+def _render_migration(request: Request, db: Session, new_link: dict | None = None) -> Response:
+    """The migration view. `new_link` carries a freshly minted sign-in link to show exactly once."""
+    return templates.TemplateResponse(
+        "users_migration.html",
+        {"request": request, "plex_only": _plex_only(db), "total": db.query(User).count(),
+         "error": request.query_params.get("error"), "new_link": new_link, "active_nav": "users"},
+    )
+
+
 @router.get("/ui/users", response_class=HTMLResponse)
 def users_page(request: Request, _: User = Depends(auth.page_admin), db: Session = Depends(get_db)):
     return _render_users(request, db)
 
 
+@router.get("/ui/users/plex-migration", response_class=HTMLResponse)
+def users_plex_migration(request: Request, _: User = Depends(auth.page_admin), db: Session = Depends(get_db)):
+    """M51: who can still only sign in with Plex.
+
+    M60's switch-off gate is 'zero Plex-only users' and until this page existed that gate could
+    only be guessed at. This is also the shortest path to fixing them: the sign-in link button
+    here mints a set-password link without leaving the page."""
+    return _render_migration(request, db)
+
+
 @router.post("/ui/users/{user_id}/sign-in-link")
-def ui_create_sign_in_link(request: Request, user_id: int, _: User = Depends(auth.page_admin), db: Session = Depends(get_db)):
+def ui_create_sign_in_link(request: Request, user_id: int, back: str = Form("users"), _: User = Depends(auth.page_admin), db: Session = Depends(get_db)):
     """M51: mint a one-time link so this person can set their own password.
 
     Rendered rather than redirected, so the token never reaches a URL bar, browser history or a
     server access log -- this response is the only place it is ever readable. Minting a second
-    link quietly retires the first, which is what an admin wants for one that has gone astray."""
+    link quietly retires the first, which is what an admin wants for one that has gone astray.
+
+    `back` says which page asked, so the link is shown on the page the admin was already on."""
     target = db.get(User, user_id)
     if target is None:
         raise HTTPException(404, "User not found")
     token = sign_in_links.create(db, target)
-    return _render_users(request, db, new_link={"username": target.username, "url": f"/join/{token}", "days": sign_in_links.LINK_DAYS})
+    link = {"username": target.username, "url": f"/join/{token}", "days": sign_in_links.LINK_DAYS}
+    if back == "migration":
+        return _render_migration(request, db, new_link=link)
+    return _render_users(request, db, new_link=link)
 
 
 @router.post("/ui/users")

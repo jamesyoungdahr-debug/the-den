@@ -5,7 +5,7 @@
   <div class="holt-page-head">
     <div>
       <h1 class="holt-page-title">Users</h1>
-      <div class="holt-meta">{{ users|length }} accounts · {{ users|selectattr('is_admin')|list|length }} admin</div>
+      <div class="holt-meta">{{ users|length }} accounts · {{ users|selectattr('is_admin')|list|length }} admin · <a href="/ui/users/plex-migration">Plex migration</a></div>
     </div>
   </div>
 
@@ -45,6 +45,7 @@
           </form>
           {% endif %}
           <form method="post" action="/ui/users/{{ u.id }}/sign-in-link">
+            <input type="hidden" name="back" value="users">
             <button type="submit" class="holt-btn holt-btn-quiet holt-btn-sm" title="Hand {{ u.username|e }} a link so they can set their own password">sign-in link</button>
           </form>
           {% if not (current_user and current_user.id == u.id) %}

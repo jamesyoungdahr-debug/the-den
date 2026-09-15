@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title_suffix %} — Plex migration{% endblock %}
+{% block content %}
+  <div class="holt-page-head">
+    <div>
+      <h1 class="holt-page-title">Plex migration</h1>
+      <div class="holt-meta">{{ plex_only|length }} of {{ total }} account{{ '' if total == 1 else 's' }} can still only sign in with Plex</div>
+    </div>
+    <div class="holt-toolbar"><a class="holt-chip" href="/ui/users">‹ Users</a></div>
+  </div>
+
+  {% if error %}<div class="holt-message holt-message-warning">{{ error }}</div>{% endif %}
+
+  {% if new_link %}
+  <div class="holt-message holt-message-positive">
+    <div><strong>Sign-in link for {{ new_link.username }}</strong> — good for {{ new_link.days }} days and it works once. Copy it now: this is the only time it is shown.</div>
+    <input type="text" readonly value="{{ new_link.url }}" onclick="this.select()" style="margin-top:var(--holt-space-2);font-family:var(--holt-font-mono);font-size:12px">
+  </div>
+  {% endif %}
+
+  {% if not plex_only %}
+  <div class="holt-empty holt-panel">
+    <div class="holt-empty-title">Everyone can sign in without Plex</div>
+    <div class="holt-body">Every account has a password of its own, so Plex can be switched off without locking anybody out.</div>
+  </div>
+  {% else %}
+  <section class="holt-section">
+    <div class="holt-panel">
+      <div class="holt-row-list">
+        {% for u in plex_only %}
+        <div class="holt-row">
+          <div class="holt-row-main">
+            <div class="holt-row-title">{{ u.username }}</div>
+            <div class="holt-row-meta">{{ u.plex_username or 'Plex account' }}{% if u.last_login_at %} · last sign-in {{ u.last_login_at.strftime('%Y-%m-%d %H:%M') }}{% else %} · never signed in{% endif %}</div>
+          </div>
+          <div class="holt-row-actions">
+            <form method="post" action="/ui/users/{{ u.id }}/sign-in-link">
+              <input type="hidden" name="back" value="migration">
+              <button type="submit" class="holt-btn holt-btn-primary holt-btn-sm">Create sign-in link</button>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+  <div class="holt-meta" style="margin-top: var(--holt-space-3)">Send each person their link and they choose their own password. It works once and expires; if one goes astray, make a new one and the old one stops working.</div>
+  {% endif %}
+{% endblock %}
