@@ -1,7 +1,7 @@
 THE DEN - WORKING CONTEXT
 =========================
 Kept up to date by Claude at every milestone so a fresh session can resume without
-the chat history. Newest entries at the top of each section. Last updated: 2026-09-13.
+the chat history. Newest entries at the top of each section. Last updated: 2026-09-15.
 
 PICK UP HERE (2026-09-13 evening: the project moved to Liam's HoltOS laptop, Linux)
 -------------------------------------------------------------------------------------------
@@ -68,6 +68,17 @@ CURRENT PLAN (2026-09-14): docs/port-40204-release-plan.md -- move the KDE clien
   Secure cookie, device token sign-in, settings API and page, mDNS TXT https=1 plus the pin). From Windows: HTTPS with
   the right pin 200, a wrong pin refused, plain HTTP gets an empty reply. The installed updater service was not touched.
   A real updater install of 0.8.1c gets cryptography from requirements.txt, which needs network access.
+  LOG UPDATE 2026-09-15 (LiamPC, Claude Opus 5, session 74285f74): the-den (M37 3c95a00, M35 085537a, VM notes
+  ea952fa) and the-den-client (M37 1ae346a) are on GitHub but NOT tagged: the newest tags are still the-den v0.8.1a
+  and the-den-client v0.5.0b, so the HoltOS updater has not installed 0.8.1c or 0.5.0c. the-den-android e8d69e9 (M37,
+  0.7.0b, versionCode 24) is still local, 1 commit ahead of origin. Other sessions added the HoltOS otter rebrand and
+  the neon accent colours on top (the-den a88d655 and e5f87f9; the-den-client de623c8 and ac32dc3). Standing rules
+  from Liam (2026-09-14): never use ports 80 or 443; no downloads while testing, because they need his VPN. The Strix
+  Halo is out of service, so there is no large-file profile. Tagging the-den v0.8.1c needs care: any install with a
+  non-loopback WEB_HOST switches to HTTPS, and the current apps can't pin yet. Next: M36 UPnP (external port 40204
+  only, plus the server's own NAT loopback check), then M39/M40 so the apps pin the M35 certificate. Each repo root
+  now has a local HANDOFF.md and CLAUDE.local.md, kept out of git through .git/info/exclude; the-den-android's
+  HANDOFF.md was already tracked in git before that rule, so it is left for Liam to decide.
 
 Work no longer happens on the Windows machine (C:\projects, WSL Ubuntu). The three repos were cloned fresh from
 GitHub into /home/liam/Projects/theden/the-den, the-den-client and the-den-android on Liam's HoltOS 0.0.4-alpha
