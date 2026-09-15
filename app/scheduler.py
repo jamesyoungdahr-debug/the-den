@@ -2,7 +2,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 import logging
 
-from app import automation, import_lists as import_lists_service, library_scan, plex_scan, remote_access, settings as settings_module
+from app import automation, import_lists as import_lists_service, library_match, library_scan, plex_scan, remote_access, settings as settings_module
 from app.db import SessionLocal
 
 scheduler = AsyncIOScheduler()
@@ -47,10 +47,14 @@ async def _import_lists_job() -> None:
 
 
 async def _library_scan_job() -> None:
-    """M50a: walk the library folders and reconcile media_files with what is on disk."""
+    """M50a/M50b: reconcile media_files with what is on disk, then try to place the files the
+    scan could not identify against TMDB."""
     db = SessionLocal()
     try:
         library_scan.scan(db)
+        db.commit()
+        await library_match.match_movies(db)
+        await library_match.match_episodes(db)
         db.commit()
     except Exception:
         db.rollback()

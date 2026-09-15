@@ -356,3 +356,23 @@ def library_file_list(db: Session, show: str = "all", limit: int = 500) -> list[
             "missing": row.missing,
         })
     return out
+
+
+def has_playable_file(db: Session, kind: str, item_id: int) -> bool:
+    """True when this movie or episode has at least one recorded file that is still on disk.
+    M50b reads this instead of the legacy Movie.has_file / Episode.has_file flag, which the
+    scan does not maintain."""
+    query = db.query(MediaFile).filter(MediaFile.missing.is_(False))
+    query = query.filter(MediaFile.movie_id == item_id) if kind == "movie" else query.filter(MediaFile.episode_id == item_id)
+    return bool(db.query(query.exists()).scalar())
+
+
+def playable_ids(db: Session, kind: str, item_ids) -> set[int]:
+    """Which of these movies or episodes have at least one recorded file still on disk.
+    The bulk form of has_playable_file: one query for a whole season instead of one per episode."""
+    ids = list(item_ids)
+    if not ids:
+        return set()
+    column = MediaFile.movie_id if kind == "movie" else MediaFile.episode_id
+    rows = db.query(column).filter(column.in_(ids), MediaFile.missing.is_(False)).distinct()
+    return {row[0] for row in rows}

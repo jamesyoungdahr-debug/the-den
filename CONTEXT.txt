@@ -5,6 +5,23 @@ the chat history. Newest entries at the top of each section. Last updated: 2026-
 
 PICK UP HERE (2026-09-13 evening: the project moved to Liam's HoltOS laptop, Linux)
 -------------------------------------------------------------------------------------------
+M50b LIBRARY SCANNER, MATCHING 2026-09-15 (LiamPC; committed locally, NOT pushed or tagged): the scan's files now feed
+  the pages and request availability. app/library_match.py places a file the scan could not identify: it parses the movie
+  name (falling back to the containing folder, where the importer puts the year), searches TMDB, and attaches the file only
+  when exactly ONE candidate survives on normalised title plus a year within one either way - anything ambiguous is left for
+  a person, because guessing between same-named titles would file the wrong metadata against someone's media. TV does the
+  same, resolving the series from the folder (stepping past a "Season NN" folder) and creating the show and its episodes via
+  the existing get_or_create_series. availability() in app/requests_service.py, and merged_movies/merged_series in
+  app/library_service.py, now read media_files rows instead of the legacy Movie.has_file / Episode.has_file flags, which the
+  scan never sets - so a title the scan found used to read as unavailable even with its file on disk. Both pages use one bulk
+  query (library_scan.playable_ids) rather than one per title, and the scan job runs both matchers straight after each scan.
+  The Plex half of availability is kept so it can still contribute during the parallel period, but nothing depends on it.
+  Verified: py_compile across every touched module, and the M50a migration's backfill SQL run directly against SQLite using
+  only the standard library - including the case that would otherwise abort the migration, two titles sharing one file path,
+  which INSERT OR IGNORE plus the unique index collapses to a single row, with a second run proving idempotent. NOT run: the
+  suite and any live server (the app deps are not on this machine) - the Z13 runs those. Still to do: the unmatched queue and
+  collections. The 4090 wrote the matchers and the availability rewrite, the 4080 the bulk helpers and the scheduler wiring.
+  No DeepSeek tokens were used for M50b.
 M50a LIBRARY SCANNER, FILES 2026-09-15 (LiamPC; committed locally, NOT pushed or tagged): the first step of replacing Plex.
   `app/library_scan.py` walks every configured library folder (RootFolder rows plus the Settings movies/TV roots, deduplicated
   by real path), records each video file in the new `media_files` table (migration 7b3c9d1e5f2a), matches it to its Movie or

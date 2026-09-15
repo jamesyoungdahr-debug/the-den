@@ -22,6 +22,7 @@ import re
 from sqlalchemy.orm import Session
 
 from app.models import DownloadRecord, Episode, Movie, PlexMedia, QualityProfile, Series
+from app import library_scan
 from app.candidates import profile_for
 from app.scoring import is_upgradable
 
@@ -47,19 +48,23 @@ def merged_movies(db: Session) -> list[dict]:
     plex_by_title = {(_norm(p.title), p.year): p for p in plex_rows}
     downloading = _downloading_movie_ids(db)
     default_profile = db.query(QualityProfile).first()
+    movie_rows = db.query(Movie).order_by(Movie.id.desc()).all()
+    # M50b: one bulk query for the whole page instead of one per title.
+    on_disk = library_scan.playable_ids(db, "movie", [m.id for m in movie_rows])
     out: list[dict] = []
     matched: set[str] = set()
-    for m in db.query(Movie).order_by(Movie.id.desc()).all():
+    for m in movie_rows:
         p = plex_by_tmdb.get(m.tmdb_id) or plex_by_title.get((_norm(m.title), m.year))
         if p is not None:
             matched.add(p.rating_key)
+        has_file = m.id in on_disk
         profile = profile_for(db, m.quality_profile_id, default=default_profile)
-        upgradable = bool(m.has_file and profile and is_upgradable(m.file_quality, m.file_score, profile))
+        upgradable = bool(has_file and profile and is_upgradable(m.file_quality, m.file_score, profile))
         out.append({
             "source": "both" if p else "den", "id": m.id, "tmdb_id": m.tmdb_id, "title": m.title, "year": m.year,
-            "poster_path": m.poster_path or (plex_thumb_url(p) if p else ""), "has_file": bool(m.has_file),
+            "poster_path": m.poster_path or (plex_thumb_url(p) if p else ""), "has_file": has_file,
             "downloading": m.id in downloading, "on_plex": p is not None, "plex_rating_key": p.rating_key if p else None,
-            "available": bool(m.has_file) or p is not None,
+            "available": has_file or p is not None,
             "file_quality": m.file_quality or "", "file_score": m.file_score or 0, "upgradable": upgradable,
         })
     plex_only = [p for p in plex_rows if p.rating_key not in matched]
@@ -82,9 +87,12 @@ def merged_series(db: Session) -> list[dict]:
     totals: dict[int, int] = {}
     haves: dict[int, int] = {}
     if ids:
-        for series_id, has_file in db.query(Episode.series_id, Episode.has_file).filter(Episode.series_id.in_(ids)):
+        episode_rows = db.query(Episode.id, Episode.series_id).filter(Episode.series_id.in_(ids)).all()
+        # M50b: one bulk query for every episode on the page.
+        on_disk = library_scan.playable_ids(db, "episode", [row[0] for row in episode_rows])
+        for episode_id, series_id in episode_rows:
             totals[series_id] = totals.get(series_id, 0) + 1
-            if has_file:
+            if episode_id in on_disk:
                 haves[series_id] = haves.get(series_id, 0) + 1
 
     def seasons_of(p: PlexMedia | None) -> dict[int, int]:

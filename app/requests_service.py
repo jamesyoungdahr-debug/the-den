@@ -11,7 +11,7 @@ from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
 
-from app import plex_scan, tmdb, tvmaze
+from app import library_scan, plex_scan, tmdb, tvmaze
 from app import settings as settings_module
 from app.models import Episode, MediaRequest, Movie, RequestComment, Series, User
 from app.notifier import notify_event, notify_user
@@ -35,18 +35,23 @@ def availability(db: Session, media_type: str, tmdb_id: int, tvdb_id: int | None
     if media_type == "movie":
         m = db.query(Movie).filter(Movie.tmdb_id == tmdb_id).first()
         p = plex_movies.get(tmdb_id)
-        out["den"] = {"id": m.id, "has_file": m.has_file} if m else None
+        # M50b: read the files the scan recorded, not the legacy has_file flag it never sets.
+        on_disk = library_scan.has_playable_file(db, "movie", m.id) if m else False
+        out["den"] = {"id": m.id, "has_file": on_disk} if m else None
         out["plex"] = {"title": p.title, "year": p.year} if p else None
-        out["available"] = bool((m and m.has_file) or p)
+        out["available"] = bool(on_disk or p)
         return out
     s = db.query(Series).filter(Series.tmdb_id == tmdb_id).first()
     p = plex_tv_tmdb.get(tmdb_id) or (plex_tv_tvdb.get(tvdb_id) if tvdb_id else None)
     den_seasons: dict[int, dict] = {}
     if s:
-        for e in db.query(Episode).filter(Episode.series_id == s.id):
+        episodes = db.query(Episode).filter(Episode.series_id == s.id).all()
+        # M50b: one bulk query for the whole show rather than one per episode.
+        on_disk = library_scan.playable_ids(db, "episode", [e.id for e in episodes])
+        for e in episodes:
             row = den_seasons.setdefault(e.season_number, {"have": 0, "total": 0, "monitored": False})
             row["total"] += 1
-            row["have"] += 1 if e.has_file else 0
+            row["have"] += 1 if e.id in on_disk else 0
             row["monitored"] = row["monitored"] or e.monitored
         out["den"] = {"id": s.id, "seasons": den_seasons, "have": sum(r["have"] for r in den_seasons.values()), "total": sum(r["total"] for r in den_seasons.values())}
     plex_seasons = plex_scan.season_counts(p)
