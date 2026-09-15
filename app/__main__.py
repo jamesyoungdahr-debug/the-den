@@ -31,4 +31,5 @@ if __name__ == "__main__":
         options = {"ssl_certfile": str(cert), "ssl_keyfile": str(key)}
     elif not tls.is_loopback(config.WEB_HOST):
         sys.exit(f"The Den: TLS=off only works with a loopback WEB_HOST, not {config.WEB_HOST!r}; plain HTTP never leaves this machine.")
-    uvicorn.run("app.main:app", host=config.WEB_HOST, port=config.WEB_PORT, **options)
+    # Apps keep HTTPS connections open; without a limit a restart waits for them to close (seen in M40 testing).
+    uvicorn.run("app.main:app", host=config.WEB_HOST, port=config.WEB_PORT, timeout_graceful_shutdown=10, **options)
