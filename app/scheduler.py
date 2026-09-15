@@ -2,13 +2,14 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 import logging
 
-from app import automation, import_lists as import_lists_service, plex_scan, settings as settings_module
+from app import automation, import_lists as import_lists_service, plex_scan, remote_access, settings as settings_module
 from app.db import SessionLocal
 
 scheduler = AsyncIOScheduler()
 JOB_ID = "automation_cycle"
 PLEX_JOB_ID = "plex_scan"
 IMPORT_LISTS_JOB_ID = "import_lists_sync"
+REMOTE_ACCESS_JOB_ID = "remote_access_check"
 log = logging.getLogger(__name__)
 
 
@@ -44,6 +45,19 @@ async def _import_lists_job() -> None:
         db.close()
 
 
+async def _remote_access_job():
+    """Re-check the remote access guard and the router mapping, then test NAT loopback once mapped (M36)."""
+    from app import remote_access, setup_state
+    db = SessionLocal()
+    try:
+        s = settings_module.effective(db)
+        remote_access.apply(s, setup_state.is_complete(db))
+        if remote_access.status()["state"] == "mapped":
+            await remote_access.check_loopback(s)
+    finally:
+        db.close()
+
+
 def start() -> None:
     db = SessionLocal()
     try:
@@ -54,6 +68,7 @@ def start() -> None:
     scheduler.add_job(_job, "interval", seconds=interval, id=JOB_ID)
     scheduler.add_job(_plex_job, "interval", minutes=plex_minutes, id=PLEX_JOB_ID)
     scheduler.add_job(_import_lists_job, "interval", minutes=import_list_minutes, id=IMPORT_LISTS_JOB_ID)
+    scheduler.add_job(_remote_access_job, "interval", minutes=10, id=REMOTE_ACCESS_JOB_ID)
     scheduler.start()
 
 

@@ -9,6 +9,7 @@ from types import SimpleNamespace
 sys.path.insert(0, ".")
 
 from app import config, discovery  # noqa: E402
+import ifaddr  # noqa: E402
 
 
 def test_server_id_is_created_once():
@@ -114,6 +115,55 @@ def test_refresh_without_start_is_a_no_op():
     discovery.refresh(SimpleNamespace(plex_server_name="X", server_name=None))
     current = discovery.current()
     assert current["advertised"] is False
+
+
+def test_advertised_addresses_skips_virtual_and_link_local():
+    original_host = config.WEB_HOST
+    original_get_adapters = ifaddr.get_adapters
+
+    class FakeIP:
+        def __init__(self, ip):
+            self.ip = ip
+
+    adapters = [
+        SimpleNamespace(name="eth0", ips=[FakeIP("192.168.1.5"), FakeIP("169.254.3.4")]),
+        SimpleNamespace(name="docker0", ips=[FakeIP("172.17.0.1")]),
+        SimpleNamespace(name="br-1a2b", ips=[FakeIP("172.18.0.1")]),
+        SimpleNamespace(name="tailscale0", ips=[FakeIP("100.64.0.9")]),
+        SimpleNamespace(name="lo", ips=[FakeIP("127.0.0.1")]),
+        SimpleNamespace(name="wlan0", ips=[FakeIP("192.168.1.5"), FakeIP("10.0.0.7")]),
+    ]
+
+    config.WEB_HOST = "0.0.0.0"
+    ifaddr.get_adapters = lambda: adapters  # noqa: E402
+    try:
+        result = discovery.advertised_addresses()
+        assert result == ["192.168.1.5", "10.0.0.7"]
+    finally:
+        config.WEB_HOST = original_host
+        ifaddr.get_adapters = original_get_adapters
+
+
+def test_server_id_fallback_when_state_dir_unwritable():
+    with tempfile.NamedTemporaryFile(delete=False) as tmp:
+        tmp_path = tmp.name
+
+    try:
+        unwritable_parent = os.path.join(tmp_path, "sub")
+        original_state = config.STATE_DIR
+        original_fallback = discovery._fallback_id
+        config.STATE_DIR = unwritable_parent
+        discovery._fallback_id = None
+        try:
+            id1 = discovery.server_id()
+            assert len(id1) == 32 and all(c in "0123456789abcdef" for c in id1)
+            id2 = discovery.server_id()
+            assert id1 == id2
+        finally:
+            config.STATE_DIR = original_state
+            discovery._fallback_id = original_fallback
+    finally:
+        os.unlink(tmp_path)
 
 
 if __name__ == "__main__":

@@ -43,6 +43,7 @@ class EffectiveSettings:
     server_name: str | None
     flaresolverr_url: str
     public_host: str | None
+    remote_access_enabled: bool
 
     def engine_config(self) -> EngineConfig:
         return EngineConfig(
@@ -110,4 +111,5 @@ def effective(db: Session) -> EffectiveSettings:
         server_name=row.server_name,
         flaresolverr_url=_pick(row.flaresolverr_url, config.FLARESOLVERR_URL),
         public_host=_pick(row.public_host, config.PUBLIC_HOST) or None,
+        remote_access_enabled=bool(row.remote_access_enabled),
     )

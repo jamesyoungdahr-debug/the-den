@@ -108,12 +108,14 @@ keys still starts, on 127.0.0.1:40204. The TXT record carries `name`, `id` and `
   certificate names; a reissue after a name change keeps the pin; plain HTTP refused on a LAN
   bind.
 
-### M36 Remote access via UPnP (server, web)
+### M36 Remote access via UPnP (server, web) -- code done 2026-09-15; router test waits for Liam; not released
 
-- libtorrent's port mapper (`session.add_port_mapping`; UPnP and NAT-PMP are already enabled
-  in the torrent session) maps the public HTTPS port to `WEB_PORT`. Status (external IP,
-  mapped port, errors) comes from port-map alerts and shows in Settings and
-  `/api/remote-access`.
+- Revised 2026-09-15: libtorrent's port mapper can't be used from Python (its bindings raise a
+  TypeError instead of returning mapping handles, and no port-map alerts arrived), so
+  `app/upnp.py` is a small standard-library UPnP IGD client (SSDP discovery, the device
+  description, AddPortMapping, GetSpecificPortMappingEntry, DeletePortMapping,
+  GetExternalIPAddress). `app/remote_access.py` maps external `WEB_PORT` to `WEB_PORT` with a
+  one-hour lease renewed every 10 minutes; status shows in Settings and `/api/remote-access`.
 - Guard: refuses unless HTTPS is on with an unexpired certificate; turns itself off if it
   lapses. Only external port 40204 is ever mapped (never 80 or 443).
 - NAT loopback check (Liam doesn't know whether the router does it): once mapped, the server

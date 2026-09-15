@@ -20,16 +20,24 @@ log = logging.getLogger(__name__)
 SERVICE_TYPE = "_theden._tcp.local."
 API_VERSION = "2"
 
+# Docker, VM and VPN interfaces aren't reachable by the apps on the LAN.
+VIRTUAL_ADAPTER_PREFIXES = (
+    "docker", "br-", "veth", "virbr", "vmnet", "vboxnet",
+    "tun", "tap", "wg", "tailscale", "zt", "cni",
+    "flannel", "podman", "lxc", "lxd",
+)
+
 # Module state (reset on stop)
 _loop: asyncio.AbstractEventLoop | None = None
 _zeroconf: AsyncZeroconf | None = None
 _info: AsyncServiceInfo | None = None
 _current_name: str | None = None
 _addresses: list[str] = []
+_fallback_id: str | None = None
 
 
 def server_id() -> str:
-    """The random id of this install. Path: Path(config.STATE_DIR) / "server_id"."""
+    """The random id of this install. Path: Path(config.STATE_DIR) / "server_id". An in-memory id is used for this process when STATE_DIR can't be written, so /health keeps working."""
     path = Path(config.STATE_DIR) / "server_id"
     try:
         content = path.read_text(encoding="utf-8").strip()
@@ -38,9 +46,19 @@ def server_id() -> str:
     except (OSError, UnicodeDecodeError):
         pass
 
-    path.parent.mkdir(parents=True, exist_ok=True)
+    global _fallback_id
+    if _fallback_id is not None:
+        return _fallback_id
+
     value = uuid.uuid4().hex
-    path.write_text(value, encoding="utf-8")
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(value, encoding="utf-8")
+    except OSError as exc:
+        log.warning("Can't save the server id under %s (%s); using a temporary id until STATE_DIR is writable", path.parent, exc)
+        _fallback_id = value
+        return value
+
     return value
 
 
@@ -61,9 +79,12 @@ def advertised_addresses() -> list[str]:
     if not host or host == "0.0.0.0" or host == "::":
         addresses: list[str] = []
         for adapter in ifaddr.get_adapters():
+            if adapter.name.lower().startswith(VIRTUAL_ADAPTER_PREFIXES):
+                continue
             for ip in adapter.ips:
-                if isinstance(ip.ip, str) and not ip.ip.startswith("127."):
-                    addresses.append(ip.ip)
+                addr = ip.ip
+                if isinstance(addr, str) and not addr.startswith("127.") and not addr.startswith("169.254."):
+                    addresses.append(addr)
         # Remove duplicates while preserving order
         seen: set[str] = set()
         result: list[str] = []

@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app import auth
-from app import config, scheduler, tls
+from app import config, remote_access, scheduler, tls
 from app import settings as settings_module
 from app.deps import get_db
 from app.torrent import engine
@@ -59,6 +59,8 @@ class SettingsUpdate(BaseModel):
     # The name remote apps use to reach this server (M35), e.g. requesthome.asuscomm.com; blank = PUBLIC_HOST.
     # The self-signed certificate covers it from the next restart.
     public_host: str | None = None
+    # Forward WEB_PORT on the router with UPnP (M36). Refused unless HTTPS is on and setup is finished.
+    remote_access_enabled: bool | None = None
 
 
 def clean_public_host(value: str) -> str | None:
@@ -123,6 +125,9 @@ def get_settings(db: Session = Depends(get_db)):
         "public_host": s.public_host or "",
         "https": tls.enabled(),  # read-only: set by TLS and WEB_HOST in the env file
         "tls_pin": tls.pin(),  # read-only: the key pin the apps store (M35)
+        "remote_access_enabled": s.remote_access_enabled,
+        "web_port": config.WEB_PORT,  # read-only: the port remote access forwards
+        "remote_access": remote_access.status(),  # read-only
     }
 
 
@@ -152,6 +157,16 @@ def apply_runtime_changes(old: settings_module.EffectiveSettings, new: settings_
 
     if discovery.display_name(new) != discovery.display_name(old):
         discovery.refresh(new)
+
+    if new.remote_access_enabled != old.remote_access_enabled or new.public_host != old.public_host:
+        from app import setup_state
+        from app.db import SessionLocal
+
+        db = SessionLocal()
+        try:
+            remote_access.apply(new, setup_state.is_complete(db))
+        finally:
+            db.close()
 
 
 @router.post("/settings")
@@ -208,7 +223,24 @@ def save_settings(payload: SettingsUpdate, db: Session = Depends(get_db)):
         row.sabnzbd_url = payload.sabnzbd_url.strip() or None
     if payload.public_host is not None:
         row.public_host = clean_public_host(payload.public_host)
+    if payload.remote_access_enabled is not None:
+        row.remote_access_enabled = payload.remote_access_enabled
 
     db.commit()
     apply_runtime_changes(old, settings_module.effective(db))
     return get_settings(db)
+
+
+@router.get("/remote-access")
+def get_remote_access(db: Session = Depends(get_db)):
+    """Remote access (M36): the setting, the forwarded port and the router mapping state."""
+    s = settings_module.effective(db)
+    return {"enabled": s.remote_access_enabled, "public_host": s.public_host, "web_port": config.WEB_PORT, **remote_access.status()}
+
+
+@router.post("/remote-access/check")
+async def check_remote_access(db: Session = Depends(get_db)):
+    """Run the NAT loopback self-check now and return the new state."""
+    s = settings_module.effective(db)
+    await remote_access.check_loopback(s)
+    return get_remote_access(db)

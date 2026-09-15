@@ -61,6 +61,13 @@ async def collect(db: Session) -> list[Issue]:
         except Exception as exc:
             issues.append(("plex_unreachable", "warning", f"plex.tv could not be reached: {exc}"))
 
+    from app import remote_access
+    ra = remote_access.status()
+    if ra["state"] == "refused":
+        issues.append(("remote_access", "warning", f"Remote access is on but refused: {ra['reason']}"))
+    elif ra["state"] == "error":
+        issues.append(("remote_access", "warning", f"Remote access isn't working: {ra['reason']}"))
+
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     for ix in enabled:
         stat = db.query(IndexerStat).filter(IndexerStat.indexer_id == ix.id, IndexerStat.day == today).first()

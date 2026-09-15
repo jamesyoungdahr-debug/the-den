@@ -93,7 +93,12 @@ pin that key (`/health` shows it as `tls_pin`). Set `PUBLIC_HOST` (for example y
 certificate covers it. Browsers warn about a self-signed certificate; a trusted one needs a DNS
 provider with an API (Cloudflare, planned). `TLS=off` is refused on anything but a loopback bind, and
 the KDE client (0.5.0c) and the Android app (0.7.0b) can't pin yet, so they only reach a loopback or
-plain-HTTP server until their next versions. The torrent client listens on `TORRENT_PORT` (default 6881,
+plain-HTTP server until their next versions. **Remote access** (Settings > Remote access, off by default) asks
+the router over UPnP to forward `WEB_PORT` to this machine: only that port, never 80 or 443, and only while HTTPS is
+on and first-run setup is finished. The mapping has a one-hour lease that the server renews every 10 minutes, it is
+removed when the setting is turned off or the server stops, and a rule on the router that already forwards the port
+to another machine is left alone. The server also tests NAT loopback by reaching itself through the public name,
+and `GET /api/remote-access` shows the state. The torrent client listens on `TORRENT_PORT` (default 6881,
 TCP+UDP) on all interfaces; forward that port on your router for better peer connectivity.
 The built-in Cloudflare solver opens Chromium headed when a display is available (that
 clears the check most reliably); set `DEN_SOLVER_HEADLESS=1` to keep it windowless anyway,

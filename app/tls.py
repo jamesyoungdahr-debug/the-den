@@ -207,6 +207,19 @@ def ensure_certificate(public_host: str | None = None) -> tuple[Path, Path]:
     return cert_path(), key_path()
 
 
+def pin_for_certificate_der(der: bytes) -> str:
+    """The pin for a DER-encoded certificate, computed the way the apps compute it: "sha256/" + standard
+    padded base64 of SHA-256 over the certificate's SubjectPublicKeyInfo DER."""
+    cert = x509.load_der_x509_certificate(der)
+    return "sha256/" + base64.b64encode(hashlib.sha256(_spki(cert.public_key())).digest()).decode("ascii")
+
+
+def certificate_expires_at() -> datetime | None:
+    """When the current certificate expires (UTC), or None before one exists."""
+    cert = _load_cert()
+    return cert.not_valid_after_utc if cert is not None else None
+
+
 def pin() -> str | None:
     """The pin the apps store: "sha256/" + base64 of SHA-256 over the certificate's public key.
     None while HTTPS is off or before a certificate exists."""

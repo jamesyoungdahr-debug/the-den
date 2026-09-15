@@ -79,6 +79,18 @@ CURRENT PLAN (2026-09-14): docs/port-40204-release-plan.md -- move the KDE clien
   only, plus the server's own NAT loopback check), then M39/M40 so the apps pin the M35 certificate. Each repo root
   now has a local HANDOFF.md and CLAUDE.local.md, kept out of git through .git/info/exclude; the-den-android's
   HANDOFF.md was already tracked in git before that rule, so it is left for Liam to decide.
+  Later on 2026-09-15 Liam asked for it to be untracked: the-den-android df137da stops tracking HANDOFF.md.
+  M36 + LEFTOVERS 2026-09-15 (LiamPC, Claude Opus 5, session 74285f74; server 0.8.1d; committed locally, NOT pushed
+  or tagged): Settings > Remote access (remote_access_enabled, migration c2d3e4f5a6b7) forwards WEB_PORT on the router
+  over UPnP. libtorrent's port mapper was dropped: in 2.0.12 its Python add_port_mapping raises TypeError (no converter
+  for the handle vector) and no port-map alerts arrived, so app/upnp.py is a stdlib UPnP IGD client and
+  app/remote_access.py holds the guard (HTTPS on, certificate unexpired, not loopback, setup finished, never 80 or
+  443), a one-hour lease renewed by a 10-minute scheduler job, removal on disable and shutdown, never touching another
+  machine's rule, and the NAT loopback self-check. /health gains public_host. Discovery skips link-local and
+  Docker/VM/VPN interfaces; server_id() falls back to an in-memory id when STATE_DIR is unwritable. Verified in WSL: 27
+  unit checks (fake UPnP client), 17 fake-router checks, 15 live checks, test_discovery 10/10, migration round-trip.
+  Not tested yet: a real router, NAT loopback, access from outside (Liam). Next: M40 KDE pinning and discovery, then
+  M39 Android.
 
 Work no longer happens on the Windows machine (C:\projects, WSL Ubuntu). The three repos were cloned fresh from
 GitHub into /home/liam/Projects/theden/the-den, the-den-client and the-den-android on Liam's HoltOS 0.0.4-alpha

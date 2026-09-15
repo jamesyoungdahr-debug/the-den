@@ -1,11 +1,13 @@
 from fastapi import Depends, FastAPI, Request
+import asyncio
+import logging
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from starlette.middleware.sessions import SessionMiddleware
 
-from app import auth, automation, backup, discovery, formats, health, scheduler, setup_state, tls
+from app import auth, automation, backup, discovery, formats, health, remote_access, scheduler, setup_state, tls
 from app import settings as settings_module
 from app.db import SessionLocal, engine as db_engine
 from app.deps import get_db
@@ -14,6 +16,8 @@ from app.routers import api_settings, backup as backup_routes, discover, downloa
 from app.routers import auth as auth_routes
 from app.templating import templates
 from app.torrent import engine as torrent_engine
+
+log = logging.getLogger(__name__)
 
 app = FastAPI(title="The Den")
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
@@ -133,12 +137,35 @@ async def start_discovery():
 
 
 @app.on_event("startup")
+async def start_remote_access():
+    """Ask the router for the port mapping if an admin turned remote access on (M36). The router work runs in a background thread."""
+    db = SessionLocal()
+    try:
+        s = settings_module.effective(db)
+        remote_access.apply(s, setup_state.is_complete(db))
+    except Exception:
+        log.warning("Remote access could not start", exc_info=True)
+    finally:
+        db.close()
+
+
+@app.on_event("startup")
 def start_scheduler():
     scheduler.start()
 
 
-# Shutdown handlers run in registration order and stop at the first one that raises, so the
-# mDNS goodbye goes first: the apps drop a stopped server at once instead of waiting for expiry.
+# Shutdown handlers run in registration order and stop at the first one that raises. The router
+# mapping goes first (its hook never raises), then the mDNS goodbye, so the apps drop a stopped
+# server at once instead of waiting for expiry.
+@app.on_event("shutdown")
+async def stop_remote_access():
+    """Remove the router mapping on shutdown (M36)."""
+    try:
+        await asyncio.to_thread(remote_access.stop)
+    except Exception:
+        log.warning("Removing the router mapping failed", exc_info=True)
+
+
 @app.on_event("shutdown")
 async def stop_discovery():
     await discovery.stop()
@@ -173,9 +200,12 @@ def health_check(request: Request, db: Session = Depends(get_db)):
     s = settings_module.effective(db)
     out = {"status": "ok", "api_version": 2, "server_id": discovery.server_id(), "server_name": discovery.display_name(s), "setup_complete": setup_state.is_complete(db),
            "https": tls.enabled(), "tls_pin": tls.pin()}  # M35: the apps pin this key on first sign-in
+    if s.public_host:
+        out["public_host"] = s.public_host  # M40: the apps remember the public address next to the LAN one
     if getattr(request.state, "user", None) is not None:
         out["torrent_engine"] = torrent_engine.info()
         out["checks"] = health.current(db)
+        out["remote_access"] = remote_access.status()
     return out
 
 

@@ -146,6 +146,8 @@ class Settings(Base):
     setup_completed_at = Column(DateTime, nullable=True)
     # The name remote apps use to reach this server, e.g. requesthome.asuscomm.com (M35); null = PUBLIC_HOST.
     public_host = Column(String, nullable=True)
+    # Forward WEB_PORT on the router with UPnP (M36); off unless an admin turns it on.
+    remote_access_enabled = Column(Boolean, nullable=True)
 
 
 class DownloadRecord(Base):
