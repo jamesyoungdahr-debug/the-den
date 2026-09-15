@@ -117,6 +117,22 @@ CURRENT PLAN (2026-09-14): docs/port-40204-release-plan.md -- move the KDE clien
   tested yet: a phone. Everything that doesn't need Liam from the 2026-09-15 list is done: M36, M40, M39 and the
   review leftovers. Waiting for Liam: the router test (M36), a HoltOS desktop pass (M40), a phone test (M39), and
   "push" (the-den, the-den-client and the-den-android all have local commits).
+  PUSHED 2026-09-15 at Liam's request, NO tags: the-den d2a1d9a, the-den-client f9f9b2f, the-den-android 1f4c971. The
+  newest tags are still the-den v0.8.1a, the-den-client v0.5.0b and the-den-android v0.6.8, so nothing auto-installs.
+  Before the push: app/__main__.py now passes timeout_graceful_shutdown=10 to uvicorn, because a SIGTERM waited for
+  open keep-alive HTTPS connections from the apps (measured in WSL with three idle connections and one half-sent
+  request: 30.1 s before, 10.1 s after). holtos-update-apply was checked: install_pkgbuild_depends pacman-installs the
+  client's new python-cryptography and python-zeroconf on a running system, but archiso/packages.x86_64 lacks both, so
+  a fresh HoltOS image build would fail its vendor check once client 0.5.0d or later is tagged; the holtos session was
+  told. Next: research for a built-in media server (Plex, Jellyfin, Emby feature sets and what users want).
+  MEDIA SERVER RESEARCH 2026-09-15 (docs only; committed locally, not pushed): docs/media-server-plan.md collects four
+  research reports (Plex's feature set, what Plex users wish Plex had, Jellyfin and Emby, media-server architecture)
+  into a recommendation, a phased plan P0-P9 and a risks table. No code yet. Before any building Liam decides:
+  (1) a licence (The Den has none; copying Jellyfin or Intro Skipper code would make it GPL), (2) casting and
+  certificates (a LAN-only HTTP media port with signed short-lived URLs, or a trusted certificate on a domain),
+  (3) QtMultimedia or libmpv for the KDE player, (4) the hardware target for transcoding. Subagents researched;
+  the 4090 wrote the document sections. Next: Liam's decisions, then P0 (ffprobe scanning, playback state, signed
+  stream URLs, ffmpeg job manager).
 
 Work no longer happens on the Windows machine (C:\projects, WSL Ubuntu). The three repos were cloned fresh from
 GitHub into /home/liam/Projects/theden/the-den, the-den-client and the-den-android on Liam's HoltOS 0.0.4-alpha
