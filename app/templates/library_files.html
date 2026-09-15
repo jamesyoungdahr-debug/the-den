@@ -32,6 +32,7 @@
           </div>
           <div class="holt-toolbar">
             <span class="holt-chip">{{ f.media_type }}</span>
+            {% if not f.matched %}<a class="holt-chip" href="/ui/library/match/{{ f.id }}">Match</a>{% endif %}
             {% if f.missing %}<span class="holt-chip">gone from disk</span>{% endif %}
           </div>
         </div>

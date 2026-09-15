@@ -181,3 +181,48 @@ async def match_episodes(db: Session, limit: int = 50) -> dict:
         log.info("library match: placed %d of %d unmatched TV file(s)", matched, len(rows))
 
     return {"tried": len(rows), "matched": matched}
+
+
+async def search_titles(query: str, api_key: str) -> list[dict]:
+    """Movie and TV candidates for a query a person typed, for the unmatched queue page.
+    Unlike the automatic matcher this makes no judgement - it just shows what TMDB has."""
+    cards = await tmdb.search_multi(query, api_key)
+    return [card for card in cards if card.get("media_type") in ("movie", "tv")]
+
+
+async def attach_choice(db: Session, file_id: int, tmdb_id: int, media_type: str) -> bool:
+    """Attach one unmatched file to the title a person picked by hand. Returns False when the
+    file or the title could not be resolved, so the caller can say so. The CALLER commits."""
+    row = db.get(MediaFile, file_id)
+    if row is None:
+        return False
+
+    if media_type == "movie":
+        movie, _created = await get_or_create_movie(db, tmdb_id)
+        row.movie_id = movie.id
+        row.episode_id = None
+        row.matched = True
+        return True
+
+    if media_type == "tv":
+        series, _created = await get_or_create_series(db, tmdb_id)
+        if series is None:
+            return False
+        parsed = parse_episode(os.path.basename(row.path))
+        if parsed is None:
+            return False
+        season, episode = parsed
+        target = (
+            db.query(Episode)
+            .filter(Episode.series_id == series.id, Episode.season_number == season, Episode.episode_number == episode)
+            .first()
+        )
+        if target is None:
+            # The show is now in the library but this episode is not one of its rows.
+            return False
+        row.episode_id = target.id
+        row.movie_id = None
+        row.matched = True
+        return True
+
+    return False

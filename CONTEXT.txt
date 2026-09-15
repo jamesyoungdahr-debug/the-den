@@ -22,6 +22,11 @@ M50b LIBRARY SCANNER, MATCHING 2026-09-15 (LiamPC; committed locally, NOT pushed
   suite and any live server (the app deps are not on this machine) - the Z13 runs those. Still to do: the unmatched queue and
   collections. The 4090 wrote the matchers and the availability rewrite, the 4080 the bulk helpers and the scheduler wiring.
   No DeepSeek tokens were used for M50b.
+  M50b unmatched queue 2026-09-15 (same session, NOT pushed or tagged): /ui/library/files gains a Match link on every unmatched
+  row, /ui/library/match/{id} searches TMDB (app/library_match.search_titles) and attaches the picked title with
+  library_match.attach_choice, which creates the Movie or Series through the same get_or_create_* helpers the matcher uses.
+  library_match.html is the search page. Server 0.8.3c. Verified by py_compile only; the suite and a live server still have not
+  been run (the app deps are not on this machine). The 4090 wrote the service functions and the routes, the 4080 the templates.
 M50a LIBRARY SCANNER, FILES 2026-09-15 (LiamPC; committed locally, NOT pushed or tagged): the first step of replacing Plex.
   `app/library_scan.py` walks every configured library folder (RootFolder rows plus the Settings movies/TV roots, deduplicated
   by real path), records each video file in the new `media_files` table (migration 7b3c9d1e5f2a), matches it to its Movie or

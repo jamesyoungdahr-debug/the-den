@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title_suffix %} — Match a file{% endblock %}
+{% block content %}
+  <div class="holt-page-head">
+    <div>
+      <h1 class="holt-page-title">Match a file</h1>
+      <div class="holt-meta">{{ entry.name }} — pick the title this file belongs to</div>
+    </div>
+    <div class="holt-toolbar"><a class="holt-chip" href="/ui/library/files?show=unmatched">‹ Unmatched</a></div>
+  </div>
+
+  <section class="holt-section">
+    <div class="holt-panel">
+      <form method="get" action="/ui/library/match/{{ entry.id }}">
+        <div class="holt-field">
+          <label>Search TMDB</label>
+          <input type="text" name="q" value="{{ q }}" placeholder="Title to search for">
+        </div>
+        <button type="submit" class="holt-btn holt-btn-primary">Search</button>
+      </form>
+    </div>
+  </section>
+
+  {% if q %}
+    {% if not results %}
+    <div class="holt-empty holt-panel">
+      <div class="holt-empty-title">Nothing found</div>
+      <div class="holt-body">TMDB returned no movies or series for "{{ q }}".</div>
+    </div>
+    {% else %}
+    <section class="holt-section">
+      <div class="holt-panel">
+        <div class="holt-row-list">
+          {% for r in results %}
+          <div class="holt-row">
+            <div class="holt-row-main">
+              <div class="holt-row-title">{{ r.title }}</div>
+              <div class="holt-row-meta">{{ r.media_type }}{% if r.year %} · {{ r.year }}{% endif %}</div>
+            </div>
+            <div class="holt-toolbar">
+              <form method="post" action="/ui/library/match/{{ entry.id }}">
+                <input type="hidden" name="tmdb_id" value="{{ r.tmdb_id }}">
+                <input type="hidden" name="media_type" value="{{ r.media_type }}">
+                <button type="submit" class="holt-btn holt-btn-secondary holt-btn-sm">Use this</button>
+              </form>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+    {% endif %}
+  {% endif %}
+{% endblock %}

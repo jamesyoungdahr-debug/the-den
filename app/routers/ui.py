@@ -1,4 +1,5 @@
 import json
+import os
 from calendar import monthrange
 from datetime import date, timedelta
 
@@ -7,7 +8,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
 from app import indexers as indexer_engine
-from app import auth, config, library_scan, library_service, playback
+from app import auth, config, library_match, library_scan, library_service, playback
 from app import backup, renamer
 from app import settings as settings_module
 from app import tmdb, torznab, tvmaze
@@ -18,7 +19,7 @@ from app.deps import get_db
 from app.download_check import check_and_import
 from app.grabber import grab_episode as do_grab_episode, grab_season as do_grab_season
 from app.grabber import grab_movie as do_grab_movie
-from app.models import BlocklistEntry, DownloadRecord, Episode, Indexer, Movie, Series
+from app.models import BlocklistEntry, DownloadRecord, Episode, Indexer, MediaFile, Movie, Series
 from app import config, remote_access, tls
 from app.routers.api_settings import apply_runtime_changes, clean_public_host
 from app.routers.downloads import assign_download as _assign_download_action, import_as_is as _import_as_is_action, _unmatched_entry
@@ -707,6 +708,32 @@ def ui_library_files(request: Request, show: str = "all", db: Session = Depends(
         "library_files.html",
         {"request": request, "entries": entries, "counts": library_scan.file_counts(db), "show": show, "active_nav": "settings"},
     )
+
+
+@router.get("/ui/library/match/{file_id}", response_class=HTMLResponse, dependencies=ADMIN)
+async def ui_library_match(request: Request, file_id: int, q: str = "", db: Session = Depends(get_db)):
+    """M50b: search TMDB and attach one unmatched file to the title a person picks."""
+    row = db.get(MediaFile, file_id)
+    if row is None:
+        raise HTTPException(404, "File not found")
+    results = []
+    if q.strip():
+        s = settings_module.effective(db)
+        if s.tmdb_api_key:
+            results = await library_match.search_titles(q, s.tmdb_api_key)
+    entry = {"id": row.id, "name": os.path.basename(row.path)}
+    return templates.TemplateResponse(
+        "library_match.html",
+        {"request": request, "entry": entry, "q": q, "results": results, "active_nav": "settings"},
+    )
+
+
+@router.post("/ui/library/match/{file_id}", dependencies=ADMIN)
+async def ui_library_match_apply(file_id: int, tmdb_id: int = Form(...), media_type: str = Form(...), db: Session = Depends(get_db)):
+    """Attach the file to the chosen title, then back to the unmatched list."""
+    await library_match.attach_choice(db, file_id, tmdb_id, media_type)
+    db.commit()
+    return RedirectResponse("/ui/library/files?show=unmatched", status_code=303)
 
 
 @router.post("/ui/rename/apply", dependencies=ADMIN)
