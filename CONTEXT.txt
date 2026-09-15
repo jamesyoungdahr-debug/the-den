@@ -27,6 +27,16 @@ M50b LIBRARY SCANNER, MATCHING 2026-09-15 (LiamPC; committed locally, NOT pushed
   library_match.attach_choice, which creates the Movie or Series through the same get_or_create_* helpers the matcher uses.
   library_match.html is the search page. Server 0.8.3c. Verified by py_compile only; the suite and a live server still have not
   been run (the app deps are not on this machine). The 4090 wrote the service functions and the routes, the 4080 the templates.
+M50b FIXES AND SCAN NOW 2026-09-15 (0.8.3d, 0.8.3e; NOT pushed or tagged): (d) scan() now derives the legacy
+  Movie.has_file / Episode.has_file flags from media_files after every pass. Playback and availability already read media_files,
+  but the library pages and their Play buttons still read those flags, which the scan never set - so a TV episode the scan found
+  showed as "missing" with no Play button even though its file was on disk, and the calendar and the series counts were wrong
+  for the same reason. Repairing the flags in one place fixes every reader at once instead of chasing each call site; only rows
+  whose flag actually disagrees are written. (e) Settings > Library gains a Scan now button (POST /ui/settings/library/scan)
+  that runs the scan and both matchers inline and reports what it found, mirroring the Plex scan button. Without it the scan
+  only ran on its timer (default 60 minutes) or at startup, so pointing The Den at a new folder appeared to do nothing - which
+  matters directly for the plan to hard-link a Plex library into a Root Folder and scan it. Both verified by py_compile only:
+  the suite and a live server still have not been run.
 M50a LIBRARY SCANNER, FILES 2026-09-15 (LiamPC; committed locally, NOT pushed or tagged): the first step of replacing Plex.
   `app/library_scan.py` walks every configured library folder (RootFolder rows plus the Settings movies/TV roots, deduplicated
   by real path), records each video file in the new `media_files` table (migration 7b3c9d1e5f2a), matches it to its Movie or
