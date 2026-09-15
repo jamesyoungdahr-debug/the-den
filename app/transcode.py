@@ -134,6 +134,9 @@ def output_args(decided: dict, source: str, dest: str, start: int = 0) -> list[s
     """The ffmpeg argument list that writes dest. An argument list, never a shell string."""
     exe = media_probe.ffmpeg_path() or "ffmpeg"
     args = [exe, "-hide_banner", "-nostdin", "-y"]
+    # ffmpeg_jobs reads this off stdout to know how far along the job is; without it there is
+    # nothing to read and progress stays at zero for the whole conversion.
+    args += ["-progress", "pipe:1", "-nostats"]
     if decided.get("video_copy") is False and os.path.exists(VAAPI_DEVICE):
         args += ["-vaapi_device", VAAPI_DEVICE]
     if start > 0:
