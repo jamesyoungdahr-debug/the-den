@@ -9,7 +9,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
 from app import indexers as indexer_engine
-from app import auth, config, library_match, library_scan, library_service, playback, scheduler
+from app import auth, config, library_match, library_scan, library_service, playback, scheduler, watchlist
 from app import backup, renamer
 from app import settings as settings_module
 from app import tmdb, torznab, tvmaze
@@ -693,6 +693,57 @@ def ui_assign_unmatched(download_id: int, file: str = Form(...), kind: str = For
 def ui_import_as_is_unmatched(download_id: int, file: str = Form(...), root: str = Form(...), db: Session = Depends(get_db)):
     _import_as_is_action(download_id, ImportAsIsBody(file=file, root=root), db)
     return RedirectResponse("/ui/downloads/unmatched", status_code=303)
+
+
+def _safe_back(value: str | None) -> str:
+    """Where to send somebody after a watchlist change. A redirect target taken from a form is
+    the classic open-redirect hole, so only a path on this server is ever honoured."""
+    if not value or not value.startswith("/") or value.startswith("//"):
+        return "/ui/watchlist"
+    return value
+
+
+@router.get("/ui/watchlist", response_class=HTMLResponse, dependencies=USER)
+def ui_watchlist(request: Request, db: Session = Depends(get_db)):
+    """M51: your own watchlist. An import list can pick it up on a schedule, so keeping a
+    wishlist no longer needs Plex to be connected."""
+    return templates.TemplateResponse(
+        "watchlist.html",
+        {"request": request, "items": watchlist.for_user(db, request.state.user.id), "active_nav": "discover"},
+    )
+
+
+@router.post("/ui/watchlist", dependencies=USER)
+def ui_watchlist_add(
+    request: Request,
+    tmdb_id: int = Form(...),
+    media_type: str = Form(...),
+    title: str = Form(...),
+    year: str = Form(""),
+    poster_path: str = Form(""),
+    back: str = Form("/ui/watchlist"),
+    db: Session = Depends(get_db),
+):
+    """Add a title. Idempotent, so a double click cannot put the same film on twice."""
+    watchlist.add(
+        db, request.state.user.id, media_type, tmdb_id, title,
+        int(year) if year.strip().isdigit() else None, poster_path,
+    )
+    return RedirectResponse(_safe_back(back), status_code=303)
+
+
+@router.post("/ui/watchlist/remove", dependencies=USER)
+def ui_watchlist_remove(
+    request: Request,
+    tmdb_id: int = Form(...),
+    media_type: str = Form(...),
+    back: str = Form("/ui/watchlist"),
+    db: Session = Depends(get_db),
+):
+    """Take a title off. Anyone can only ever remove their own, because the user comes from the
+    session rather than the form."""
+    watchlist.remove(db, request.state.user.id, media_type, tmdb_id)
+    return RedirectResponse(_safe_back(back), status_code=303)
 
 
 @router.get("/ui/rename", response_class=HTMLResponse, dependencies=ADMIN)

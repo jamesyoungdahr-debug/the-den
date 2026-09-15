@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title_suffix %} — Watchlist{% endblock %}
+{% block content %}
+  <div class="holt-page-head">
+    <div>
+      <h1 class="holt-page-title">Watchlist</h1>
+      <div class="holt-meta">{{ items|length }} title{{ '' if items|length == 1 else 's' }} you want</div>
+    </div>
+  </div>
+
+  {% if not items %}
+  <div class="holt-empty holt-panel">
+    <div class="holt-empty-title">Nothing on your watchlist</div>
+    <div class="holt-body">Add a film or series from Discover. An import list can pick this up on a schedule, so titles arrive without asking for each one.</div>
+  </div>
+  {% else %}
+  <section class="holt-section">
+    <div class="holt-panel">
+      <div class="holt-row-list">
+        {% for i in items %}
+        <div class="holt-row">
+          <div class="holt-row-main">
+            <div class="holt-row-title">{{ i.title }}</div>
+            <div class="holt-row-meta">{{ i.year or 'year unknown' }} · {{ 'film' if i.media_type == 'movie' else 'series' }}</div>
+          </div>
+          <div class="holt-row-actions">
+            <a class="holt-chip" href="/discover/{{ i.media_type }}/{{ i.tmdb_id }}">Details</a>
+            <form method="post" action="/ui/watchlist/remove" style="margin:0">
+              <input type="hidden" name="tmdb_id" value="{{ i.tmdb_id }}">
+              <input type="hidden" name="media_type" value="{{ i.media_type }}">
+              <input type="hidden" name="back" value="/ui/watchlist">
+              <button type="submit" class="holt-btn holt-btn-quiet holt-btn-sm">Remove</button>
+            </form>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+{% endblock %}

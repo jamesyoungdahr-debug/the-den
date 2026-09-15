@@ -13,7 +13,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
 from app import health
-from app import auth, playback, plex_scan, requests_service, tmdb, tvmaze
+from app import auth, playback, plex_scan, requests_service, tmdb, tvmaze, watchlist
 from app import history
 from app import settings as settings_module
 from app.deps import get_db
@@ -252,6 +252,9 @@ async def _detail(kind: str, tmdb_id: int, db: Session, me: User | None = None) 
                 for p in parts
             ],
         }
+    # M51: whether this title is already on the viewer's own watchlist, so the page can offer
+    # Add or Remove rather than always showing the same button.
+    item["on_watchlist"] = watchlist.has(db, me.id, kind, tmdb_id) if me is not None else False
     return item
 
 

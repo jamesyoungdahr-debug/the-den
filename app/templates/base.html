@@ -17,7 +17,7 @@
 
   {#- Nav definition: one place, rendered three ways (sidebar, tab bar, more-sheet). -#}
   {% set nav_groups = [
-    ("Browse", [("discover", "/", "Discover", "compass"), ("requests", "/requests", "Requests", "inbox")]),
+    ("Browse", [("discover", "/", "Discover", "compass"), ("watchlist", "/ui/watchlist", "Watchlist", "plus"), ("requests", "/requests", "Requests", "inbox")]),
     ("Library", [("movies", "/library", "Movies", "film"), ("tv", "/tv", "TV", "tv"), ("calendar", "/calendar", "Calendar", "calendar")]),
     ("Admin", [("downloads", "/ui/downloads", "Downloads", "download"), ("indexers", "/ui/indexers", "Indexers", "db"), ("users", "/ui/users", "Users", "users"), ("settings", "/ui/settings", "Settings", "sliders")]),
   ] %}

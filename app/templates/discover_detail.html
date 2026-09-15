@@ -60,6 +60,24 @@
             {% if item.library %}<a class="holt-btn holt-btn-secondary" href="/ui/series/{{ item.library.id }}">Episodes</a>{% endif %}
           {% endif %}
 
+          {% if item.on_watchlist %}
+          <form method="post" action="/ui/watchlist/remove" style="margin:0">
+            <input type="hidden" name="tmdb_id" value="{{ item.tmdb_id }}">
+            <input type="hidden" name="media_type" value="{{ 'movie' if kind == 'movie' else 'tv' }}">
+            <input type="hidden" name="back" value="/discover/{{ kind }}/{{ item.tmdb_id }}">
+            <button type="submit" class="holt-btn holt-btn-secondary" title="Take it off your watchlist">On your watchlist</button>
+          </form>
+          {% else %}
+          <form method="post" action="/ui/watchlist" style="margin:0">
+            <input type="hidden" name="tmdb_id" value="{{ item.tmdb_id }}">
+            <input type="hidden" name="media_type" value="{{ 'movie' if kind == 'movie' else 'tv' }}">
+            <input type="hidden" name="title" value="{{ item.title }}">
+            <input type="hidden" name="year" value="{{ item.year or '' }}">
+            <input type="hidden" name="poster_path" value="{{ item.poster_path or '' }}">
+            <input type="hidden" name="back" value="/discover/{{ kind }}/{{ item.tmdb_id }}">
+            <button type="submit" class="holt-btn holt-btn-secondary">Add to watchlist</button>
+          </form>
+          {% endif %}
           {% if item.trailer_key %}<a class="holt-btn holt-btn-quiet" href="https://www.youtube.com/watch?v={{ item.trailer_key }}" target="_blank" rel="noopener">Trailer ↗</a>{% endif %}
           {% if item.imdb_id %}<a class="holt-btn holt-btn-quiet" href="https://www.imdb.com/title/{{ item.imdb_id }}/" target="_blank" rel="noopener">IMDb ↗</a>{% endif %}
         </div>
