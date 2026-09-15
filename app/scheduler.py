@@ -1,5 +1,6 @@
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
+import asyncio
 import logging
 
 from app import automation, import_lists as import_lists_service, library_match, library_scan, plex_scan, remote_access, settings as settings_module
@@ -46,21 +47,54 @@ async def _import_lists_job() -> None:
         db.close()
 
 
-async def _library_scan_job() -> None:
-    """M50a/M50b: reconcile media_files with what is on disk, then try to place the files the
-    scan could not identify against TMDB."""
+def _scan_in_thread() -> dict:
+    """The filesystem walk is blocking, so it gets its own session and its own thread."""
     db = SessionLocal()
     try:
-        library_scan.scan(db)
+        result = library_scan.scan(db)
         db.commit()
-        await library_match.match_movies(db)
-        await library_match.match_episodes(db)
-        db.commit()
-    except Exception:
-        db.rollback()
-        log.warning("scheduled library scan failed", exc_info=True)
+        return result
     finally:
         db.close()
+
+
+async def _match_in_session() -> int:
+    """Both matchers, on the event loop because they await TMDB. Returns how many files were placed."""
+    db = SessionLocal()
+    try:
+        movies = await library_match.match_movies(db)
+        episodes = await library_match.match_episodes(db)
+        db.commit()
+        return movies["matched"] + episodes["matched"]
+    finally:
+        db.close()
+
+
+async def run_library_scan() -> dict:
+    """M50a/M50b: one scan and both matchers, publishing progress for the Settings page to poll.
+    The walk runs in a worker thread so a big library cannot block the event loop. Shared by the
+    scheduled job and the Settings "Scan now" button."""
+    try:
+        result = await asyncio.to_thread(_scan_in_thread)
+        library_scan.update_progress(
+            running=True, phase="matching", seen=result["seen"], added=result["added"],
+            unmatched=result["unmatched"], missing=result["missing"],
+        )
+        placed = await _match_in_session()
+    except Exception as exc:
+        log.warning("library scan failed", exc_info=True)
+        library_scan.finish_progress("failed", error=str(exc))
+        raise
+    library_scan.finish_progress("done", placed=placed)
+    return result
+
+
+async def _library_scan_job() -> None:
+    """The scheduled form of run_library_scan; it has already logged and marked the failure."""
+    try:
+        await run_library_scan()
+    except Exception:
+        pass
 
 
 async def _remote_access_job():

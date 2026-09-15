@@ -1,3 +1,4 @@
+import asyncio
 import json
 import os
 from calendar import monthrange
@@ -8,7 +9,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
 from app import indexers as indexer_engine
-from app import auth, config, library_match, library_scan, library_service, playback
+from app import auth, config, library_match, library_scan, library_service, playback, scheduler
 from app import backup, renamer
 from app import settings as settings_module
 from app import tmdb, torznab, tvmaze
@@ -737,22 +738,19 @@ async def ui_library_match_apply(file_id: int, tmdb_id: int = Form(...), media_t
 
 
 @router.post("/ui/settings/library/scan", dependencies=ADMIN)
-async def ui_library_scan_now(db: Session = Depends(get_db)):
-    """M50b: run a library scan and the matchers on demand instead of waiting for the timer."""
-    try:
-        result = library_scan.scan(db)
-        db.commit()
-        movies = await library_match.match_movies(db)
-        episodes = await library_match.match_episodes(db)
-        db.commit()
-    except Exception as exc:
-        db.rollback()
-        return RedirectResponse(f"/ui/settings?error=Library+scan+failed:+{str(exc).replace(' ', '+')}#library", status_code=303)
-    summary = (
-        f"{result['seen']} files seen, {result['added']} new, {result['unmatched']} unmatched, "
-        f"{result['missing']} missing; placed {movies['matched'] + episodes['matched']}"
-    )
-    return RedirectResponse(f"/ui/settings?notice=Library+scan:+{summary.replace(' ', '+')}#library", status_code=303)
+async def ui_library_scan_now():
+    """M50b: start a library scan in the background. The page polls /api/library/scan/status, so
+    the request returns at once instead of hanging until a big library finishes."""
+    if library_scan.progress()["running"]:
+        return RedirectResponse("/ui/settings?error=A+library+scan+is+already+running#library", status_code=303)
+    asyncio.create_task(scheduler.run_library_scan())
+    return RedirectResponse("/ui/settings?notice=Library+scan+started#library", status_code=303)
+
+
+@router.get("/api/library/scan/status", dependencies=ADMIN)
+def api_library_scan_status():
+    """M50b: what the running (or last finished) library scan is doing, for the Settings page."""
+    return library_scan.progress()
 
 
 @router.post("/ui/rename/apply", dependencies=ADMIN)

@@ -48,6 +48,51 @@
         <div class="holt-toolbar" style="margin-top: var(--holt-space-3)">
           <button type="submit" form="library-scan" class="holt-btn holt-btn-secondary holt-btn-sm">Scan now</button>
         </div>
+        <div id="scan-progress" class="holt-meta" style="margin-top: var(--holt-space-2)"></div>
+        <script>
+          // Live scan progress. The button posts and returns at once, so this is the only
+          // thing that tells a person what the scan is doing.
+          (function () {
+            var box = document.getElementById("scan-progress");
+            if (!box) return;
+            var wasRunning = false;
+            function line(s) {
+              if (s.running && s.phase === "matching") {
+                return "Scan finished (" + s.seen + " files seen) - matching titles against TMDB...";
+              }
+              if (s.running) {
+                var where = s.folder ? s.folder.split(/[\\/]/).pop() : "starting";
+                var of = s.folders_total ? " (" + s.folders_done + "/" + s.folders_total + " folders)" : "";
+                return "Scanning " + where + of + " - " + s.seen + " files seen, " + s.added + " new, " + s.unmatched + " unmatched";
+              }
+              if (s.phase === "done") {
+                return "Last scan: " + s.seen + " files seen, " + s.added + " new, " + s.unmatched + " unmatched, " + s.missing + " missing; " + s.placed + " title(s) placed.";
+              }
+              if (s.phase === "failed") {
+                return "Last scan failed: " + (s.error || "unknown error");
+              }
+              return "";
+            }
+            function poll() {
+              fetch("/api/library/scan/status", { credentials: "same-origin" })
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (s) {
+                  if (!s) return;
+                  box.textContent = line(s);
+                  if (s.running) {
+                    wasRunning = true;
+                    setTimeout(poll, 1000);
+                  } else if (wasRunning) {
+                    // It just finished: reload once so the counts and links below are current.
+                    wasRunning = false;
+                    setTimeout(function () { location.reload(); }, 1200);
+                  }
+                })
+                .catch(function () { setTimeout(poll, 3000); });
+            }
+            poll();
+          })();
+        </script>
       </section>
 
       <section class="holt-panel" id="torrent">

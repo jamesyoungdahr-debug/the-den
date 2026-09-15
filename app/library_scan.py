@@ -32,6 +32,45 @@ SKIP_DIR_NAMES = {
 SEASON_DIR_RE = re.compile(r"^(?:season|s)[\s._-]*(\d{1,2})$", re.IGNORECASE)
 
 
+# What the running (or last finished) scan is doing, for the Settings page to poll. A module-level
+# dict is enough: one scan runs at a time and every reader only ever takes a copy.
+_PROGRESS: dict = {
+    "running": False,
+    "phase": "idle",  # idle | scanning | matching | done | failed
+    "folder": "",
+    "folders_done": 0,
+    "folders_total": 0,
+    "seen": 0,
+    "added": 0,
+    "matched": 0,
+    "unmatched": 0,
+    "missing": 0,
+    "placed": 0,
+    "started_at": None,
+    "finished_at": None,
+    "error": None,
+}
+
+
+def progress() -> dict:
+    """A snapshot of the running scan, or the last finished one. A copy, so a caller cannot
+    mutate the live state by accident."""
+    return dict(_PROGRESS)
+
+
+def update_progress(**fields) -> None:
+    """Publish progress fields. Unknown keys are ignored rather than added, so a typo cannot
+    quietly grow the state."""
+    for key, value in fields.items():
+        if key in _PROGRESS:
+            _PROGRESS[key] = value
+
+
+def finish_progress(phase: str = "done", error: str | None = None, placed: int = 0) -> None:
+    """Mark the scan finished, cleanly or otherwise."""
+    update_progress(running=False, phase=phase, error=error, placed=placed, finished_at=datetime.now(timezone.utc))
+
+
 def _norm(title: str | None) -> str:
     """Lowercase a title and collapse every run of non-alphanumerics to a single space."""
     if not title:
@@ -179,8 +218,15 @@ def scan(db: Session, now: datetime | None = None) -> dict:
     existing: dict[str, MediaFile] = {_real(row.path): row for row in db.query(MediaFile).all()}
     seen: set[str] = set()
     added = updated = matched = unmatched = missing = 0
+    folders = library_folders(db)
+    update_progress(
+        running=True, phase="scanning", folder="", folders_done=0, folders_total=len(folders),
+        seen=0, added=0, matched=0, unmatched=0, missing=0, placed=0,
+        started_at=stamp, finished_at=None, error=None,
+    )
 
-    for folder, media_type, root_folder_id in library_folders(db):
+    for index, (folder, media_type, root_folder_id) in enumerate(folders, start=1):
+        update_progress(folder=folder, folders_done=index - 1)
         for raw_path in walk_videos(folder):
             real = os.path.realpath(raw_path)
             key = _real(real)
@@ -231,6 +277,7 @@ def scan(db: Session, now: datetime | None = None) -> dict:
                 row.episode_id = None
                 row.matched = False
                 unmatched += 1
+            update_progress(seen=len(seen), added=added, matched=matched, unmatched=unmatched)
 
     for key, row in existing.items():
         if key in seen or row.missing:
@@ -242,6 +289,7 @@ def scan(db: Session, now: datetime | None = None) -> dict:
     # Keep the legacy flags the library pages read in step with what the scan just recorded.
     synced = sync_presence_flags(db)
 
+    update_progress(folders_done=len(folders), seen=len(seen), added=added, matched=matched, unmatched=unmatched, missing=missing)
     log.info(
         "library scan: seen=%d added=%d updated=%d matched=%d unmatched=%d missing=%d flags=%d",
         len(seen),
