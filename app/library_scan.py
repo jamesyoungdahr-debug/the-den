@@ -234,14 +234,18 @@ def scan(db: Session, now: datetime | None = None) -> dict:
         row.missing = True
         missing += 1
 
+    # Keep the legacy flags the library pages read in step with what the scan just recorded.
+    synced = sync_presence_flags(db)
+
     log.info(
-        "library scan: seen=%d added=%d updated=%d matched=%d unmatched=%d missing=%d",
+        "library scan: seen=%d added=%d updated=%d matched=%d unmatched=%d missing=%d flags=%d",
         len(seen),
         added,
         updated,
         matched,
         unmatched,
         missing,
+        synced["changed"],
     )
     return {
         "added": added,
@@ -250,6 +254,7 @@ def scan(db: Session, now: datetime | None = None) -> dict:
         "matched": matched,
         "unmatched": unmatched,
         "missing": missing,
+        "flags_changed": synced["changed"],
     }
 
 
@@ -376,3 +381,30 @@ def playable_ids(db: Session, kind: str, item_ids) -> set[int]:
     column = MediaFile.movie_id if kind == "movie" else MediaFile.episode_id
     rows = db.query(column).filter(column.in_(ids), MediaFile.missing.is_(False)).distinct()
     return {row[0] for row in rows}
+
+
+def sync_presence_flags(db: Session) -> dict:
+    """Keep the legacy Movie.has_file and Episode.has_file flags in step with media_files.
+
+    Playback and availability resolve media_files rows, but the library pages, the play buttons
+    and the calendar still read these flags, so the scan maintains them as a derived cache
+    instead of leaving them stale. The CALLER commits. Returns how many flags changed."""
+    changed = 0
+
+    movie_ids = [row[0] for row in db.query(Movie.id)]
+    on_disk = playable_ids(db, "movie", movie_ids)
+    for movie in db.query(Movie).all():
+        wanted = movie.id in on_disk
+        if bool(movie.has_file) != wanted:
+            movie.has_file = wanted
+            changed += 1
+
+    episode_ids = [row[0] for row in db.query(Episode.id)]
+    on_disk = playable_ids(db, "episode", episode_ids)
+    for episode in db.query(Episode).all():
+        wanted = episode.id in on_disk
+        if bool(episode.has_file) != wanted:
+            episode.has_file = wanted
+            changed += 1
+
+    return {"changed": changed}
