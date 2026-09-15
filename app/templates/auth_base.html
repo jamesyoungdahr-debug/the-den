@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="/static/holt-tokens.css?v={{ static_v }}">
   <link rel="stylesheet" href="/static/den.css?v={{ static_v }}">
   <style>
-    /* Sign-in ground: the wallpaper's pool rings, the purple glow, and the otter at 9%. */
+    /* Sign-in ground: the wallpaper's pool rings, the purple glow, and the new HoltOS otter (ComfyUI render, the same as the HoltOS login screen) at 9%. */
     .den-auth { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: var(--holt-space-4); position: relative; overflow: hidden; }
     .den-auth-ground { position: fixed; inset: 0; z-index: 0; pointer-events: none;
       background: radial-gradient(900px 600px at 30% 40%, rgba(177,77,255,.16), transparent 60%), radial-gradient(600px 400px at 85% 90%, rgba(40,224,200,.10), transparent 60%); }
@@ -26,7 +26,7 @@
     <div class="den-auth-ring" style="width:1400px;height:1400px;left:-160px;top:-260px"></div>
     <div class="den-auth-ring" style="width:1040px;height:1040px;left:20px;top:-80px"></div>
     <div class="den-auth-ring" style="width:700px;height:700px;left:190px;top:90px;border-color:rgba(177,77,255,.10)"></div>
-    <img class="den-auth-otter" src="/static/otter-fullbody.svg" alt="">
+    <img class="den-auth-otter" src="/static/otter-fullbody.png?v={{ static_v }}" alt="">
   </div>
   <main class="den-auth">
     <div class="den-auth-card holt-glass-float">
