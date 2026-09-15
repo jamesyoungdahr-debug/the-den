@@ -13,11 +13,13 @@ belongs elsewhere. Full HLS with restart-on-seek is the rest of P2 and is not bu
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import os
 import subprocess
+from pathlib import Path
 
-from app import media_probe, playability
+from app import config, media_probe, playability
 
 log = logging.getLogger(__name__)
 
@@ -150,3 +152,17 @@ def output_args(decided: dict, source: str, dest: str, start: int = 0) -> list[s
     # even when the source was something else.
     args += ["-movflags", "+faststart", dest]
     return args
+
+
+def cache_path(library_file, mode: str) -> Path:
+    """Where a converted copy of this file lives.
+
+    Keyed by the file's real path, its mtime and the mode, so a replaced file -- or a remux that
+    has become a transcode -- gets its own entry and a stale one is simply never asked for again.
+    The name comes from a hash and never from anything in the URL, the same rule the subtitle
+    cache follows."""
+    mtime_ns = os.stat(library_file.path).st_mtime_ns
+    digest = hashlib.sha256(f"{library_file.path}\0{mtime_ns}\0{mode}".encode()).hexdigest()
+    folder = Path(config.STATE_DIR) / "media-cache" / "converted"
+    folder.mkdir(parents=True, exist_ok=True)
+    return folder / f"{digest}.mp4"

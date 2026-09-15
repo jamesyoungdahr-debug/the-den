@@ -164,6 +164,15 @@ def get(job_id: str) -> Job | None:
         return _jobs.get(job_id)
 
 
+def find(dest: str) -> Job | None:
+    """A running job already writing this destination, if there is one. Asking twice must join
+    the first conversion rather than start a second ffmpeg on the same file."""
+    for job in list(_jobs.values()):
+        if job.dest == dest and not job.finished:
+            return job
+    return None
+
+
 def stop(job_id: str) -> None:
     """Kill a job and forget it. Its partial output is removed, because a half-written file
     would look playable and fail in the middle."""
