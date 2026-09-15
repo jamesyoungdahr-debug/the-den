@@ -104,6 +104,19 @@ CURRENT PLAN (2026-09-14): docs/port-40204-release-plan.md -- move the KDE clien
   harness), and the KDE sign-in check 6/6. Seen while testing: a server stopped with SIGTERM waited more than 30 s
   while a Qt client kept an HTTPS connection open, and stopped in 0.2 s once the client closed it; worth checking on
   the real service. Not tested yet: a desktop pass on HoltOS against a real LAN server. Next: M39 Android.
+  M39 ANDROID 2026-09-15 (the-den-android 0.7.0c, versionCode 25; committed locally, NOT pushed or tagged): the same
+  pinning model as the KDE client. PinnedTrustManager (an X509ExtendedTrustManager that takes the host and port from
+  the TLS session) and PinnedHostnameVerifier check every certificate against network/PinStore.kt: a new key waits for
+  the person on the sign-in screen, a stored pin must match even when the system trusts the certificate, expired
+  certificates are refused even when pinned, a server id can't switch keys, and a server reporting a different pin
+  than the connection used is refused; "Forget the saved key" clears a pin. http:// LAN addresses are retried over
+  HTTPS, and the app remembers a trusted server's LAN address and announced public_host and tries the other when the
+  saved one fails. LAN discovery over NSD, only on Wi-Fi or Ethernet with a multicast lock; advertised pins are never
+  trusted. docs/privacy-android.md lists the pins and the local-network queries. Verified in WSL: assembleDebug and 27
+  JVM tests, including live TLS tests of the trust manager and SessionViewModel against a The Den HTTPS server. Not
+  tested yet: a phone. Everything that doesn't need Liam from the 2026-09-15 list is done: M36, M40, M39 and the
+  review leftovers. Waiting for Liam: the router test (M36), a HoltOS desktop pass (M40), a phone test (M39), and
+  "push" (the-den, the-den-client and the-den-android all have local commits).
 
 Work no longer happens on the Windows machine (C:\projects, WSL Ubuntu). The three repos were cloned fresh from
 GitHub into /home/liam/Projects/theden/the-den, the-den-client and the-den-android on Liam's HoltOS 0.0.4-alpha

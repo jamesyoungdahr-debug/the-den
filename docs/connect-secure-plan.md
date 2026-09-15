@@ -150,7 +150,7 @@ token revokes it. `has_api_token` left the user JSON; the admin user list gains 
 - Verify: register and sign in from a desktop browser and from the phone through the public
   name; a Plex user adds a passkey and signs in without Plex.
 
-### M39 Android: find, remember, switch, passkeys
+### M39 Android: find, remember, switch, passkeys -- done 2026-09-15 except passkeys (after M48); phone test waits for Liam
 
 - Discovery on the connect screen (NsdManager with a multicast lock, only on Wi-Fi or
   Ethernet) listing servers by display name; manual URL entry stays.

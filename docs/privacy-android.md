@@ -11,8 +11,12 @@ This policy explains what the app stores and where it sends data.
 - **Your server address** — the URL of your own The Den server.
 - **A personal API token** — issued by your server when you sign in, so the app can
   make requests on your behalf without storing your password.
+- **Trusted server certificates** — for each server certificate you choose to trust, its
+  pin (a fingerprint of the server's key) and the LAN and public addresses that server
+  announced, so the app can refuse an impostor and switch between those addresses.
+  "Forget the saved key" on the sign-in screen removes a pin.
 
-Both are kept in the app's private storage on your device. They are never sent anywhere
+All of these are kept in the app's private storage on your device. They are never sent anywhere
 except to the server address you entered. Signing out deletes the token. Uninstalling
 the app deletes everything.
 
@@ -31,6 +35,9 @@ The app does not store your Plex password or your local account password.
 - **image.tmdb.org.** Poster and backdrop images for titles shown in Discover are loaded
   directly from The Movie Database's image servers. TMDB's privacy policy applies to
   those requests; the app sends nothing to TMDB beyond the standard image request.
+- **Your local network** — while the sign-in screen is open on Wi-Fi or Ethernet, the app
+  asks the local network (mDNS / DNS-SD) which The Den servers are there. These queries
+  stay on your network.
 
 ## What the app does not do
 
