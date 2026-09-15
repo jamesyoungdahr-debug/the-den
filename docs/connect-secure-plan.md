@@ -163,7 +163,7 @@ token revokes it. `has_api_token` left the user JSON; the admin user list gains 
   emulator runs under KVM on the Strix Halo; its system image isn't installed yet); the real phone on Wi-Fi and on mobile data (needs
   Liam).
 
-### M40 KDE: find, remember, switch, passkeys
+### M40 KDE: find, remember, switch, passkeys -- done 2026-09-15 except passkeys (after M48); desktop test waits for Liam
 
 - `DiscoveredServersModel` over `zeroconf` (callbacks reach the Qt main thread through a
   signal), a server list on the login page, remembered servers in QSettings, LAN/public

@@ -91,6 +91,19 @@ CURRENT PLAN (2026-09-14): docs/port-40204-release-plan.md -- move the KDE clien
   unit checks (fake UPnP client), 17 fake-router checks, 15 live checks, test_discovery 10/10, migration round-trip.
   Not tested yet: a real router, NAT loopback, access from outside (Liam). Next: M40 KDE pinning and discovery, then
   M39 Android.
+  M40 KDE CLIENT 2026-09-15 (the-den-client 0.5.0d; committed locally, NOT pushed or tagged): certificate pinning for
+  HTTPS servers (src/tls_pins.py; the pinning code in src/api_client.py is Claude's). The first connection to a new
+  key shows its pin and waits for the person to trust it; after that only that key is accepted at that address (even
+  if the system trusts another certificate), a server id seen before can't switch keys, expired certificates are
+  refused even when pinned, and a server reporting a different pin than the connection used is refused. http:// LAN
+  addresses are retried over HTTPS. The client remembers a trusted server's LAN address and its announced public_host
+  and tries the other when the saved one fails; an announced address is trusted without a prompt only with that
+  server's key. LAN discovery lists _theden._tcp servers on the login page (TXT pins shown, never trusted). PKGBUILD
+  depends gain python-cryptography and python-zeroconf. Verified in WSL: 18 live pinning checks against python -m app
+  servers and fake TLS servers, run_all.sh 14/14 (a new discovery check with a live zeroconf round trip, the QML
+  harness), and the KDE sign-in check 6/6. Seen while testing: a server stopped with SIGTERM waited more than 30 s
+  while a Qt client kept an HTTPS connection open, and stopped in 0.2 s once the client closed it; worth checking on
+  the real service. Not tested yet: a desktop pass on HoltOS against a real LAN server. Next: M39 Android.
 
 Work no longer happens on the Windows machine (C:\projects, WSL Ubuntu). The three repos were cloned fresh from
 GitHub into /home/liam/Projects/theden/the-den, the-den-client and the-den-android on Liam's HoltOS 0.0.4-alpha
