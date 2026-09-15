@@ -27,6 +27,18 @@ M50b LIBRARY SCANNER, MATCHING 2026-09-15 (LiamPC; committed locally, NOT pushed
   library_match.attach_choice, which creates the Movie or Series through the same get_or_create_* helpers the matcher uses.
   library_match.html is the search page. Server 0.8.3c. Verified by py_compile only; the suite and a live server still have not
   been run (the app deps are not on this machine). The 4090 wrote the service functions and the routes, the 4080 the templates.
+M50b UNMATCHED QUEUE, COLLECTIONS AND TESTS 2026-09-15 (0.8.3c to 0.8.3g; NOT pushed or tagged): the unmatched queue
+  gives every file the matcher would not guess at a Match link on /ui/library/files, which opens a TMDB search and attaches
+  the picked title through the same get_or_create_* helpers the matcher uses (app/library_match.search_titles and
+  attach_choice, template library_match.html). A movie page now lists the rest of its TMDB collection and marks what the
+  library already has - no new table, no migration (tmdb.collection_parts plus a section on discover_detail.html, which is the
+  page every movie poster links to). tests/test_library_pure.py covers the scan's database-free logic - the title normaliser,
+  the year window, the movie name parser and the folder walker - and writing it found a real gap: the walker only skipped
+  torrent samples and ad folders, so a Plex library's Extras, Featurettes, Trailers and Proof folders would have been scanned
+  as though their contents were the film, filling the unmatched queue with bonus clips. SKIP_DIR_NAMES now covers those, which
+  matters directly for pointing the scan at a hard-linked Plex library. Verified: py_compile throughout, the 30-check scan
+  test actually executed with the ORM imports stubbed (the app dependencies are still not installed on this machine), and the
+  M50a migration's backfill SQL run against SQLite. The full suite and a live server have still not been run.
 M50b FIXES AND SCAN NOW 2026-09-15 (0.8.3d, 0.8.3e; NOT pushed or tagged): (d) scan() now derives the legacy
   Movie.has_file / Episode.has_file flags from media_files after every pass. Playback and availability already read media_files,
   but the library pages and their Play buttons still read those flags, which the scan never set - so a TV episode the scan found
