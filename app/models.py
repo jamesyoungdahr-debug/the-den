@@ -191,6 +191,10 @@ class User(Base):
     email = Column(String, nullable=True)
     avatar_url = Column(String, nullable=True)
     password_hash = Column(String, nullable=True)
+    # M51: a one-time link an admin hands to somebody whose only way in has been Plex. Stored as
+    # a hash, like a device token, so a copy of the database is not a set of working links.
+    sign_in_token_hash = Column(String, nullable=True)
+    sign_in_expires_at = Column(DateTime, nullable=True)
     plex_id = Column(Integer, nullable=True, unique=True)
     plex_username = Column(String, nullable=True)
     role = Column(String, nullable=False, default="user")  # admin | user
