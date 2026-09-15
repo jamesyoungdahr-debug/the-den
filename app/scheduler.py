@@ -3,7 +3,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import asyncio
 import logging
 
-from app import automation, import_lists as import_lists_service, library_match, library_scan, plex_scan, remote_access, settings as settings_module
+from app import automation, ffmpeg_jobs, import_lists as import_lists_service, library_match, library_scan, plex_scan, remote_access, settings as settings_module, transcode
 from app.db import SessionLocal
 
 scheduler = AsyncIOScheduler()
@@ -12,6 +12,7 @@ PLEX_JOB_ID = "plex_scan"
 IMPORT_LISTS_JOB_ID = "import_lists_sync"
 LIBRARY_SCAN_JOB_ID = "library_scan"
 REMOTE_ACCESS_JOB_ID = "remote_access_check"
+MEDIA_HOUSEKEEPING_JOB_ID = "media_housekeeping"
 log = logging.getLogger(__name__)
 
 
@@ -97,6 +98,18 @@ async def _library_scan_job() -> None:
         pass
 
 
+async def _media_housekeeping_job() -> None:
+    """M50b/P2: kill abandoned ffmpeg jobs and keep the converted-file cache under its ceiling.
+    A timer rather than a request, so a request never waits on somebody else's cleanup."""
+    try:
+        killed = ffmpeg_jobs.reap()
+        pruned = transcode.prune_cache()
+        if killed or pruned["removed"]:
+            log.info("housekeeping: reaped %d job(s), dropped %d cached file(s)", killed, pruned["removed"])
+    except Exception:
+        log.warning("media housekeeping failed", exc_info=True)
+
+
 async def _remote_access_job():
     """Re-check the remote access guard and the router mapping, then test NAT loopback once mapped (M36)."""
     from app import remote_access, setup_state
@@ -123,6 +136,7 @@ def start() -> None:
     scheduler.add_job(_import_lists_job, "interval", minutes=import_list_minutes, id=IMPORT_LISTS_JOB_ID)
     scheduler.add_job(_library_scan_job, "interval", minutes=library_minutes, id=LIBRARY_SCAN_JOB_ID)
     scheduler.add_job(_remote_access_job, "interval", minutes=10, id=REMOTE_ACCESS_JOB_ID)
+    scheduler.add_job(_media_housekeeping_job, "interval", minutes=5, id=MEDIA_HOUSEKEEPING_JOB_ID)
     scheduler.start()
 
 

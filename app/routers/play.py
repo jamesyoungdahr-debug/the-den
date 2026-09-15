@@ -4,6 +4,7 @@ Every route needs a signed-in user (session cookie or X-Api-Key). Files are only
 
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
 from typing import Literal
@@ -167,7 +168,12 @@ def converted_file(kind: Kind, item_id: int, request: Request, file_id: int | No
             ffmpeg_jobs.touch(job.id)
         raise HTTPException(404, "The converted copy is not ready yet")
     served = media_stream.LibraryFile(kind=kind, item_id=item_id, path=str(dest), content_type="video/mp4")
-    return media_stream.file_response(request, served)
+    response = media_stream.file_response(request, served)
+    try:
+        os.utime(dest, None)  # refreshes the cache pruner's idea of "recently used"
+    except OSError:
+        pass
+    return response
 
 
 @router.get("/{kind}/{item_id}/subtitles/{track_id}.vtt")

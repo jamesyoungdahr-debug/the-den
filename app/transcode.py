@@ -166,3 +166,45 @@ def cache_path(library_file, mode: str) -> Path:
     folder = Path(config.STATE_DIR) / "media-cache" / "converted"
     folder.mkdir(parents=True, exist_ok=True)
     return folder / f"{digest}.mp4"
+
+
+# Converted copies are whole films, so a few of them fill a disk. The ceiling is generous but
+# real; anything dropped can be converted again from the original.
+CACHE_LIMIT_BYTES = 20 * 1024 * 1024 * 1024
+
+
+def cache_folder() -> Path:
+    """Where converted copies live."""
+    return Path(config.STATE_DIR) / "media-cache" / "converted"
+
+
+def prune_cache(limit_bytes: int = CACHE_LIMIT_BYTES) -> dict:
+    """Keep the converted copies under a ceiling, dropping the least recently used first.
+
+    "Recently used" is the file's mtime, which serving a converted copy refreshes -- so a film
+    somebody keeps watching survives while one converted once and abandoned goes. Deleting is
+    always safe: the original is untouched and a conversion can be run again."""
+    folder = cache_folder()
+    if not folder.is_dir():
+        return {"removed": 0, "kept": 0, "bytes": 0}
+    entries: list[tuple[float, int, Path]] = []
+    for entry in folder.glob("*.mp4"):
+        try:
+            stat = entry.stat()
+        except OSError:
+            continue
+        entries.append((stat.st_mtime, stat.st_size, entry))
+    total = sum(size for _mtime, size, _path in entries)
+    removed = 0
+    for _mtime, size, path in sorted(entries):
+        if total <= limit_bytes:
+            break
+        try:
+            path.unlink()
+        except OSError:
+            continue
+        total -= size
+        removed += 1
+    if removed:
+        log.info("transcode cache: dropped %d file(s), %d bytes left", removed, total)
+    return {"removed": removed, "kept": len(entries) - removed, "bytes": total}
